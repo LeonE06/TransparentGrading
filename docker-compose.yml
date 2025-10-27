@@ -1,0 +1,45 @@
+
+
+name: transparentgrading
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: tg-db
+    environment:
+      MYSQL_DATABASE: transparentgrading
+      MYSQL_USER: symfony
+      MYSQL_PASSWORD: symfony
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - tg-net
+
+  backend:
+    container_name: tg-backend
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env.local
+    depends_on:
+      - db
+    networks:
+      - tg-net
+
+  frontend:
+    container_name: tg-frontend
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - tg-net
+
+volumes:
+  db_data:
+
+networks:
+  tg-net:
+    name: tg-net
+    driver: bridge
