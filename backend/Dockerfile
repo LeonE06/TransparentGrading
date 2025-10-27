@@ -53,4 +53,4 @@ RUN php bin/console cache:clear --env=prod \
  && chmod -R 755 var
 
 EXPOSE 9000
-CMD ["php-fpm"]
+CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", "public"]
