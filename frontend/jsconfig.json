@@ -1,0 +1,5 @@
+     {
+       "vueCompilerOptions": {
+         "globalTypesPath": "./node_modules/@vue/language-server/out/types"
+       }
+     }
