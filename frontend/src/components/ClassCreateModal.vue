@@ -1,121 +1,237 @@
 <template>
-  <div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-2xl w-[600px] shadow-xl">
-      <h2 class="text-2xl font-semibold mb-6">Neue Klasse erstellen</h2>
+  <div class="modal-overlay" @click.self="close">
+    <div class="modal">
+      <div class="header">
+        <h2>Neue Klasse erstellen</h2>
+        <button class="close-btn" @click="close">×</button>
+      </div>
 
-      <!-- Klassenname -->
-      <label class="block text-sm font-medium text-gray-600 mb-1">Klassenbezeichnung</label>
+      <!-- Klassenbezeichnung -->
+      <label class="label">Klassenbezeichnung</label>
       <input
         v-model="className"
         type="text"
-        placeholder="z.B. 4AI"
-        class="w-full border rounded-lg p-2 mb-4 focus:ring-2 focus:ring-indigo-400 outline-none"
+        placeholder="z. B. 4AI"
+        class="input"
       />
 
-      <!-- Schüler-Suche -->
-      <label class="block text-sm font-medium text-gray-600 mb-1">Schüler*innen hinzufügen</label>
-      <div class="relative">
-        <input
-          v-model="searchQuery"
-          @input="searchStudents"
-          type="text"
-          placeholder="Schüler*innen suchen und hinzufügen..."
-          class="w-full border rounded-lg p-2 mb-2 focus:ring-2 focus:ring-indigo-400 outline-none"
-        />
-        <ul
-          v-if="searchResults.length && searchQuery"
-          class="absolute bg-white border rounded-lg mt-1 max-h-40 overflow-y-auto w-full z-10"
-        >
-          <li
-            v-for="student in searchResults"
-            :key="student.id"
-            @click="addStudent(student)"
-            class="p-2 cursor-pointer hover:bg-indigo-100"
-          >
-            {{ student.vorname }} {{ student.nachname }}
-          </li>
-        </ul>
-      </div>
+      <!-- Schüler*innen hinzufügen -->
+      <label class="label">Schüler*innen hinzufügen</label>
+      <input
+        v-model="searchTerm"
+        type="text"
+        placeholder="Schüler*innen suchen und hinzufügen..."
+        class="input"
+        @input="searchStudents"
+      />
 
-      <!-- Ausgewählte Schüler -->
-      <div class="flex flex-wrap gap-2 border rounded-lg p-2 min-h-[50px] mb-6">
+      <!-- Suchergebnisse -->
+      <div v-if="searchResults.length" class="search-results">
         <div
-          v-for="s in selectedStudents"
-          :key="s.id"
-          class="flex items-center bg-gray-100 px-3 py-1 rounded-full"
+          v-for="student in searchResults"
+          :key="student.id"
+          class="search-item"
+          @click="addStudent(student)"
         >
-          {{ s.vorname }} {{ s.nachname }}
-          <button @click="removeStudent(s.id)" class="ml-2 text-gray-500 hover:text-red-500">✕</button>
+          {{ student.firstName }} {{ student.lastName }}
         </div>
       </div>
 
-      <!-- Buttons -->
-      <div class="flex justify-end gap-2">
-        <button @click="$emit('close')" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">
-          Abbrechen
-        </button>
-        <button
-          @click="createClass"
-          class="bg-gradient-to-r from-indigo-400 to-indigo-600 text-white px-5 py-2 rounded-lg hover:opacity-90"
+      <!-- Ausgewählte Schüler*innen -->
+      <div v-if="selectedStudents.length" class="selected-list">
+        <div
+          v-for="student in selectedStudents"
+          :key="student.id"
+          class="selected-item"
         >
-          Klasse erstellen
-        </button>
+          {{ student.firstName }} {{ student.lastName }}
+          <button class="remove-btn" @click="removeStudent(student)">×</button>
+        </div>
+      </div>
+
+      <!-- Aktionen -->
+      <div class="actions">
+        <button class="btn cancel" @click="close">Abbrechen</button>
+        <button class="btn create" @click="createClass">Klasse erstellen</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import axios from "axios";
+import { ref } from 'vue'
+import axios from 'axios'
+import debounce from 'lodash.debounce' // optional, für bessere Suche
 
-const emit = defineEmits(["close", "class-created"]);
+const emit = defineEmits(['close', 'created'])
 
-const className = ref("");
-const searchQuery = ref("");
-const searchResults = ref([]);
-const selectedStudents = ref([]);
+const className = ref('')
+const searchTerm = ref('')
+const searchResults = ref([])
+const selectedStudents = ref([])
 
-const searchStudents = async () => {
-  if (searchQuery.value.trim().length < 2) {
-    searchResults.value = [];
-    return;
+const close = () => emit('close')
+
+const searchStudents = debounce(async () => {
+  if (searchTerm.value.trim().length < 2) {
+    searchResults.value = []
+    return
   }
-  const res = await axios.get(`/api/schueler?search=${searchQuery.value}`);
-  searchResults.value = res.data;
-};
+
+  try {
+    // Beispiel: Symfony-Endpunkt
+    const response = await axios.get(`/api/students?search=${searchTerm.value}`)
+    searchResults.value = response.data
+  } catch (error) {
+    console.error('Fehler beim Suchen:', error)
+  }
+}, 300)
 
 const addStudent = (student) => {
-  if (!selectedStudents.value.find((s) => s.id === student.id)) {
-    selectedStudents.value.push(student);
+  if (!selectedStudents.value.find(s => s.id === student.id)) {
+    selectedStudents.value.push(student)
   }
-  searchResults.value = [];
-  searchQuery.value = "";
-};
+  searchResults.value = [] // Ergebnisse ausblenden
+  searchTerm.value = ''    // Suchfeld leeren
+}
 
-const removeStudent = (id) => {
-  selectedStudents.value = selectedStudents.value.filter((s) => s.id !== id);
-};
+const removeStudent = (student) => {
+  selectedStudents.value = selectedStudents.value.filter(s => s.id !== student.id)
+}
 
 const createClass = async () => {
-  if (!className.value.trim()) return alert("Bitte einen Klassennamen eingeben!");
-
-  // 1️⃣ Klasse erstellen
-  const { data } = await axios.post("/api/klassen", { name: className.value });
-
-  // 2️⃣ Schüler hinzufügen
-  for (const s of selectedStudents.value) {
-    await axios.post(`/api/klassen/${data.id}/schueler`, { schueler_id: s.id });
+  try {
+    await axios.post('/api/classes', {
+      name: className.value,
+      students: selectedStudents.value.map(s => s.id),
+    })
+    emit('created')
+    close()
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Klasse:', error)
   }
-
-  emit("class-created");
-  emit("close");
-};
+}
 </script>
 
 <style scoped>
-/* sanfte Transition für Dropdown */
-ul {
-  transition: all 0.2s ease-in-out;
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 600px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.close-btn {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  margin-top: 1rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.search-results {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+
+.search-item {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.search-item:hover {
+  background: #f0f0f0;
+}
+
+.selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-height: 50px;
+}
+
+.selected-item {
+  display: flex;
+  align-items: center;
+  background: #e7e7e7;
+  border-radius: 20px;
+  padding: 0.3rem 0.7rem;
+}
+
+.remove-btn {
+  margin-left: 6px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  gap: 0.5rem;
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+}
+
+.cancel {
+  background: #e0e0e0;
+}
+
+.create {
+  background: linear-gradient(to right, #6a5af9, #8369f4);
+  color: white;
 }
 </style>
