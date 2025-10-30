@@ -15,24 +15,28 @@ class Klassen
     #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups(['class_read'])]
-    private ?int $id = null;
+    private ?int $id = NULL;
 
     #[ORM\Column(length: 50)]
     #[Groups(['class_read', 'class_write'])]
-    private ?string $name = null;
+    private ?string $name = NULL;
 
     #[ORM\ManyToOne(targetEntity: Lehrer::class)]
     #[ORM\JoinColumn(name: "lehrer_id", referencedColumnName: "id", nullable: true)]
     #[Groups(['class_read'])]
-    private ?Lehrer $lehrer = null;
+    private ?Lehrer $lehrer = NULL;
 
     #[ORM\OneToMany(mappedBy: 'klasse', targetEntity: Schueler::class)]
     #[Groups(['class_read'])]
     private Collection $schueler;
 
+    #[ORM\OneToMany(mappedBy: 'klasse', targetEntity: Kurse::class)]
+    private Collection $kurse;
+
     public function __construct()
     {
         $this->schueler = new ArrayCollection();
+          $this->kurse = new ArrayCollection();
     }
 
     // Getters & Setters …
@@ -63,5 +67,10 @@ class Klassen
             }
         }
         return $this;
+    }
+
+    public function getKurse(): Collection
+    {
+        return $this->kurse;
     }
 }
