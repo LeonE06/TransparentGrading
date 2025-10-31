@@ -34,7 +34,6 @@
           @click="addStudent(student)"
         >
           {{ student.vorname }} {{ student.nachname }}
-
         </div>
       </div>
 
@@ -46,7 +45,6 @@
           class="selected-item"
         >
           {{ student.vorname }} {{ student.nachname }}
-
           <button class="remove-btn" @click="removeStudent(student)">×</button>
         </div>
       </div>
@@ -63,7 +61,7 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
-import debounce from 'lodash.debounce' // optional, für bessere Suche
+import debounce from 'lodash.debounce'
 
 const emit = defineEmits(['close', 'created'])
 
@@ -74,6 +72,7 @@ const selectedStudents = ref([])
 
 const close = () => emit('close')
 
+// 🔍 Schüler suchen (mit debounce)
 const searchStudents = debounce(async () => {
   if (searchTerm.value.trim().length < 2) {
     searchResults.value = []
@@ -81,26 +80,31 @@ const searchStudents = debounce(async () => {
   }
 
   try {
-    // Beispiel: Symfony-Endpunkt
-    const response = await axios.get(`/api/students?search=${searchTerm.value}`)
+    const response = await axios.get('/api/students', {
+      params: { search: searchTerm.value }
+    })
     searchResults.value = response.data
   } catch (error) {
     console.error('Fehler beim Suchen:', error)
+    searchResults.value = []
   }
 }, 300)
 
+// ➕ Schüler hinzufügen
 const addStudent = (student) => {
   if (!selectedStudents.value.find(s => s.id === student.id)) {
     selectedStudents.value.push(student)
   }
-  searchResults.value = [] // Ergebnisse ausblenden
-  searchTerm.value = ''    // Suchfeld leeren
+  searchResults.value = []
+  searchTerm.value = ''
 }
 
+// ➖ Schüler entfernen
 const removeStudent = (student) => {
   selectedStudents.value = selectedStudents.value.filter(s => s.id !== student.id)
 }
 
+// 🏗️ Klasse erstellen
 const createClass = async () => {
   try {
     await axios.post('/api/classes', {
