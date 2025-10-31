@@ -53,8 +53,7 @@ RUN php bin/console cache:clear --env=prod \
  && chmod -R 755 var
 
 EXPOSE 9000
-CMD sh -c "php -S 0.0.0.0:${PORT:-8000} -t public"
+# Doctrine Schema automatisch beim Start aktualisieren und Server starten
+CMD sh -c "php bin/console doctrine:schema:update --force --no-interaction && php -S 0.0.0.0:${PORT:-8000} -t public"
 
 
-# Doctrine Schema automatisch erstellen (für Free-Tier)
-RUN php bin/console doctrine:schema:update --force --no-interaction
