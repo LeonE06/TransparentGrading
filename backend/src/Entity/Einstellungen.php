@@ -6,6 +6,7 @@ use App\Repository\EinstellungenRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EinstellungenRepository::class)]
+#[ORM\Table(name: "Einstellungen")]
 class Einstellungen
 {
     #[ORM\Id]

@@ -6,6 +6,7 @@ use App\Repository\BenotungsartenRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BenotungsartenRepository::class)]
+#[ORM\Table(name: "Benotungsarten")]
 class Benotungsarten
 {
     #[ORM\Id]

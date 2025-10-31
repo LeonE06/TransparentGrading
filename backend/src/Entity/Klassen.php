@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: KlassenRepository::class)]
+#[ORM\Table(name: "Klassen")]
 class Klassen
 {
     #[ORM\Id]

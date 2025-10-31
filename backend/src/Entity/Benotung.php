@@ -6,6 +6,7 @@ use App\Repository\BenotungRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BenotungRepository::class)]
+#[ORM\Table(name: "Benotung")]
 class Benotung
 {
     #[ORM\Id]
