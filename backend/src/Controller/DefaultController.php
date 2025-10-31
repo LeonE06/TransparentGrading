@@ -12,7 +12,7 @@ class DefaultController
     {
         return new JsonResponse([
             'status' => 'ok',
-            'message' => 'TransparentGrading API läuft',
+            'message' => 'TransparentGrading API laeuft',
         ]);
     }
 }

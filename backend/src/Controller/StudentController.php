@@ -2,7 +2,8 @@
 
 namespace App\Controller;
 
-use App\Repository\SchuelerRepository;
+use App\Entity\Schueler;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,34 +14,57 @@ use Symfony\Component\Serializer\SerializerInterface;
 class StudentController extends AbstractController
 {
     /**
-     * 🔹 GET /api/students?search=...
-     * Sucht Schüler nach Vor- oder Nachnamen.
+     * 🔹 GET /api/students
+     * Gibt alle Schüler*innen zurück, optional gefiltert nach einem Suchbegriff.
+     * Beispiel: /api/students?search=leon
      */
-    #[Route('', name: 'api_students_search', methods: ['GET'])]
-    public function search(
+    #[Route('', name: 'get_students', methods: ['GET'])]
+    public function getAll(
         Request $request,
-        SchuelerRepository $repo,
+        EntityManagerInterface $em,
         SerializerInterface $serializer
     ): JsonResponse {
-        $search = trim($request->query->get('search', ''));
+        $search = strtolower(trim($request->query->get('search', '')));
 
-        // Nur ab 2 Zeichen suchen
-        if (strlen($search) < 2) {
-            return new JsonResponse([], 200);
+        $repo = $em->getRepository(Schueler::class);
+        $qb = $repo->createQueryBuilder('s');
+
+        if ($search !== '') {
+            $qb->where('LOWER(s.vorname) LIKE :term OR LOWER(s.nachname) LIKE :term')
+               ->setParameter('term', '%' . $search . '%');
         }
 
-        // Suche nach Vorname oder Nachname
-        $students = $repo->createQueryBuilder('s')
-            ->where('LOWER(s.vorname) LIKE LOWER(:term)')
-            ->orWhere('LOWER(s.nachname) LIKE LOWER(:term)')
-            ->setParameter('term', '%' . $search . '%')
-            ->setMaxResults(10)
+        $students = $qb
+            ->orderBy('s.nachname', 'ASC')
+            ->addOrderBy('s.vorname', 'ASC')
             ->getQuery()
             ->getResult();
 
-        // Nur benötigte Felder serialisieren
         $json = $serializer->serialize($students, 'json', [
-            'groups' => ['class_read', 'student_read']
+            'groups' => ['student_read']
+        ]);
+
+        return new JsonResponse($json, 200, [], true);
+    }
+
+    /**
+     * 🔹 GET /api/students/{id}
+     * Gibt die Daten eines einzelnen Schülers zurück.
+     */
+    #[Route('/{id}', name: 'get_student', methods: ['GET'])]
+    public function getOne(
+        int $id,
+        EntityManagerInterface $em,
+        SerializerInterface $serializer
+    ): JsonResponse {
+        $student = $em->getRepository(Schueler::class)->find($id);
+
+        if (!$student) {
+            return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+        }
+
+        $json = $serializer->serialize($student, 'json', [
+            'groups' => ['student_read']
         ]);
 
         return new JsonResponse($json, 200, [], true);

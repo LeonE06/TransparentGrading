@@ -1,58 +1,58 @@
 <template>
-  <div class="modal-overlay" @click.self="close">
+  <div class="modal-backdrop" @click.self="close">
     <div class="modal">
-      <div class="header">
-        <h2>Neue Klasse erstellen</h2>
-        <button class="close-btn" @click="close">×</button>
-      </div>
+      <h2>Neues Klasse erstellen</h2>
 
       <!-- Klassenbezeichnung -->
-      <label class="label">Klassenbezeichnung</label>
-      <input
-        v-model="className"
-        type="text"
-        placeholder="z. B. 4AI"
-        class="input"
-      />
-
-      <!-- Schüler*innen hinzufügen -->
-      <label class="label">Schüler*innen hinzufügen</label>
-      <input
-        v-model="searchTerm"
-        type="text"
-        placeholder="Schüler*innen suchen und hinzufügen..."
-        class="input"
-        @input="searchStudents"
-      />
-
-      <!-- Suchergebnisse -->
-      <div v-if="searchResults.length" class="search-results">
-        <div
-          v-for="student in searchResults"
-          :key="student.id"
-          class="search-item"
-          @click="addStudent(student)"
-        >
-          {{ student.vorname }} {{ student.nachname }}
-        </div>
+      <div class="form-group">
+        <label for="className">Klassenbezeichnung</label>
+        <input
+          id="className"
+          v-model="className"
+          type="text"
+          placeholder="z.B. 4AI"
+        />
       </div>
 
-      <!-- Ausgewählte Schüler*innen -->
-      <div v-if="selectedStudents.length" class="selected-list">
-        <div
-          v-for="student in selectedStudents"
-          :key="student.id"
-          class="selected-item"
-        >
-          {{ student.vorname }} {{ student.nachname }}
-          <button class="remove-btn" @click="removeStudent(student)">×</button>
+      <!-- Schüler*innen hinzufügen -->
+      <div class="form-group">
+        <label>Schüler*innen hinzufügen</label>
+        <input
+          v-model="studentSearch"
+          @input="searchStudents"
+          type="text"
+          placeholder="Schüler*innen suchen und hinzufügen..."
+        />
+        <!-- Suchergebnisse -->
+        <ul v-if="searchResults.length > 0" class="search-results">
+          <li
+            v-for="student in searchResults"
+            :key="student.id"
+            @click="addStudent(student)"
+          >
+            {{ student.vorname }} {{ student.nachname }}
+          </li>
+        </ul>
+
+        <!-- Ausgewählte Schüler -->
+        <div class="selected-students">
+          <div
+            v-for="student in selectedStudents"
+            :key="student.id"
+            class="student-chip"
+          >
+            {{ student.vorname }} {{ student.nachname }}
+            <button class="remove-btn" @click="removeStudent(student.id)">×</button>
+          </div>
         </div>
       </div>
 
       <!-- Aktionen -->
       <div class="actions">
-        <button class="btn cancel" @click="close">Abbrechen</button>
-        <button class="btn create" @click="createClass">Klasse erstellen</button>
+        <button class="cancel" @click="close">Abbrechen</button>
+        <button class="create" @click="createClass" :disabled="loading">
+          {{ loading ? 'Erstelle...' : 'Klasse erstellen' }}
+        </button>
       </div>
     </div>
   </div>
@@ -61,183 +61,188 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
-import debounce from 'lodash.debounce'
+import debounce from 'lodash/debounce'
 
+// Props / Emits
 const emit = defineEmits(['close', 'created'])
 
+// Reaktive States
 const className = ref('')
-const searchTerm = ref('')
+const studentSearch = ref('')
 const searchResults = ref([])
 const selectedStudents = ref([])
+const loading = ref(false)
 
-const close = () => emit('close')
-
-// 🔍 Schüler suchen (mit debounce)
+// Schüler suchen (debounced)
 const searchStudents = debounce(async () => {
-  if (searchTerm.value.trim().length < 2) {
+  if (!studentSearch.value.trim()) {
     searchResults.value = []
     return
   }
 
   try {
-    const response = await axios.get('/api/students', {
-      params: { search: searchTerm.value }
-    })
+    const response = await axios.get(`/api/students?search=${studentSearch.value}`)
     searchResults.value = response.data
-  } catch (error) {
-    console.error('Fehler beim Suchen:', error)
-    searchResults.value = []
+  } catch (err) {
+    console.error('Fehler bei der Schülersuche:', err)
   }
 }, 300)
 
-// ➕ Schüler hinzufügen
-const addStudent = (student) => {
+// Schüler hinzufügen
+function addStudent(student) {
   if (!selectedStudents.value.find(s => s.id === student.id)) {
     selectedStudents.value.push(student)
   }
   searchResults.value = []
-  searchTerm.value = ''
+  studentSearch.value = ''
 }
 
-// ➖ Schüler entfernen
-const removeStudent = (student) => {
-  selectedStudents.value = selectedStudents.value.filter(s => s.id !== student.id)
+// Schüler entfernen
+function removeStudent(id) {
+  selectedStudents.value = selectedStudents.value.filter(s => s.id !== id)
 }
 
-// 🏗️ Klasse erstellen
-const createClass = async () => {
+// Klasse erstellen
+async function createClass() {
+  if (!className.value.trim()) {
+    alert('Bitte gib einen Klassennamen ein.')
+    return
+  }
+
+  loading.value = true
   try {
     await axios.post('/api/classes', {
       name: className.value,
       students: selectedStudents.value.map(s => s.id),
     })
     emit('created')
-    close()
-  } catch (error) {
-    console.error('Fehler beim Erstellen der Klasse:', error)
+  } catch (err) {
+    console.error('Fehler beim Erstellen der Klasse:', err)
+    alert('Fehler beim Erstellen der Klasse.')
+  } finally {
+    loading.value = false
   }
+}
+
+// Modal schließen
+function close() {
+  emit('close')
 }
 </script>
 
 <style scoped>
-.modal-overlay {
+/* Hintergrund */
+.modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 50;
+  z-index: 1000;
 }
 
+/* Fenster */
 .modal {
-  background: #f8f8f8;
+  background-color: white;
   border-radius: 12px;
   padding: 2rem;
   width: 600px;
   max-width: 90%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  position: relative;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+/* Eingabefelder */
+.form-group {
+  margin-bottom: 1.5rem;
 }
 
-.close-btn {
-  border: none;
-  background: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.label {
-  display: block;
+label {
   font-weight: 600;
+  display: block;
   margin-bottom: 0.3rem;
-  margin-top: 1rem;
 }
 
-.input {
+input {
   width: 100%;
   padding: 0.6rem;
   border: 1px solid #ccc;
   border-radius: 8px;
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
 }
 
+/* Schüler-Suchergebnisse */
 .search-results {
-  background: white;
-  border: 1px solid #ddd;
+  background-color: #fff;
+  border: 1px solid #ccc;
   border-radius: 8px;
-  max-height: 200px;
+  margin-top: 0.4rem;
+  max-height: 180px;
   overflow-y: auto;
-  margin-bottom: 0.5rem;
+  list-style: none;
+  padding: 0;
 }
 
-.search-item {
-  padding: 0.5rem;
+.search-results li {
+  padding: 0.5rem 0.8rem;
   cursor: pointer;
 }
-.search-item:hover {
-  background: #f0f0f0;
+
+.search-results li:hover {
+  background-color: #f0f4ff;
 }
 
-.selected-list {
+/* Chips */
+.selected-students {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 0.5rem;
-  min-height: 50px;
+  margin-top: 0.6rem;
 }
 
-.selected-item {
+.student-chip {
+  background-color: #f1f3f9;
+  border: 1px solid #d3daf3;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
   display: flex;
   align-items: center;
-  background: #e7e7e7;
-  border-radius: 20px;
-  padding: 0.3rem 0.7rem;
+  gap: 0.4rem;
 }
 
 .remove-btn {
-  margin-left: 6px;
-  border: none;
   background: none;
-  font-size: 1.1rem;
+  border: none;
   cursor: pointer;
+  font-size: 1rem;
 }
 
+/* Aktionen */
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1.5rem;
-  gap: 0.5rem;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  cursor: pointer;
-  border: none;
-  font-weight: 500;
+  gap: 0.8rem;
+  margin-top: 1rem;
 }
 
 .cancel {
-  background: #e0e0e0;
+  background-color: #f0f0f0;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .create {
-  background: linear-gradient(to right, #6a5af9, #8369f4);
+  background: linear-gradient(90deg, #4a90e2, #6675ff);
+  border: none;
   color: white;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.create:disabled {
+  background: #a8b5ff;
+  cursor: not-allowed;
 }
 </style>

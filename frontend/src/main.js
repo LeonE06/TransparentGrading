@@ -1,14 +1,15 @@
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
-import router from './router'   // ✅ Router importieren
-
+import router from './router'
 import axios from 'axios'
 
-// ⚙️ Axios-Standard-URL setzen (z. B. für dein Backend)
-axios.defaults.baseURL = 'http://backend:8000' // bei Docker passt das so
+// 🔧 Backend automatisch richtig wählen (lokal vs. Vercel)
+axios.defaults.baseURL = import.meta.env.PROD
+  ? 'https://transparentgrading.onrender.com/' // dein echtes Render-Backend hier eintragen!
+  : '/api'
 
 // 🚀 App starten + Router aktivieren
 createApp(App)
-  .use(router) // ✅ Router aktivieren
+  .use(router)
   .mount('#app')
