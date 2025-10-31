@@ -27,24 +27,24 @@ class Schueler
     #[ORM\Column(type: "date", nullable: true)]
     private ?\DateTimeInterface $geburtsdatum = null;
 
-    #[ORM\ManyToOne(targetEntity: Klassen::class, inversedBy: 'Schueler')]
+    #[ORM\ManyToOne(targetEntity: Klassen::class, inversedBy: 'schueler')]
     #[ORM\JoinColumn(name: "klasse_id", referencedColumnName: "id", nullable: true)]
     private ?Klassen $klasse = null;
 
-    #[ORM\OneToOne(mappedBy: 'Schueler', targetEntity: Einstellungen::class)]
+    #[ORM\OneToOne(mappedBy: 'schueler', targetEntity: Einstellungen::class)]
     private ?Einstellungen $einstellungen = null;
 
 
     #[ORM\OneToMany(mappedBy: 'zielSchueler', targetEntity: Nachrichten::class)]
     private Collection $empfangeneNachrichten;
 
-    #[ORM\OneToMany(mappedBy: 'Schueler', targetEntity: NachrichtenStatus::class)]
+    #[ORM\OneToMany(mappedBy: 'schueler', targetEntity: NachrichtenStatus::class)]
     private Collection $nachrichtenStatus;
 
-    #[ORM\OneToMany(mappedBy: 'Schueler', targetEntity: KursSchueler::class)]
+    #[ORM\OneToMany(mappedBy: 'schueler', targetEntity: KursSchueler::class)]
     private Collection $kursSchueler;
 
-    #[ORM\OneToMany(mappedBy: 'Schueler', targetEntity: KursEinstellungen::class)]
+    #[ORM\OneToMany(mappedBy: 'schueler', targetEntity: KursEinstellungen::class)]
     private Collection $kursEinstellungen;
 
     public function __construct()
