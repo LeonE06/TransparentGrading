@@ -53,13 +53,7 @@ RUN php bin/console cache:clear --env=prod \
  && chmod -R 755 var
 
 EXPOSE 9000
-# Doctrine Schema automatisch beim Start aktualisieren (mit Retry)
-CMD sh -c 'echo "⏳ Waiting for database..." && \
-until php -r "try { new PDO(getenv(\"DATABASE_URL\")); exit(0); } catch (Exception \$e) { echo \"DB not ready...\\n\"; sleep(3); }"; do :; done && \
-echo "✅ Database is ready. Running schema update..." && \
-php bin/console doctrine:schema:update --force --no-interaction && \
-echo "🎉 Schema update done. Starting Symfony..." && \
-php -S 0.0.0.0:${PORT:-8000} -t public'
+CMD php -S 0.0.0.0:${PORT:-8000} -t public
 
 
 
