@@ -33,7 +33,8 @@
           class="search-item"
           @click="addStudent(student)"
         >
-          {{ student.firstName }} {{ student.lastName }}
+          {{ student.vorname }} {{ student.nachname }}
+
         </div>
       </div>
 
@@ -44,7 +45,8 @@
           :key="student.id"
           class="selected-item"
         >
-          {{ student.firstName }} {{ student.lastName }}
+          {{ student.vorname }} {{ student.nachname }}
+
           <button class="remove-btn" @click="removeStudent(student)">×</button>
         </div>
       </div>

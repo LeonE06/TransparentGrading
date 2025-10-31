@@ -6,8 +6,8 @@
     <!-- obere Steuerleiste -->
     <div class="toolbar">
       <div class="left-controls">
-        <button class="btn">Alle</button>
-        <button class="btn">Sortiert nach Stufe</button>
+        <button class="btn" @click="loadClasses">Alle</button>
+        <button class="btn" @click="sortByName">Sortiert nach Name</button>
       </div>
 
       <div class="right-controls">
@@ -23,9 +23,26 @@
       </div>
     </div>
 
-    <!-- Klassenliste (Platzhalter, später echte Daten) -->
+    <!-- Klassenliste -->
     <div class="class-list">
-      <p>Hier werden später alle Klassen angezeigt...</p>
+      <div v-if="loading" class="loading">⏳ Lade Klassen...</div>
+
+      <div v-else-if="filteredClasses.length === 0">
+        <p>Keine Klassen gefunden.</p>
+      </div>
+
+      <ul v-else>
+        <li
+          v-for="klasse in filteredClasses"
+          :key="klasse.id"
+          class="class-item"
+        >
+          <strong>{{ klasse.name }}</strong>
+          <span class="count"
+            >{{ klasse.schueler?.length || 0 }} Schüler*innen</span
+          >
+        </li>
+      </ul>
     </div>
 
     <!-- ClassCreateModal-Komponente -->
@@ -38,26 +55,59 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import ClassCreateModal from '../components/ClassCreateModal.vue' // ✅ Modal importieren
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+import ClassCreateModal from '../components/ClassCreateModal.vue'
 
+// Reaktive States
 const searchTerm = ref('')
 const showCreateForm = ref(false)
+const classes = ref([])
+const loading = ref(false)
 
+// Klassen laden
+async function loadClasses() {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/classes')
+    classes.value = response.data
+  } catch (error) {
+    console.error('❌ Fehler beim Laden der Klassen:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Filter / Suche
+const filteredClasses = computed(() => {
+  if (!searchTerm.value.trim()) return classes.value
+  return classes.value.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.value.toLowerCase())
+  )
+})
+
+// Modal-Funktionen
 function openCreateModal() {
   showCreateForm.value = true
 }
-
 function closeCreateModal() {
   showCreateForm.value = false
 }
-
-// Wird aufgerufen, wenn eine neue Klasse erstellt wurde
 function handleClassCreated() {
-  console.log('Neue Klasse wurde erfolgreich erstellt!')
-  // später: z. B. Klassenliste neu laden
+  console.log('✅ Neue Klasse erstellt – aktualisiere Liste...')
   closeCreateModal()
+  loadClasses()
 }
+
+// Sortierfunktion
+function sortByName() {
+  classes.value.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// Beim Laden der Seite direkt alle Klassen holen
+onMounted(() => {
+  loadClasses()
+})
 </script>
 
 <style scoped>
@@ -122,5 +172,26 @@ function handleClassCreated() {
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.class-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.class-item:last-child {
+  border-bottom: none;
+}
+
+.count {
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.loading {
+  color: #555;
+  font-style: italic;
 }
 </style>
