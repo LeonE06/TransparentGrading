@@ -81,7 +81,7 @@ const searchStudents = debounce(async () => {
   }
 
   try {
-    const response = await axios.get(`/api/students?search=${studentSearch.value}`)
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/students?search=${studentSearch.value}`)
     searchResults.value = response.data
   } catch (err) {
     console.error('Fehler bei der Schülersuche:', err)
@@ -111,7 +111,7 @@ async function createClass() {
 
   loading.value = true
   try {
-    await axios.post('/api/classes', {
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/classes`, {
       name: className.value,
       students: selectedStudents.value.map(s => s.id),
     })
