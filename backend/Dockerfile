@@ -53,7 +53,11 @@ RUN php bin/console cache:clear --env=prod \
  && chmod -R 755 var
 
 EXPOSE 9000
-# Doctrine Schema automatisch beim Start aktualisieren und Server starten
-CMD sh -c "php bin/console doctrine:schema:update --force --no-interaction && php -S 0.0.0.0:${PORT:-8000} -t public"
+# Doctrine Schema automatisch beim Start aktualisieren (mit Retry)
+CMD sh -c 'echo "⏳ Waiting for database..." && \
+until php -r "try { new PDO(getenv(\"DATABASE_URL\")); exit(0); } catch (Exception \$e) { exit(1); }"; do sleep 3; done && \
+echo "✅ Database is ready. Running migrations..." && \
+php bin/console doctrine:schema:update --force --no-interaction && \
+php -S 0.0.0.0:${PORT:-8000} -t public'
 
 
