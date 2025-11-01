@@ -16,22 +16,23 @@
   top: 0;
   width: 220px;           /* Breite der Sidebar */
   height: 100vh;          /* Ganze Höhe */
-  background-color: #ffffff;
+  background-color: #f9f9f9;
   display: flex;
   flex-direction: column; /* Elemente untereinander */
   align-items: flex-start;
   padding: 1rem;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+  border-right: #333 1px solid;
+ 
 }
 
 .nav-item {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 8px;
+  padding-top: 20px;
+  padding-bottom: 20px;
   border-radius: 6px;
   text-decoration: none;
   color: #333;
-  transition: background-color 0.2s;
+
 }
 
 .nav-item:hover {
