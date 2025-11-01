@@ -27,7 +27,8 @@ services:
   # 🌐 Vue Frontend (Vite)
   frontend:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: ./frontend/Dockerfile
       target: dev
     container_name: tg-frontend
     restart: unless-stopped
