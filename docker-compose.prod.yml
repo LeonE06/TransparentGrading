@@ -39,7 +39,8 @@ services:
   # 🖥️ Vue Frontend (Build über eigenes Dockerfile)
   frontend:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: ./frontend/Dockerfile
       target: serve
     container_name: tg-frontend
     restart: unless-stopped
