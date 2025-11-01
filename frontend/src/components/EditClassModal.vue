@@ -72,7 +72,8 @@ const emit = defineEmits(['close', 'updated'])
 // API-Base wie in KlassenView.vue
 const isDev = import.meta.env.DEV
 const apiBase = import.meta.env.VITE_API_URL || ''
-const apiPrefix = isDev ? '' : `${apiBase}`
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
 
 // Lokale States
 const className = ref('')

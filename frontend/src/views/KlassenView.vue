@@ -84,7 +84,8 @@ const apiBase = import.meta.env.VITE_API_URL || ''
 
 // Wenn Dev → direkt über Proxy `/api`
 // Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
-const apiPrefix = isDev ? '' : `${apiBase}`
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
 
 // Reaktive States
 const searchTerm = ref('')
