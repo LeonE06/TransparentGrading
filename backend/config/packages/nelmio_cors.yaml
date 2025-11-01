@@ -1,15 +1,16 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        allow_origin: ['^https://.*vercel\.app$', '^http://localhost:[0-9]+$', 'https://transparentgrading.onrender.com']
+        allow_origin: ['^https://.*vercel\.app$', '^http://localhost(:[0-9]+)?$', 'https://transparentgrading.onrender.com']
         allow_methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH']
         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With']
+        expose_headers: []
         max_age: 3600
         allow_credentials: false
 
     paths:
-        '^/':
-            allow_origin: ['^https://.*vercel\.app$', '^http://localhost:[0-9]+$', 'https://transparentgrading.onrender.com']
+        '.*':  # ⚠️ vorher '^/' → jetzt '.*' (greift global)
+            allow_origin: ['^https://.*vercel\.app$', '^http://localhost(:[0-9]+)?$', 'https://transparentgrading.onrender.com']
             allow_methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH']
             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With']
             max_age: 3600
