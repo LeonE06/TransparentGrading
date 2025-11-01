@@ -111,10 +111,10 @@ async function createClass() {
 
   loading.value = true
   try {
-   await axios.post('/api/classes', {
-  name: className.value,
-  students: selectedStudents.value.map(s => s.id),
-})
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/classes`, {
+      name: className.value,
+      students: selectedStudents.value.map(s => s.id),
+    })
     emit('created')
   } catch (err) {
     console.error('Fehler beim Erstellen der Klasse:', err)
