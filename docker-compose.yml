@@ -30,11 +30,12 @@ services:
   frontend:
     container_name: tg-frontend
     build:
-      context: ./frontend
+      context: .
+      dockerfile: ./frontend/Dockerfile
     depends_on:
-      - backend
+    - backend
     networks:
-      - tg-net
+    - tg-net
 
 volumes:
   db_data:
