@@ -59,6 +59,14 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import ClassCreateModal from '../components/ClassCreateModal.vue'
 
+
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+
+// Wenn Dev → direkt über Proxy `/api`
+// Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
+const apiPrefix = isDev ? '' : `${apiBase}`
+
 // Reaktive States
 const searchTerm = ref('')
 const showCreateForm = ref(false)
@@ -69,7 +77,7 @@ const loading = ref(false)
 async function loadClasses() {
   loading.value = true
   try {
-    const response = await axios.get('/api/classes')
+    const response = await axios.get(`${apiPrefix}/classes`)
     classes.value = response.data
   } catch (error) {
     console.error('❌ Fehler beim Laden der Klassen:', error)

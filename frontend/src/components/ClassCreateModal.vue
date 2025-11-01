@@ -63,15 +63,21 @@ import { ref } from 'vue'
 import axios from 'axios'
 import debounce from 'lodash/debounce'
 
-// Props / Emits
 const emit = defineEmits(['close', 'created'])
 
-// Reaktive States
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+
+// Wenn Dev → direkt über Proxy `/api`
+// Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
+const apiPrefix = isDev ? '' : `${apiBase}`
+
 const className = ref('')
 const studentSearch = ref('')
 const searchResults = ref([])
 const selectedStudents = ref([])
 const loading = ref(false)
+
 
 // Schüler suchen (debounced)
 const searchStudents = debounce(async () => {
@@ -81,7 +87,7 @@ const searchStudents = debounce(async () => {
   }
 
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/students?search=${studentSearch.value}`)
+    const response = await axios.get(`${apiPrefix}/students?search=${studentSearch.value}`)
     searchResults.value = response.data
   } catch (err) {
     console.error('Fehler bei der Schülersuche:', err)
@@ -111,10 +117,10 @@ async function createClass() {
 
   loading.value = true
   try {
-    await axios.post(`${import.meta.env.VITE_API_URL}/api/classes`, {
-      name: className.value,
-      students: selectedStudents.value.map(s => s.id),
-    })
+    await axios.post(`${apiPrefix}/classes`, {
+  name: className.value,
+  students: selectedStudents.value.map(s => s.id),
+})
     emit('created')
   } catch (err) {
     console.error('Fehler beim Erstellen der Klasse:', err)
