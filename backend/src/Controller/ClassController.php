@@ -150,4 +150,60 @@ class ClassController extends AbstractController
 
         return new JsonResponse(['message' => 'Klasse erfolgreich gelöscht.'], 200);
     }
+
+        /**
+     * 🔹 PUT /api/classes/{id}
+     * Aktualisiert den Namen und die zugeordneten Schüler*innen einer Klasse.
+     */
+    #[Route('/{id}', name: 'update_class', methods: ['PUT', 'OPTIONS'])]
+    public function update(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        if ($request->getMethod() === 'OPTIONS') {
+            return new JsonResponse([], 204);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $class = $em->getRepository(Klassen::class)->find($id);
+
+        if (!$class) {
+            return new JsonResponse(['error' => 'Klasse nicht gefunden.'], 404);
+        }
+
+        if (!isset($data['name']) || trim($data['name']) === '') {
+            return new JsonResponse(['error' => 'Name darf nicht leer sein.'], 400);
+        }
+
+        // Name aktualisieren
+        $class->setName($data['name']);
+
+        // Bestehende Schüler-Beziehungen aufheben
+        foreach ($class->getSchueler() as $student) {
+            $student->setKlasse(null);
+            $em->persist($student);
+        }
+        $class->getSchueler()->clear();
+
+        // Neue Schüler setzen (falls vorhanden)
+        if (!empty($data['students']) && is_array($data['students'])) {
+            foreach ($data['students'] as $studentId) {
+                $student = $em->getRepository(Schueler::class)->find($studentId);
+                if ($student) {
+                    $class->addSchueler($student);
+                    $em->persist($student);
+                }
+            }
+        }
+
+        $em->persist($class);
+        $em->flush();
+
+        return new JsonResponse([
+            'message' => 'Klasse erfolgreich aktualisiert!',
+            'classId' => $class->getId(),
+        ], 200);
+    }
+
 }

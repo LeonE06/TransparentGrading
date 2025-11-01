@@ -31,18 +31,27 @@
         <p>Keine Klassen gefunden.</p>
       </div>
 
-      <ul v-else>
-        <li
-          v-for="klasse in filteredClasses"
-          :key="klasse.id"
-          class="class-item"
-        >
-          <strong>{{ klasse.name }}</strong>
-          <span class="count"
-            >{{ klasse.schueler?.length || 0 }} Schüler*innen</span
-          >
-        </li>
-      </ul>
+     <ul v-else>
+  <li
+    v-for="klasse in filteredClasses"
+    :key="klasse.id"
+    class="class-item"
+  >
+    <div class="class-info">
+      <strong>{{ klasse.name }}</strong>
+      <span class="count">
+        {{ klasse.schueler?.length || 0 }} Schüler*innen
+      </span>
+    </div>
+
+    <div class="class-actions">
+      <button class="btn edit-btn" @click="openEditModal(klasse)">✏️ Bearbeiten</button>
+
+      <button class="btn delete-btn" @click="deleteClass(klasse.id)">🗑 Löschen</button>
+    </div>
+  </li>
+</ul>
+
     </div>
 
     <!-- ClassCreateModal-Komponente -->
@@ -52,12 +61,22 @@
       @created="handleClassCreated"
     />
   </div>
+
+
+
+  <EditClassModal
+  v-if="showEditModal"
+  :klasse="selectedClass"
+  @close="closeEditModal"
+  @updated="handleClassUpdated"
+/>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import ClassCreateModal from '../components/ClassCreateModal.vue'
+import EditClassModal from '../components/EditClassModal.vue'
 
 
 const isDev = import.meta.env.DEV
@@ -93,6 +112,42 @@ const filteredClasses = computed(() => {
     c.name.toLowerCase().includes(searchTerm.value.toLowerCase())
   )
 })
+
+
+async function deleteClass(id) {
+  if (!confirm('Willst du diese Klasse wirklich löschen?')) return
+
+  try {
+    await axios.delete(`${apiPrefix}/classes/${id}`)
+    console.log('✅ Klasse gelöscht:', id)
+    loadClasses() // Liste neu laden
+  } catch (err) {
+    console.error('❌ Fehler beim Löschen der Klasse:', err)
+    alert('Fehler beim Löschen der Klasse.')
+  }
+}
+
+const showEditModal = ref(false)
+const selectedClass = ref(null)
+
+// Öffnet das Bearbeiten-Modal
+function openEditModal(klasse) {
+  selectedClass.value = { ...klasse } // Kopie der Klasse
+  showEditModal.value = true
+}
+
+// Schließt das Bearbeiten-Modal
+function closeEditModal() {
+  showEditModal.value = false
+  selectedClass.value = null
+}
+
+// Wird aufgerufen, wenn das Modal gespeichert wurde
+function handleClassUpdated() {
+  console.log('✅ Klasse aktualisiert – Liste neu laden...')
+  closeEditModal()
+  loadClasses()
+}
 
 // Modal-Funktionen
 function openCreateModal() {
@@ -202,4 +257,38 @@ onMounted(() => {
   color: #555;
   font-style: italic;
 }
+
+.class-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.class-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  background-color: #ffd966;
+  border: none;
+  color: #333;
+}
+
+.edit-btn:hover {
+  background-color: #ffcd38;
+}
+
+.delete-btn {
+  background-color: #ff6666;
+  border: none;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #e05555;
+}
+
 </style>
