@@ -12,13 +12,9 @@ import Navbar from './components/AdminNavbar.vue'
 </script>
 
 <style>
-.app {
-  display: flex;
-}
 
-/* Abstand links lassen, damit Content nicht unter der Navbar verschwindet */
 .content {
-  margin-left: 220px;
+  margin-left: 9rem;
   padding: 1.5rem;
   background-color: #f9f9f9;
   min-height: 100vh;

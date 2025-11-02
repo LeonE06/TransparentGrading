@@ -181,7 +181,8 @@ onMounted(() => {
 
 .title {
   font-size: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+  text-align: left;
 }
 
 /* Toolbar */
