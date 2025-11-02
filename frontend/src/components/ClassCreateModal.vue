@@ -160,7 +160,7 @@ h2 {
 
 /* Fenster */
 .modal {
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
   border-radius: 12px;
   padding: 2rem 5rem;
   width: 800px;
@@ -201,7 +201,7 @@ input {
   width: 94%;
   border-radius: 10px;
   margin-bottom: 1.5rem;
-  background: #EAEAEA;
+  background: var(--second-background-color);
   background-size: 15px 15px;
 }
 
@@ -236,8 +236,8 @@ input {
 }
 
 .student-chip {
-  background-color: #EAEAEA;
-  border: 1px solid #EAEAEA;
+  background-color: var(--second-background-color);
+  border: 1px solid var(--second-background-color);
   border-radius: 15px;
   padding: 0.4rem 0.8rem;
   display: flex;

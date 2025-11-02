@@ -1,9 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&display=swap');
 
 :root {
+  --first-background-color: #f9f9f9;
+  --second-background-color: #EAEAEA;
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
 }
 
 
@@ -11,5 +13,4 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
 }

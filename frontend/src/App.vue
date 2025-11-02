@@ -16,7 +16,7 @@ import Navbar from './components/AdminNavbar.vue'
 .content {
   margin-left: 9rem;
   padding: 1.5rem;
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
   min-height: 100vh;
   width: 100%;
 }

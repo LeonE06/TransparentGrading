@@ -102,12 +102,12 @@
   top: 0;
   width: 300px;
   height: 100vh;
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 1rem;
-  border-right: #EAEAEA 2.5px solid;
+  border-right: var(--second-background-color) 2.5px solid;
   
 
 }
@@ -131,7 +131,7 @@
 
 .active {
   background: 
-    linear-gradient(#f9f9f9 0 0) padding-box,
+    linear-gradient(var(--first-background-color) 0 0) padding-box,
     linear-gradient(to right, #6A16CC, #73A0F1) border-box;
   border: 1.5px solid transparent;
   border-radius: 10px;

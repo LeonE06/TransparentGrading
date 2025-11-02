@@ -153,7 +153,7 @@ h2 {
 
 /* Fenster */
 .modal {
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
   border-radius: 12px;
   padding: 2rem 5rem;
   width: 800px;

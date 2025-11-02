@@ -95,7 +95,7 @@ function downloadPDF() {
 
 /* Buttons */
 .btn {
-    background-color: #f9f9f9;
+    background-color: var(--first-background-color);
     border: 1.5px solid #EAEAEA;
     border-radius: 20px;
     padding: 0.4rem 0.8rem;
