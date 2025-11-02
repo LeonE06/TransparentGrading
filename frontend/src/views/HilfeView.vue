@@ -1,15 +1,26 @@
 <template>
-    <div class="hilfe-container">
-        <!-- Download-Button -->
-        <div class="download-section">
-            <a href="/TransparentGrading_Datenschutzkonzept_v1.0.pdf" download class="download-btn">
-                📄 PDF herunterladen
-            </a>
+    <div class="klassen-view">
+        <!-- obere Steuerleiste -->
+        <div class="toolbar">
+            <div class="left-controls">
+                <h1 class="title">Datenschutzkonzept</h1>
+            </div>
+
+            <div class="right-controls">
+
+                <button class="btn create-btn" @click="downloadPDF">
+                    PDF herunterladen
+                </button>
+            </div>
         </div>
 
-        <!-- HTML-Inhalt -->
+
         <div class="content-wrapper" v-html="htmlContent"></div>
     </div>
+
+
+
+
 </template>
 
 <script setup>
@@ -33,30 +44,70 @@ onMounted(async () => {
         htmlContent.value = '<p>Fehler beim Laden des Inhalts.</p>'
     }
 })
+
+function downloadPDF() {
+    const url = '/TransparentGrading_Datenschutzkonzept_v1.0.pdf'
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'TransparentGrading_Datenschutzkonzept_v1.0.pdf'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+}
+
 </script>
 
-<style scoped>
-.download-section {
+<style scoped> 
+.loading {
+    font-style: italic;
+    color: #666;
+}
+
+* {
+    text-align: left;
+}
+
+.klassen-view {
+    padding: 1rem 2rem;
+}
+
+.title {
+    font-size: 2rem;
     margin-bottom: 2rem;
-    text-align: center;
+    text-align: left;
+    font-weight: 650;
 }
 
-.download-btn {
-    display: inline-block;
-    background-color: #4a90e2;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 500;
+/* Toolbar */
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.2rem;
+}
+
+.left-controls,
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+    background-color: #f9f9f9;
+    border: 1.5px solid #EAEAEA;
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
     transition: background-color 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 16px 30px;
+    min-width: 180px;
 }
 
-.download-btn:hover {
-    background-color: #3b7ccc;
-    text-decoration: none;
+.create-btn {
+    background-image: linear-gradient(to right, #6A16CC, #73A0F1);
+    color: white;
+    border: none;
 }
-
-
 </style>
