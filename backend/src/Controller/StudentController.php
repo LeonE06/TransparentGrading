@@ -4,21 +4,54 @@ namespace App\Controller;
 
 use App\Entity\Schueler;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/students')]
+#[Route('/api/students', name: 'api_students_')]
 class StudentController extends AbstractController
 {
     /**
-     * 🔹 GET /api/students
-     * Gibt alle Schüler*innen zurück, optional gefiltert nach einem Suchbegriff.
-     * Beispiel: /api/students?search=leon
+     * 🔹 GET /api/students/view?page=1&limit=20
+     * -> zieht Daten aus der DB-View mit Pagination
      */
-    #[Route('', name: 'get_students', methods: ['GET'])]
+    #[Route('/view', name: 'view', methods: ['GET', 'OPTIONS'])]
+    public function getStudentsView(Connection $connection, Request $request): JsonResponse
+    {
+        // Preflight abfangen
+        if ($request->getMethod() === 'OPTIONS') {
+            return new JsonResponse([], 204);
+        }
+
+        $page  = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, (int) $request->query->get('limit', 20));
+        $offset = ($page - 1) * $limit;
+
+        $students = $connection->fetchAllAssociative(
+            'SELECT * FROM view_schueler_uebersicht LIMIT :limit OFFSET :offset',
+            ['limit' => $limit, 'offset' => $offset],
+            ['limit' => \PDO::PARAM_INT, 'offset' => \PDO::PARAM_INT]
+        );
+
+        $total = $connection->fetchOne('SELECT COUNT(*) FROM view_schueler_uebersicht');
+
+        return $this->json([
+            'data'  => $students,
+            'page'  => $page,
+            'limit' => $limit,
+            'total' => (int) $total,
+            'pages' => (int) ceil($total / $limit),
+        ]);
+    }
+
+    /**
+     * 🔹 GET /api/students
+     * (Alternative Variante über Doctrine, ohne View)
+     */
+    #[Route('', name: 'list', methods: ['GET'])]
     public function getAll(
         Request $request,
         EntityManagerInterface $em,
@@ -41,7 +74,7 @@ class StudentController extends AbstractController
             ->getResult();
 
         $json = $serializer->serialize($students, 'json', [
-            'groups' => ['student_read']
+            'groups' => ['student_read'],
         ]);
 
         return new JsonResponse($json, 200, [], true);
@@ -49,9 +82,9 @@ class StudentController extends AbstractController
 
     /**
      * 🔹 GET /api/students/{id}
-     * Gibt die Daten eines einzelnen Schülers zurück.
+     * -> gibt einen einzelnen Schüler zurück
      */
-    #[Route('/{id}', name: 'get_student', methods: ['GET'])]
+    #[Route('/{id<\d+>}', name: 'one', methods: ['GET'])]
     public function getOne(
         int $id,
         EntityManagerInterface $em,
@@ -64,9 +97,64 @@ class StudentController extends AbstractController
         }
 
         $json = $serializer->serialize($student, 'json', [
-            'groups' => ['student_read']
+            'groups' => ['student_read'],
         ]);
 
         return new JsonResponse($json, 200, [], true);
     }
+/**
+     * 🔹 DELETE /api/students/{id}
+     * -> deleted einen einzelnen schüler
+     */
+    #[Route('/{id<\d+>}', name: 'delete', methods: ['DELETE'])]
+public function deleteStudent(int $id, EntityManagerInterface $em): JsonResponse
+{
+    $student = $em->getRepository(Schueler::class)->find($id);
+
+    if (!$student) {
+        return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+    }
+
+    $em->remove($student);
+    $em->flush();
+
+    return new JsonResponse(['message' => 'Schüler*in gelöscht.'], 200);
+}
+
+/**
+     * 🔹 PUT /api/students/{id}
+     * -> updadet einen einzelnen Schüler
+     */
+
+#[Route('/{id<\d+>}', name: 'update_student', methods: ['PUT'])]
+public function updateStudent(
+    int $id,
+    Request $request,
+    EntityManagerInterface $em
+): JsonResponse {
+    $student = $em->getRepository(Schueler::class)->find($id);
+
+    if (!$student) {
+        return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+    }
+
+    $data = json_decode($request->getContent(), true);
+    if (!isset($data['klasse'])) {
+        return new JsonResponse(['error' => 'Klasse nicht angegeben.'], 400);
+    }
+
+    // Neue Klasse finden (Name oder ID)
+    $klasse = $em->getRepository(\App\Entity\Klassen::class)->findOneBy(['name' => $data['klasse']]);
+    if (!$klasse) {
+        return new JsonResponse(['error' => 'Klasse nicht gefunden.'], 404);
+    }
+
+    // Klasse aktualisieren
+    $student->setKlasse($klasse);
+    $em->flush();
+
+    return new JsonResponse(['message' => 'Schüler*in erfolgreich aktualisiert.']);
+}
+
+
 }
