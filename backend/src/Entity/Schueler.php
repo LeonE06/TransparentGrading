@@ -48,6 +48,11 @@ class Schueler
     #[ORM\OneToMany(mappedBy: 'schueler', targetEntity: KursEinstellungen::class)]
     private Collection $kursEinstellungen;
 
+    #[ORM\ManyToOne(targetEntity: Microsoft365User::class)]
+    #[ORM\JoinColumn(name: "ms365usr_id", referencedColumnName: "id", nullable: false)]
+    #[Groups(['class_read', 'student_read'])]
+    private ?Microsoft365User $ms365User = null;
+
     public function __construct()
     {
         $this->empfangeneNachrichten = new ArrayCollection();
