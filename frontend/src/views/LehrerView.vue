@@ -3,11 +3,11 @@
     <!-- Überschrift -->
     <h1 class="title">Alle Lehrer*innen</h1>
 
-    <!-- obere Steuerleiste -->
+    <!-- Toolbar -->
     <div class="toolbar">
       <div class="left-controls">
-        <button class="btn" :class="{ active: filter === 'all' }" @click="filter = 'all'">Alle</button>
-        <button class="btn" :class="{ active: filter === 'az' }" @click="filter = 'az'">Sortiert A-Z</button>
+        <button class="btn" @click="loadTeachers">Alle</button>
+        <button class="btn" @click="sortByName">Sortiert A-Z</button>
       </div>
     </div>
 
@@ -21,39 +21,49 @@
 
     <!-- Lehrer-Liste -->
     <div class="teacher-list">
-      <div v-if="loading" class="loading">⏳ Lade Lehrer*innen...</div>
+      <div v-if="loading" class="loading">⏳ Lade Lehrer...</div>
 
       <div v-else-if="filteredTeachers.length === 0">
         <p>Keine Lehrer*innen gefunden.</p>
       </div>
 
-      <ul v-else>
-        <li v-for="lehrer in filteredTeachers" :key="lehrer.lehrer_id" class="teacher-item">
-          <div class="teacher-info">
-            <strong>{{ lehrer.vorname }} {{ lehrer.nachname }}</strong>
-            <span class="email">{{ lehrer.email }}</span>
-          </div>
-
-          <div class="teacher-actions">
-            <button class="delete-btn" @click="deleteTeacher(lehrer.lehrer_id)">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M21 5.97998C17.67 5.64998 14.32 5.47998 10.98 5.47998C9 5.47998 7.02 5.57998 5.04 5.77998L3 5.97998"
-                  stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97"
-                  stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                <path
-                  d="M18.8499 9.14001L18.1999 19.21C18.0899 20.78 17.9999 22 15.2099 22H8.7899C5.9999 22 5.9099 20.78 5.7999 19.21L5.1499 9.14001"
-                  stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M10.3301 16.5H13.6601" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-                <path d="M9.5 12.5H14.5" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </li>
-      </ul>
+      <table v-else class="teacher-table">
+        <thead>
+          <tr>
+            <th>Vorname</th>
+            <th>Nachname</th>
+            <th>Email</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in filteredTeachers" :key="t.id">
+            <td>{{ t.vorname }}</td>
+            <td>{{ t.nachname }}</td>
+            <td>{{ t.email }}</td>
+            <td class="actions">
+              <button class="delete-btn" @click="deleteTeacher(t.id)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M21 5.97998C17.67 5.64998 14.32 5.47998 10.98 5.47998C9 5.47998 7.02 5.57998 5.04 5.77998L3 5.97998"
+                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97"
+                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M18.8499 9.14001L18.1999 19.21C18.0899 20.78 17.9999 22 15.2099 22H8.7899C5.9999 22 5.9099 20.78 5.7999 19.21L5.1499 9.14001"
+                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M10.3301 16.5H13.6601" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path d="M9.5 12.5H14.5" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -62,67 +72,60 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
-// API setup
 const isDev = import.meta.env.DEV
 const apiBase = import.meta.env.VITE_API_URL || ''
 const apiPrefix = isDev ? '' : `${apiBase}/api`
 
-// States
 const teachers = ref([])
-const loading = ref(false)
 const searchTerm = ref('')
-const filter = ref('all')
+const loading = ref(false)
 
-// 🔹 Lehrer laden
+// Lehrer laden
 async function loadTeachers() {
   loading.value = true
   try {
-    const res = await axios.get(`${apiPrefix}/teachers/view`)
-    teachers.value = res.data
-  } catch (err) {
-    console.error('❌ Fehler beim Laden der Lehrer*innen:', err)
+    const response = await axios.get(`${apiPrefix}/teachers/view`)
+    teachers.value = response.data
+  } catch (error) {
+    console.error('❌ Fehler beim Laden der Lehrer:', error)
   } finally {
     loading.value = false
   }
 }
 
-// 🔹 Lehrer löschen
+// Lehrer löschen
 async function deleteTeacher(id) {
   if (!confirm('Willst du diesen Lehrer wirklich löschen?')) return
   try {
     await axios.delete(`${apiPrefix}/teachers/${id}`)
-    alert('✅ Lehrer gelöscht.')
+    console.log('✅ Lehrer gelöscht:', id)
     loadTeachers()
   } catch (err) {
-    console.error('❌ Fehler beim Löschen:', err)
-    alert('Fehler beim Löschen.')
+    console.error('❌ Fehler beim Löschen des Lehrers:', err)
+    alert('Fehler beim Löschen des Lehrers.')
   }
 }
 
-// 🔹 Filter + Suche + Sortierung
+// Filter / Suche
 const filteredTeachers = computed(() => {
-  let list = teachers.value
-
-  // Suche
-  if (searchTerm.value) {
-    const term = searchTerm.value.toLowerCase()
-    list = list.filter(
-      (t) =>
-        t.vorname.toLowerCase().includes(term) ||
-        t.nachname.toLowerCase().includes(term) ||
-        (t.email && t.email.toLowerCase().includes(term))
-    )
-  }
-
-  // Sortierung
-  if (filter.value === 'az') {
-    list = [...list].sort((a, b) => a.nachname.localeCompare(b.nachname))
-  }
-
-  return list
+  if (!searchTerm.value.trim()) return teachers.value
+  const term = searchTerm.value.toLowerCase()
+  return teachers.value.filter(
+    t =>
+      t.vorname.toLowerCase().includes(term) ||
+      t.nachname.toLowerCase().includes(term) ||
+      t.email.toLowerCase().includes(term)
+  )
 })
 
-onMounted(loadTeachers)
+// Sortierfunktion
+function sortByName() {
+  teachers.value.sort((a, b) => a.nachname.localeCompare(b.nachname))
+}
+
+onMounted(() => {
+  loadTeachers()
+})
 </script>
 
 <style scoped>
@@ -145,26 +148,26 @@ onMounted(loadTeachers)
   margin-bottom: 2.2rem;
 }
 
-.left-controls {
+.left-controls,
+.right-controls {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
 /* Buttons */
 .btn {
-  background-color: #f9f9f9;
+  background-color: var(--first-background-color);
   border: 1.5px solid #EAEAEA;
   border-radius: 20px;
   padding: 16px 30px;
-  min-width: 180px;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-width: 180px;
 }
 
-.btn.active {
-  background-image: linear-gradient(to right, #6A16CC, #73A0F1);
-  color: white;
-  border: none;
+.btn:hover {
+  background-color: #f1f1f1;
 }
 
 /* Suchfeld */
@@ -179,7 +182,7 @@ onMounted(loadTeachers)
   background-size: 15px 15px;
 }
 
-/* Lehrer-Liste */
+/* Lehrer-Tabelle */
 .teacher-list {
   background-color: #fff;
   border-radius: 8px;
@@ -187,31 +190,34 @@ onMounted(loadTeachers)
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.teacher-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.2rem 0;
+.teacher-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.teacher-table th {
+  text-align: left;
+  background: #f7f7f7;
+  padding: 12px 18px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+}
+
+.teacher-table td {
+  padding: 10px 18px;
   border-bottom: 1px solid #eee;
 }
 
-.teacher-item:last-child {
-  border-bottom: none;
+.teacher-table tr:hover {
+  background-color: #f9f5ff;
 }
 
-.teacher-info strong {
-  font-weight: 600;
-  font-size: 1.05rem;
-}
-
-.email {
-  color: #777;
-  margin-left: 1rem;
-}
-
-.teacher-actions {
+/* Aktionen */
+.actions {
   display: flex;
-  gap: 0.5rem;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .delete-btn {
