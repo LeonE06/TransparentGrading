@@ -1,7 +1,7 @@
 <template>
   <div class="modal-backdrop" @click.self="close">
     <div class="modal">
-      <h2>Neues Klasse erstellen</h2>
+      <h2>Neue Klasse erstellen</h2>
 
       <!-- Klassenbezeichnung -->
       <div class="form-group">
@@ -18,6 +18,7 @@
       <div class="form-group">
         <label>Schüler*innen hinzufügen</label>
         <input
+          class="search"
           v-model="studentSearch"
           @input="searchStudents"
           type="text"
@@ -137,6 +138,15 @@ function close() {
 </script>
 
 <style scoped>
+
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: left;
+  font-weight: 650;
+}
+
 /* Hintergrund */
 .modal-backdrop {
   position: fixed;
@@ -150,30 +160,49 @@ function close() {
 
 /* Fenster */
 .modal {
-  background-color: white;
+  background-color: #f9f9f9;
   border-radius: 12px;
-  padding: 2rem;
-  width: 600px;
+  padding: 2rem 5rem;
+  width: 800px;
+  min-height: 50vh;
   max-width: 90%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Eingabefelder */
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 label {
+  
   font-weight: 600;
   display: block;
   margin-bottom: 0.3rem;
+  text-align: left;;
+}
+
+.search{
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid #4D495C;
+  border-radius: 6px;
+  width: 91%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: white url("/searchIcon.svg") no-repeat 15px center;
+  background-size: 15px 15px;
 }
 
 input {
-  width: 100%;
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  padding: 0.8rem 1.6rem;
+  border-radius: 6px;
+  border:none;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #EAEAEA;
+  background-size: 15px 15px;
 }
 
 /* Schüler-Suchergebnisse */
@@ -201,18 +230,20 @@ input {
 .selected-students {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.8rem;
   margin-top: 0.6rem;
+  
 }
 
 .student-chip {
-  background-color: #f1f3f9;
-  border: 1px solid #d3daf3;
-  border-radius: 20px;
+  background-color: #EAEAEA;
+  border: 1px solid #EAEAEA;
+  border-radius: 15px;
   padding: 0.4rem 0.8rem;
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  margin-right: 1rem;
 }
 
 .remove-btn {
@@ -231,20 +262,27 @@ input {
 }
 
 .cancel {
-  background-color: #f0f0f0;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 16px 10px;
+  min-width: 180px;
+  background-image: #EAEAEA;
+  color: #4D495C;
+  border: none;
 }
 
 .create {
-  background: linear-gradient(90deg, #4a90e2, #6675ff);
-  border: none;
-  color: white;
-  padding: 0.5rem 1.2rem;
-  border-radius: 8px;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 16px 10px;
+  min-width: 180px;
+  background-image: linear-gradient(to right, #6A16CC, #73A0F1);
+  color: white;
+  border: none;
 }
 
 .create:disabled {

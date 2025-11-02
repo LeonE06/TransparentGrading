@@ -52,8 +52,8 @@
               </svg>
             </button>
 
-            <button class="delete-btn" @click="deleteClass(klasse.id)"><svg width="24" height="24"
-                viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button class="delete-btn" @click="deleteClass(klasse.id)"><svg width="24" height="24" viewBox="0 0 24 24"
+                fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M21 5.97998C17.67 5.64998 14.32 5.47998 10.98 5.47998C9 5.47998 7.02 5.57998 5.04 5.77998L3 5.97998"
                   stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -258,7 +258,7 @@ onMounted(() => {
 .class-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.6rem 0;
+  padding: 1.5rem 0;
   border-bottom: 1px solid #eee;
 }
 
@@ -269,6 +269,7 @@ onMounted(() => {
 .count {
   color: #777;
   font-size: 0.9rem;
+  margin-left: 1rem;
 }
 
 .loading {
@@ -290,7 +291,7 @@ onMounted(() => {
 }
 
 .edit-btn {
-   border: none;
+  border: none;
   background-color: #ffff;
 }
 
