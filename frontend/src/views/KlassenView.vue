@@ -39,7 +39,8 @@
           </div>
 
           <div class="class-actions">
-            <button class="edit-btn" @click="openEditModal(klasse)"><svg width="24" height="24" viewBox="0 0 24 24"
+            <button class="edit-btn" @click="openEditModal(klasse)">
+              <svg width="24" height="24" viewBox="0 0 24 24"
                 fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M11 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22H15C20 22 22 20 22 15V13" stroke="#292D32"
                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -224,6 +225,9 @@ onMounted(() => {
   min-width: 180px;
 }
 
+.btn:hover {
+  background-color: #f1f1f1;
+}
 
 .create-btn {
   background-image: linear-gradient(to right, #6A16CC, #73A0F1);

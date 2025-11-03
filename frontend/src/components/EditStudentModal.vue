@@ -103,12 +103,13 @@ onMounted(loadClasses)
 
 /* Modal */
 .modal {
-  background: #fff;
+    background-color: var(--first-background-color);
   border-radius: 12px;
-  width: 600px;
+  padding: 2rem 5rem;
+  width: 800px;
+  min-height: 50vh;
   max-width: 90%;
-  padding: 1.5rem 2rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Header */
@@ -179,13 +180,15 @@ select:focus {
 }
 
 .cancel-btn {
-  background-color: #e8e8e8;
-  color: #333;
-  border: none;
-  padding: 0.6rem 1.4rem;
-  border-radius: 8px;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  padding: 16px 10px;
+  min-width: 180px;
+  background-image: #EAEAEA;
+  color: #4D495C;
+  border: none;
 }
 
 .cancel-btn:hover {
@@ -193,13 +196,15 @@ select:focus {
 }
 
 .save-btn {
-  background-image: linear-gradient(to right, #6a16cc, #73a0f1);
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 16px 10px;
+  min-width: 180px;
+  background-image: linear-gradient(to right, #6A16CC, #73A0F1);
   color: white;
   border: none;
-  padding: 0.6rem 1.4rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.15s;
 }
 
 .save-btn:hover {

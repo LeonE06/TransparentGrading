@@ -251,7 +251,7 @@ input {
   display: flex;
   justify-content: flex-end;
   gap: 0.8rem;
-  margin-top: 1rem;
+  margin-top: 2rem;
 }
 
 .cancel {
@@ -264,6 +264,9 @@ input {
   background-image: #EAEAEA;
   color: #4D495C;
   border: none;
+}
+.cancel:hover {
+  background-color: #d5d5d5;
 }
 
 .save {
