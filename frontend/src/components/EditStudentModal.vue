@@ -202,7 +202,7 @@ select:focus {
   transition: background-color 0.2s;
   padding: 16px 10px;
   min-width: 180px;
-  background-image: linear-gradient(to right, #6A16CC, #73A0F1);
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
   color: white;
   border: none;
 }

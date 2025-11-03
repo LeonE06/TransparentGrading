@@ -106,7 +106,7 @@ function downloadPDF() {
 }
 
 .create-btn {
-    background-image: linear-gradient(to right, #6A16CC, #73A0F1);
+    background-image: linear-gradient(to right, var(--primary), var(--secondary));
     color: white;
     border: none;
 }

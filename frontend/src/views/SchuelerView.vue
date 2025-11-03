@@ -197,7 +197,7 @@ onMounted(loadStudents)
 /* Buttons */
 .btn {
   background-color: var(--first-background-color);
-  border: 1.5px solid #EAEAEA;
+  border: 1.5px solid var(--second-background-color);
   border-radius: 20px;
   padding: 16px 30px;
   cursor: pointer;
@@ -223,7 +223,7 @@ onMounted(loadStudents)
 
 /* Tabelle im Klassenstil */
 .student-list {
-  background-color: #fff;
+  background-color: var(--card);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -236,7 +236,7 @@ onMounted(loadStudents)
 
 .student-table th {
   text-align: left;
-  background: #fff;
+  background: var(--card);
   padding: 12px 18px;
   font-weight: 600;
   color: #333;
@@ -259,7 +259,7 @@ onMounted(loadStudents)
 
 .edit-btn {
   border: none;
-  background-color: #ffff;
+  background-color: var(--card);
 }
 
 .edit-btn:hover {
@@ -268,7 +268,7 @@ onMounted(loadStudents)
 
 .delete-btn {
   border: none;
-  background-color: #ffff;
+  background-color: var(--card);
 }
 
 .delete-btn:hover {
@@ -285,8 +285,8 @@ onMounted(loadStudents)
 }
 
 .page-btn {
-  background-color: #ffffff;
-  border: 1.5px solid #eaeaea;
+  background-color: var(--card);
+  border: 1.5px solid var(--second-background-color);
   border-radius: 10px;
   padding: 8px 16px;
   min-width: 40px;
@@ -303,8 +303,8 @@ onMounted(loadStudents)
 }
 
 .page-btn.active {
-  background-image: linear-gradient(to right, #6a16cc, #73a0f1);
-  color: white;
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
+  color: var(--card);
   border: none;
   font-weight: 600;
   transform: translateY(-1px);

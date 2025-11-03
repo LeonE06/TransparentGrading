@@ -118,7 +118,7 @@
   padding-bottom: 20px;
   border-radius: 6px;
   text-decoration: none;
-  color: #333;
+  color: var(--text);
   text-align: left;
   display: flex;
   margin: 3vh 0;
@@ -132,7 +132,7 @@
 .active {
   background: 
     linear-gradient(var(--first-background-color) 0 0) padding-box,
-    linear-gradient(to right, #6A16CC, #73A0F1) border-box;
+    linear-gradient(to right, var(--primary), var(--secondary)) border-box;
   border: 1.5px solid transparent;
   border-radius: 10px;
 }

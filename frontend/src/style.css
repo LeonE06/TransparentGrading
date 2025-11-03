@@ -7,22 +7,25 @@
   --text: #222;
   --muted: #666;
   --primary: #6A16CC;
+  --secondary: #73A0F1;
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
   background-color: var(--first-background-color);
 }
 
 html.dark {
-  --first-background-color: #0f1115;
+  --first-background-color: #2B2730;
   --second-background-color: #4D495C;
   --card: #0b0d10;
   --text: #e6e6e6;
   --muted: #9aa0a6;
-  --primary: #7a5cff;
+  --primary: #907DFF;
+  --secondary: #2F43E7;
 }
 
 #app {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
+  color: var(--text);
 }
