@@ -97,7 +97,7 @@ const apiPrefix = isDev ? '' : `${apiBase}/api`
 
 const students = ref([])
 const page = ref(1)
-const limit = ref(20)
+const limit = ref(10)
 const totalPages = ref(1)
 const searchTerm = ref('')
 const loading = ref(false)

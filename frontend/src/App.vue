@@ -1,7 +1,9 @@
 <template>
   <div class="app">
     <Navbar />
+    
     <main class="content">
+      <DarkLightMode />
       <router-view />
     </main>
   </div>
@@ -9,6 +11,7 @@
 
 <script setup>
 import Navbar from './components/AdminNavbar.vue'
+import DarkLightMode from '@/components/DarkLightMode.vue'
 </script>
 
 <style>

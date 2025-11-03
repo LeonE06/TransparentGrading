@@ -33,7 +33,7 @@
             <th>Vorname</th>
             <th>Nachname</th>
             <th>Email</th>
-            <th>Aktionen</th>
+            <th style="text-align: right;">Aktionen</th>
           </tr>
         </thead>
         <tbody>
@@ -41,23 +41,17 @@
             <td>{{ t.vorname }}</td>
             <td>{{ t.nachname }}</td>
             <td>{{ t.email }}</td>
-            <td class="actions">
-              <button class="delete-btn" @click="deleteTeacher(t.id)">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
+            <td class="class-actions">
+              <button class="edit-btn" @click="deleteTeacher(t.id)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22H15C20 22 22 20 22 15V13" stroke="#292D32"
+                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                   <path
-                    d="M21 5.97998C17.67 5.64998 14.32 5.47998 10.98 5.47998C9 5.47998 7.02 5.57998 5.04 5.77998L3 5.97998"
-                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <path
-                    d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97"
-                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <path
-                    d="M18.8499 9.14001L18.1999 19.21C18.0899 20.78 17.9999 22 15.2099 22H8.7899C5.9999 22 5.9099 20.78 5.7999 19.21L5.1499 9.14001"
-                    stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M10.3301 16.5H13.6601" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
+                    d="M16.0399 3.02001L8.15988 10.9C7.85988 11.2 7.55988 11.79 7.49988 12.22L7.06988 15.23C6.90988 16.32 7.67988 17.08 8.76988 16.93L11.7799 16.5C12.1999 16.44 12.7899 16.14 13.0999 15.84L20.9799 7.96001C22.3399 6.60001 22.9799 5.02001 20.9799 3.02001C18.9799 1.02001 17.3999 1.66001 16.0399 3.02001Z"
+                    stroke="#292D32" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round"
                     stroke-linejoin="round" />
-                  <path d="M9.5 12.5H14.5" stroke="#292D32" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
+                  <path d="M14.9102 4.15002C15.5802 6.54002 17.4502 8.41002 19.8502 9.09002" stroke="#292D32"
+                    stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
             </td>
@@ -197,7 +191,7 @@ onMounted(() => {
 
 .teacher-table th {
   text-align: left;
-  background: #f7f7f7;
+  background: #fff;
   padding: 12px 18px;
   font-weight: 600;
   color: #333;
@@ -209,22 +203,25 @@ onMounted(() => {
   border-bottom: 1px solid #eee;
 }
 
-.teacher-table tr:hover {
-  background-color: #f9f5ff;
-}
-
 /* Aktionen */
-.actions {
+.class-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  border: none;
+  background-color: #ffff;
+}
+
+.edit-btn:hover {
+  transform: scale(1.1);
 }
 
 .delete-btn {
   border: none;
-  background-color: #fff;
-  cursor: pointer;
-  transition: transform 0.15s;
+  background-color: #ffff;
 }
 
 .delete-btn:hover {
