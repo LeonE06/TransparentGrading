@@ -7,6 +7,9 @@ COPY frontend/package*.json ./
 # 🔒 Sicheres & reproduzierbares Installieren (mit lockfile)
 RUN npm ci || npm install
 
+# 📦 Installiere zusätzlich @vueuse/core
+RUN npm install @vueuse/core
+
 # ---------- 💻 Development ----------
 FROM base AS dev
 ENV NODE_ENV=development

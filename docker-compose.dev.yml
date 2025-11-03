@@ -12,6 +12,11 @@ services:
       APP_ENV: dev
       APP_DEBUG: 1
       DATABASE_URL: mysql://tg_user:tg_pass@db:3306/transparentgrading
+       # 👇 Microsoft OAuth Testmodus-Variablen
+      AZURE_CLIENT_ID: "00000000-0000-0000-0000-000000000000"
+      AZURE_CLIENT_SECRET: "dummy"
+      AZURE_TENANT: "common"
+      AZURE_REDIRECT_URI: "http://localhost:8000/callback/microsoft"
     ports:
       - "8000:8000"
     volumes:
