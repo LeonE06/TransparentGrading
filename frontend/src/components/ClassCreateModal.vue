@@ -185,12 +185,12 @@ label {
 .search{
   padding: 0.8rem 1.6rem;
   padding-left: 3rem;
-  border: 1px solid #4D495C;
+  border: 1px solid var(--aczent-color);
   border-radius: 6px;
   width: 91%;
   border-radius: 10px;
   margin-bottom: 1.5rem;
-  background: white url("/searchIcon.svg") no-repeat 15px center;
+  background: var(--second-background-color) url("/searchIcon.svg") no-repeat 15px center;
   background-size: 15px 15px;
 }
 
@@ -207,8 +207,8 @@ input {
 
 /* Schüler-Suchergebnisse */
 .search-results {
-  background-color: #fff;
-  border: 1px solid #ccc;
+  background-color: var(--second-background-color);
+  border: 1px solid var(--aczent-color);
   border-radius: 8px;
   margin-top: 0.4rem;
   max-height: 180px;
@@ -223,7 +223,11 @@ input {
 }
 
 .search-results li:hover {
-  background-color: #f0f4ff;
+  background-color: var(--first-background-color);
+}
+
+.search-icon {
+  color: var(--icon-color);
 }
 
 /* Chips */
@@ -268,8 +272,8 @@ input {
   transition: background-color 0.2s;
   padding: 16px 10px;
   min-width: 180px;
-  background-image: #EAEAEA;
-  color: #4D495C;
+  background-color: var(--second-background-color);
+  color: var(--aczent-color);
   border: none;
 }
 
@@ -281,7 +285,7 @@ input {
   padding: 16px 10px;
   min-width: 180px;
   background-image: linear-gradient(to right, var(--primary), var(--secondary));
-  color: white;
+  color: var(--aczent-color);
   border: none;
 }
 

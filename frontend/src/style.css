@@ -3,11 +3,15 @@
 :root {
   --first-background-color: #f9f9f9;
   --second-background-color: #EAEAEA;
-  --card: #fff;
+  --aczent-color: #4D495C;
+  --card: #EAEAEA;
+  --white: #fff;
+  --search-background: #fff;
   --text: #222;
   --muted: #666;
   --primary: #6A16CC;
   --secondary: #73A0F1;
+  --icon-color: #292D32;
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
   background-color: var(--first-background-color);
@@ -16,11 +20,15 @@
 html.dark {
   --first-background-color: #2B2730;
   --second-background-color: #4D495C;
-  --card: #0b0d10;
+  --aczent-color: #f7f7f7;
+  --card: #4D495C;
+  --white: #fff;
+  --search-background: #4D495C;
   --text: #e6e6e6;
   --muted: #9aa0a6;
   --primary: #907DFF;
   --secondary: #2F43E7;
+  --icon-color: #f7f7f7;
 }
 
 #app {

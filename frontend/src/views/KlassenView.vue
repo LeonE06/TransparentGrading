@@ -53,11 +53,12 @@
               </svg>
             </button>
 
-            <button class="delete-btn" @click="deleteClass(klasse.id)"><svg width="24" height="24" viewBox="0 0 24 24"
+            <button class="delete-btn" @click="deleteClass(klasse.id)">
+              <svg width="24" height="24" viewBox="0 0 24 24"
                 fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M21 5.97998C17.67 5.64998 14.32 5.47998 10.98 5.47998C9 5.47998 7.02 5.57998 5.04 5.77998L3 5.97998"
-                  stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97"
                   stroke="#292D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 <path
@@ -216,22 +217,23 @@ onMounted(() => {
 /* Buttons */
 .btn {
   background-color: var(--first-background-color);
-  border: 1.5px solid #EAEAEA;
+  border: 1.5px solid var(--second-background-color);
   border-radius: 20px;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
   padding: 16px 30px;
   min-width: 180px;
+  color: var(--text);
 }
 
 .btn:hover {
-  background-color: #f1f1f1;
+  background-color: var(--second-background-color);
 }
 
 .create-btn {
   background-image: linear-gradient(to right, var(--primary), var(--secondary));
-  color: white;
+  color: var(--white);
   border: none;
 }
 
@@ -242,28 +244,35 @@ onMounted(() => {
 .search-input {
   padding: 0.8rem 1.6rem;
   padding-left: 3rem;
-  border: 1px solid #4D495C;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
   border-radius: 6px;
   width: 94%;
   border-radius: 10px;
   margin-bottom: 1.5rem;
-  background: white url("/searchIcon.svg") no-repeat 15px center;
+  background: var(--search-background) url("/searchIcon.svg") no-repeat 15px center;
   background-size: 15px 15px;
+  
 }
+
+input svg path {
+  stroke: var(--icon-color);
+}
+
+svg path {
+  stroke: var(--icon-color);
+}
+
+::placeholder {
+    color: var(--aczent-color);
+  }
 
 /* Klassenliste */
 .class-list {
-  background-color: #fff;
+  background-color: var(--search-background);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.class-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid #eee;
 }
 
 .class-item:last-child {
@@ -271,13 +280,13 @@ onMounted(() => {
 }
 
 .count {
-  color: #777;
+  color: var(--aczent-color);
   font-size: 0.9rem;
   margin-left: 1rem;
 }
 
 .loading {
-  color: #555;
+  color: var(--aczent-color);
   font-style: italic;
 }
 
@@ -296,7 +305,7 @@ onMounted(() => {
 
 .edit-btn {
   border: none;
-  background-color: #ffff;
+  background: none;
 }
 
 .edit-btn:hover {
@@ -305,7 +314,7 @@ onMounted(() => {
 
 .delete-btn {
   border: none;
-  background-color: #ffff;
+  background: none;
 }
 
 .delete-btn:hover {

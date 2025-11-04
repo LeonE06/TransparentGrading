@@ -90,6 +90,10 @@
   margin-left: 25px;
 }
 
+.svg_nav path {
+  stroke: var(--icon-color);
+}
+
 .logo {
   width: 200px;
   align-self: center;
@@ -126,7 +130,7 @@
 }
 
 .nav-item:hover {
-  background-color: #f3f3f3;
+  background-color: var(--second-background-color);
 }
 
 .active {
