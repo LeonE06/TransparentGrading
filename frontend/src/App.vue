@@ -3,7 +3,7 @@
     <Navbar />
     
     <main class="content">
-      <DarkLightMode />
+      <Header />
       <router-view />
     </main>
   </div>
@@ -11,7 +11,7 @@
 
 <script setup>
 import Navbar from './components/AdminNavbar.vue'
-import DarkLightMode from '@/components/DarkLightMode.vue'
+import Header from './components/Header.vue';
 </script>
 
 <style>

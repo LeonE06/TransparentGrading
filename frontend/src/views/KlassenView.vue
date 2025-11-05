@@ -18,7 +18,8 @@
       </div>
     </div>
 
-    <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Klassen suchen..." />
+    <input v-if="!isDark" v-model="searchTerm" type="text" class="search-input" placeholder="Nach Klassen suchen..." />
+    <input v-else v-model="searchTerm" type="text" class="search-input-dark" placeholder="Nach Klassen suchen..." />
 
 
     <!-- Klassenliste -->
@@ -105,6 +106,8 @@ const searchTerm = ref('')
 const showCreateForm = ref(false)
 const classes = ref([])
 const loading = ref(false)
+import { useTheme } from '@/composables/useTheme.js'
+const { isDark, toggleTheme } = useTheme()
 
 // Klassen laden
 async function loadClasses() {
@@ -250,7 +253,20 @@ onMounted(() => {
   width: 94%;
   border-radius: 10px;
   margin-bottom: 1.5rem;
-  background: var(--search-background) url("/searchIcon.svg") no-repeat 15px center;
+  background: white url("/searchIcon.svg") no-repeat 15px center;
+  background-size: 15px 15px;
+  
+}
+.search-input-dark {
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #322d37 url("/searchIconDark.svg") no-repeat 15px center;
   background-size: 15px 15px;
   
 }
@@ -269,14 +285,19 @@ svg path {
 
 /* Klassenliste */
 .class-list {
-  background-color: var(--search-background);
+  background-color: var(--card);
   border-radius: 8px;
+  border: 1px solid #EAEAEA; 
   padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px var(--shadow);
 }
 
 .class-item:last-child {
   border-bottom: none;
+}
+
+ul {
+  padding:  0 1rem;
 }
 
 .count {
@@ -295,7 +316,7 @@ svg path {
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #EAEAEA;
 }
 
 .class-actions {

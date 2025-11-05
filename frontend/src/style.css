@@ -4,7 +4,7 @@
   --first-background-color: #f9f9f9;
   --second-background-color: #EAEAEA;
   --aczent-color: #4D495C;
-  --card: #EAEAEA;
+  --card: #fff;
   --white: #fff;
   --search-background: #fff;
   --text: #222;
@@ -12,6 +12,7 @@
   --primary: #6A16CC;
   --secondary: #73A0F1;
   --icon-color: #292D32;
+  --shadow: rgba(0, 0, 0, 0.05);
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
   background-color: var(--first-background-color);
@@ -21,7 +22,7 @@ html.dark {
   --first-background-color: #2B2730;
   --second-background-color: #4D495C;
   --aczent-color: #f7f7f7;
-  --card: #4D495C;
+  --card: #2B2730;
   --white: #fff;
   --search-background: #4D495C;
   --text: #e6e6e6;
@@ -29,6 +30,7 @@ html.dark {
   --primary: #907DFF;
   --secondary: #2F43E7;
   --icon-color: #f7f7f7;
+  --shadow: rgba(77, 73, 92, 1);
 }
 
 #app {

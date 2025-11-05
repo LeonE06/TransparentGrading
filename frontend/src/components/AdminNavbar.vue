@@ -1,6 +1,7 @@
 <template>
   <nav class="navbar">
-    <img src="/Logo_Transparent_Grading.png" alt="Logo Transparent Grading" class="logo">
+    <img v-if= "!isDark" src="/Logo_Transparent_Grading.png" alt="Logo Transparent Grading" class="logo">
+    <img v-else src="/Logo_Transparent_Grading_Dark.png" alt="Logo Transparent Grading Dark" class="logo">
     <router-link to="/klassen" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -84,6 +85,11 @@
 
 </template>
 
+<script setup>
+import { useTheme } from '@/composables/useTheme.js'
+const { isDark, toggleTheme } = useTheme()
+</script>
+
 <style scoped>
 .svg_nav {
   margin-right: 25px;
@@ -98,6 +104,7 @@
   width: 200px;
   align-self: center;
   margin-bottom: 25px;
+  margin-top: 20px;
 }
 
 .navbar {
