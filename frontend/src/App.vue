@@ -11,10 +11,8 @@
 </template>
 
 <script setup>
-<<<<<<< HEAD
 import Navbar from './components/AdminNavbar.vue'
 import Header from './components/Header.vue';
-=======
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -28,7 +26,6 @@ const route = useRoute()
 const currentNavbar = computed(() =>
   route.meta.layout === 'student' ? StudentNavbar : AdminNavbar
 )
->>>>>>> daca09a (moodboard + schueler navbar)
 </script>
 
 <style>
