@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Einstellungen;
+use App\Entity\KursEinstellungen;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,9 +23,10 @@ class SettingsController extends AbstractController
         $repo = $doctrine->getRepository(Einstellungen::class);
         $settings = $repo->findOneBy(['schueler' => $user]);
 
-        $value = $settings ? $settings->getLightDarkmode() : null;
-
-        return new JsonResponse(['light_darkmode' => $value], 200);
+        return new JsonResponse([
+            'light_darkmode' => $settings ? $settings->getLightDarkmode() : null,
+            'benachrichtigungen' => $settings ? $settings->getBenachrichtigungen() : null
+        ], 200);
     }
 
     #[Route('/api/settings', name: 'api_put_settings', methods: ['PUT'])]
@@ -36,24 +38,59 @@ class SettingsController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
-        if (!array_key_exists('light_darkmode', $data)) {
-            return new JsonResponse(['error' => 'Missing field'], 400);
-        }
 
         $em = $doctrine->getManager();
         $repo = $doctrine->getRepository(Einstellungen::class);
+        $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
+        
         $settings = $repo->findOneBy(['schueler' => $user]);
 
         if (!$settings) {
             $settings = new Einstellungen();
-            // Einstellungen entity uses Schueler as primary relation — setSchueler exists?
             $settings->setSchueler($user);
             $em->persist($settings);
         }
 
-        $settings->setLightDarkmode($data['light_darkmode']);
+        // Beide Felder können optional sein
+        if (array_key_exists('light_darkmode', $data)) {
+            $settings->setLightDarkmode($data['light_darkmode']);
+        }
+
+        if (array_key_exists('benachrichtigungen', $data)) {
+            $globalValue = $data['benachrichtigungen'];
+            $settings->setBenachrichtigungen($globalValue);
+            
+            // Alle KursEinstellungen für diesen Schüler aktualisieren
+            // 1. Alle Kurse des Schülers finden (über KursSchueler)
+            $kursSchueler = $user->getKursSchueler();
+            
+            foreach ($kursSchueler as $ks) {
+                $kurs = $ks->getKurs();
+                
+                // 2. Prüfen ob bereits eine KursEinstellung existiert
+                $kursEinstellung = $kursEinstellungenRepo->findOneBy([
+                    'schueler' => $user,
+                    'kurs' => $kurs
+                ]);
+                
+                // 3. Falls nicht vorhanden, neue erstellen
+                if (!$kursEinstellung) {
+                    $kursEinstellung = new KursEinstellungen();
+                    $kursEinstellung->setSchueler($user);
+                    $kursEinstellung->setKurs($kurs);
+                    $em->persist($kursEinstellung);
+                }
+                
+                // 4. Benachrichtigung auf den globalen Wert setzen
+                $kursEinstellung->setBenachrichtigung($globalValue);
+            }
+        }
+
         $em->flush();
 
-        return new JsonResponse(['light_darkmode' => $settings->getLightDarkmode()], 200);
+        return new JsonResponse([
+            'light_darkmode' => $settings->getLightDarkmode(),
+            'benachrichtigungen' => $settings->getBenachrichtigungen()
+        ], 200);
     }
 }
