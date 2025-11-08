@@ -12,7 +12,10 @@
     </div>
 
     <!-- Suchfeld -->
-    <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Schüler*in suchen..." />
+    <input v-if="!isDark" v-model="searchTerm" type="text" class="search-input"
+      placeholder="Nach Schüler*in suchen..." />
+    <input v-else v-model="searchTerm" type="text" class="search-input-dark" placeholder="Nach Schüler*in suchen..." />
+
 
     <!-- Schülerliste -->
     <div class="student-list">
@@ -90,6 +93,8 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import EditStudentModal from '../components/EditStudentModal.vue'
+import { useTheme } from '@/composables/useTheme.js'
+const { isDark, toggleTheme } = useTheme()
 
 const isDev = import.meta.env.DEV
 const apiBase = import.meta.env.VITE_API_URL || ''
@@ -199,34 +204,66 @@ onMounted(loadStudents)
   background-color: var(--first-background-color);
   border: 1.5px solid var(--second-background-color);
   border-radius: 20px;
-  padding: 16px 30px;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  padding: 16px 30px;
   min-width: 180px;
+  color: var(--text);
 }
 
 .btn:hover {
-  background-color: #f1f1f1;
+  background-color: var(--second-background-color);
 }
 
 /* Suchfeld */
 .search-input {
   padding: 0.8rem 1.6rem;
   padding-left: 3rem;
-  border: 1px solid #4D495C;
-  border-radius: 10px;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
   width: 94%;
+  border-radius: 10px;
   margin-bottom: 1.5rem;
   background: white url("/searchIcon.svg") no-repeat 15px center;
   background-size: 15px 15px;
+
+}
+
+.search-input-dark {
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #322d37 url("/searchIconDark.svg") no-repeat 15px center;
+  background-size: 15px 15px;
+
+}
+
+input svg path {
+  stroke: var(--icon-color);
+}
+
+svg path {
+  stroke: var(--icon-color);
+}
+
+::placeholder {
+  color: var(--aczent-color);
 }
 
 /* Tabelle im Klassenstil */
 .student-list {
   background-color: var(--card);
   border-radius: 8px;
+  border: 1px solid #EAEAEA;
   padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px var(--shadow);
 }
 
 .student-table {
@@ -239,13 +276,13 @@ onMounted(loadStudents)
   background: var(--card);
   padding: 12px 18px;
   font-weight: 600;
-  color: #333;
-  border-bottom: 1px solid #ddd;
+  color: var(--text);
+  border-bottom: 1px solid #EAEAEA;
 }
 
 .student-table td {
   padding: 10px 18px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #EAEAEA;
 }
 
 
@@ -292,19 +329,19 @@ onMounted(loadStudents)
   min-width: 40px;
   cursor: pointer;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease-in-out;
 }
 
 .page-btn:hover {
-  background-color: #f4f0ff;
+  background-color: var(--second-background-color);
   transform: translateY(-1px);
 }
 
 .page-btn.active {
   background-image: linear-gradient(to right, var(--primary), var(--secondary));
-  color: var(--card);
+  color: var(--white);
   border: none;
   font-weight: 600;
   transform: translateY(-1px);

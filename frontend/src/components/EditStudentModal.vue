@@ -130,6 +130,7 @@ onMounted(loadClasses)
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
+  color: var(--text);
 }
 
 /* Body */
@@ -149,26 +150,22 @@ select {
   width: 100%;
   padding: 0.6rem;
   border-radius: 8px;
-  border: 1px solid #ddd;
   background-color: #f9f9f9;
+  border: none;
   outline: none;
   transition: border-color 0.2s;
 }
 
 input[readonly] {
-  color: #666;
-  background-color: #f2f2f2;
+  color: var(--disabled-text);
+  background: var(--disabled);
   cursor: not-allowed;
 }
 
 select {
-  background-color: #fff;
+  color: var(--text);
+  background: var(--second-background-color);
   cursor: pointer;
-}
-
-input:focus,
-select:focus {
-  border-color: #6a16cc;
 }
 
 /* Footer */
@@ -180,34 +177,27 @@ select:focus {
 }
 
 .cancel-btn {
-  border-radius: 20px;
+ border-radius: 20px;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
   padding: 16px 10px;
   min-width: 180px;
-  background-image: #EAEAEA;
-  color: #4D495C;
+  background-color: var(--second-background-color);
+  color: var(--aczent-color);
   border: none;
 }
 
-.cancel-btn:hover {
-  background-color: #d5d5d5;
-}
-
 .save-btn {
-  border-radius: 20px;
+   border-radius: 20px;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
   padding: 16px 10px;
   min-width: 180px;
   background-image: linear-gradient(to right, var(--primary), var(--secondary));
-  color: white;
+  color: var(--white);
   border: none;
 }
 
-.save-btn:hover {
-  transform: scale(1.05);
-}
 </style>

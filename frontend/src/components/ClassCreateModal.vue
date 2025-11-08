@@ -6,42 +6,24 @@
       <!-- Klassenbezeichnung -->
       <div class="form-group">
         <label for="className">Klassenbezeichnung</label>
-        <input
-          id="className"
-          v-model="className"
-          type="text"
-          placeholder="z.B. 4AI"
-        />
+        <input id="className" v-model="className" type="text" placeholder="z.B. 4AI" />
       </div>
 
       <!-- Schüler*innen hinzufügen -->
       <div class="form-group">
         <label>Schüler*innen hinzufügen</label>
-        <input
-          class="search"
-          v-model="studentSearch"
-          @input="searchStudents"
-          type="text"
-          placeholder="Schüler*innen suchen und hinzufügen..."
-        />
+        <input v-if="!isDark" v-model="studentSearch" @input="searchStudents" type="text" class="search-input" placeholder="Schüler*innen suchen und hinzufügen......" />
+        <input v-else v-model="studentSearch" @input="searchStudents" type="text" class="search-input-dark" placeholder="Schüler*innen suchen und hinzufügen......" />
         <!-- Suchergebnisse -->
         <ul v-if="searchResults.length > 0" class="search-results">
-          <li
-            v-for="student in searchResults"
-            :key="student.id"
-            @click="addStudent(student)"
-          >
+          <li v-for="student in searchResults" :key="student.id" @click="addStudent(student)">
             {{ student.vorname }} {{ student.nachname }}
           </li>
         </ul>
 
         <!-- Ausgewählte Schüler -->
         <div class="selected-students">
-          <div
-            v-for="student in selectedStudents"
-            :key="student.id"
-            class="student-chip"
-          >
+          <div v-for="student in selectedStudents" :key="student.id" class="student-chip">
             {{ student.vorname }} {{ student.nachname }}
             <button class="remove-btn" @click="removeStudent(student.id)">×</button>
           </div>
@@ -63,6 +45,9 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import debounce from 'lodash/debounce'
+
+import { useTheme } from '@/composables/useTheme.js'
+const { isDark, toggleTheme } = useTheme()
 
 const emit = defineEmits(['close', 'created'])
 
@@ -119,9 +104,9 @@ async function createClass() {
   loading.value = true
   try {
     await axios.post(`${apiPrefix}/classes`, {
-  name: className.value,
-  students: selectedStudents.value.map(s => s.id),
-})
+      name: className.value,
+      students: selectedStudents.value.map(s => s.id),
+    })
     emit('created')
   } catch (err) {
     console.error('Fehler beim Erstellen der Klasse:', err)
@@ -138,8 +123,6 @@ function close() {
 </script>
 
 <style scoped>
-
-
 h2 {
   font-size: 2rem;
   margin-bottom: 2rem;
@@ -175,34 +158,24 @@ h2 {
 }
 
 label {
-  
+
   font-weight: 600;
   display: block;
   margin-bottom: 0.3rem;
-  text-align: left;;
-}
-
-.search{
-  padding: 0.8rem 1.6rem;
-  padding-left: 3rem;
-  border: 1px solid var(--aczent-color);
-  border-radius: 6px;
-  width: 91%;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-  background: var(--second-background-color) url("/searchIcon.svg") no-repeat 15px center;
-  background-size: 15px 15px;
+  text-align: left;
+  
 }
 
 input {
   padding: 0.8rem 1.6rem;
   border-radius: 6px;
-  border:none;
+  border: none;
   width: 94%;
   border-radius: 10px;
   margin-bottom: 1.5rem;
   background: var(--second-background-color);
   background-size: 15px 15px;
+  color: var(--text);
 }
 
 /* Schüler-Suchergebnisse */
@@ -236,7 +209,47 @@ input {
   flex-wrap: wrap;
   gap: 0.8rem;
   margin-top: 0.6rem;
-  
+
+}
+
+.search-input {
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: white url("/searchIcon.svg") no-repeat 15px center;
+  background-size: 15px 15px;
+
+}
+
+.search-input-dark {
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #322d37 url("/searchIconDark.svg") no-repeat 15px center;
+  background-size: 15px 15px;
+
+}
+
+input svg path {
+  stroke: var(--icon-color);
+}
+
+svg path {
+  stroke: var(--icon-color);
+}
+
+::placeholder {
+  color: var(--aczent-color);
 }
 
 .student-chip {
@@ -255,6 +268,7 @@ input {
   border: none;
   cursor: pointer;
   font-size: 1rem;
+  color: var(--text);
 }
 
 /* Aktionen */
@@ -285,7 +299,7 @@ input {
   padding: 16px 10px;
   min-width: 180px;
   background-image: linear-gradient(to right, var(--primary), var(--secondary));
-  color: var(--aczent-color);
+  color: var(--white);
   border: none;
 }
 

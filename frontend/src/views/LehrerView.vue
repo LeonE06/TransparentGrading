@@ -12,12 +12,10 @@
     </div>
 
     <!-- Suchfeld -->
-    <input
-      v-model="searchTerm"
-      type="text"
-      class="search-input"
-      placeholder="Nach Lehrer*in suchen..."
-    />
+    <input v-if="!isDark" v-model="searchTerm" type="text" class="search-input"
+      placeholder="Nach Lehrer*in suchen..." />
+    <input v-else v-model="searchTerm" type="text" class="search-input-dark" placeholder="Nach Lehrer*in suchen..." />
+
 
     <!-- Lehrer-Liste -->
     <div class="teacher-list">
@@ -70,6 +68,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { useTheme } from '@/composables/useTheme.js'
+const { isDark, toggleTheme } = useTheme()
 
 const isDev = import.meta.env.DEV
 const apiBase = import.meta.env.VITE_API_URL || ''
@@ -157,36 +157,68 @@ onMounted(() => {
 /* Buttons */
 .btn {
   background-color: var(--first-background-color);
-  border: 1.5px solid #EAEAEA;
+  border: 1.5px solid var(--second-background-color);
   border-radius: 20px;
-  padding: 16px 30px;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  padding: 16px 30px;
   min-width: 180px;
+  color: var(--text);
 }
 
 .btn:hover {
-  background-color: #f1f1f1;
+  background-color: var(--second-background-color);
 }
 
 /* Suchfeld */
 .search-input {
   padding: 0.8rem 1.6rem;
   padding-left: 3rem;
-  border: 1px solid #4D495C;
-  border-radius: 10px;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
   width: 94%;
+  border-radius: 10px;
   margin-bottom: 1.5rem;
   background: white url("/searchIcon.svg") no-repeat 15px center;
   background-size: 15px 15px;
+
+}
+
+.search-input-dark {
+  padding: 0.8rem 1.6rem;
+  padding-left: 3rem;
+  border: 1px solid var(--aczent-color);
+  color: var(--aczent-color);
+  border-radius: 6px;
+  width: 94%;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #322d37 url("/searchIconDark.svg") no-repeat 15px center;
+  background-size: 15px 15px;
+
+}
+
+input svg path {
+  stroke: var(--icon-color);
+}
+
+svg path {
+  stroke: var(--icon-color);
+}
+
+::placeholder {
+  color: var(--aczent-color);
 }
 
 /* Lehrer-Tabelle */
 .teacher-list {
-  background-color: #fff;
+ background-color: var(--card);
   border-radius: 8px;
+  border: 1px solid #EAEAEA;
   padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px var(--shadow);
 }
 
 .teacher-table {
@@ -196,16 +228,16 @@ onMounted(() => {
 
 .teacher-table th {
   text-align: left;
-  background: #fff;
+  background: var(--card);
   padding: 12px 18px;
   font-weight: 600;
-  color: #333;
-  border-bottom: 1px solid #ddd;
+  color: var(--text);
+  border-bottom: 1px solid #EAEAEA;
 }
 
 .teacher-table td {
   padding: 10px 18px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #EAEAEA;
 }
 
 /* Aktionen */
@@ -217,7 +249,7 @@ onMounted(() => {
 
 .edit-btn {
   border: none;
-  background-color: #ffff;
+  background-color: var(--card);
 }
 
 .edit-btn:hover {
@@ -226,7 +258,7 @@ onMounted(() => {
 
 .delete-btn {
   border: none;
-  background-color: #ffff;
+  background-color: var(--card);
 }
 
 .delete-btn:hover {
