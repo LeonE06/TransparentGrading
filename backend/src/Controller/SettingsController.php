@@ -23,9 +23,21 @@ class SettingsController extends AbstractController
         $repo = $doctrine->getRepository(Einstellungen::class);
         $settings = $repo->findOneBy(['schueler' => $user]);
 
+        // Prüfe ob Schüler über 18 ist
+        $isUeber18 = false;
+        if ($user->getGeburtsdatum()) {
+            $today = new \DateTime();
+            $geburtsdatum = $user->getGeburtsdatum();
+            $age = $today->diff($geburtsdatum)->y;
+            $isUeber18 = $age >= 18;
+        }
+
         return new JsonResponse([
             'light_darkmode' => $settings ? $settings->getLightDarkmode() : null,
-            'benachrichtigungen' => $settings ? $settings->getBenachrichtigungen() : null
+            'benachrichtigungen' => $settings ? $settings->getBenachrichtigungen() : null,
+            'elternemail' => $settings ? $settings->getElternemail() : null,
+            'elternaktivierung' => $settings ? $settings->getElternaktivierung() : null,
+            'isUeber18' => $isUeber18
         ], 200);
     }
 
@@ -42,13 +54,22 @@ class SettingsController extends AbstractController
         $em = $doctrine->getManager();
         $repo = $doctrine->getRepository(Einstellungen::class);
         $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
-        
+
         $settings = $repo->findOneBy(['schueler' => $user]);
 
         if (!$settings) {
             $settings = new Einstellungen();
             $settings->setSchueler($user);
             $em->persist($settings);
+        }
+
+        // Prüfe ob Schüler über 18 ist
+        $isUeber18 = false;
+        if ($user->getGeburtsdatum()) {
+            $today = new \DateTime();
+            $geburtsdatum = $user->getGeburtsdatum();
+            $age = $today->diff($geburtsdatum)->y;
+            $isUeber18 = $age >= 18;
         }
 
         // Beide Felder können optional sein
@@ -59,20 +80,20 @@ class SettingsController extends AbstractController
         if (array_key_exists('benachrichtigungen', $data)) {
             $globalValue = $data['benachrichtigungen'];
             $settings->setBenachrichtigungen($globalValue);
-            
+
             // Alle KursEinstellungen für diesen Schüler aktualisieren
             // 1. Alle Kurse des Schülers finden (über KursSchueler)
             $kursSchueler = $user->getKursSchueler();
-            
+
             foreach ($kursSchueler as $ks) {
                 $kurs = $ks->getKurs();
-                
+
                 // 2. Prüfen ob bereits eine KursEinstellung existiert
                 $kursEinstellung = $kursEinstellungenRepo->findOneBy([
                     'schueler' => $user,
                     'kurs' => $kurs
                 ]);
-                
+
                 // 3. Falls nicht vorhanden, neue erstellen
                 if (!$kursEinstellung) {
                     $kursEinstellung = new KursEinstellungen();
@@ -80,9 +101,33 @@ class SettingsController extends AbstractController
                     $kursEinstellung->setKurs($kurs);
                     $em->persist($kursEinstellung);
                 }
-                
+
                 // 4. Benachrichtigung auf den globalen Wert setzen
                 $kursEinstellung->setBenachrichtigung($globalValue);
+            }
+        }
+
+        // Eltern-Email und Aktivierung (nur wenn über 18)
+        if ($isUeber18) {
+            if (array_key_exists('elternemail', $data)) {
+                $email = $data['elternemail'];
+                // Email-Validierung: null oder leer = erlaubt, sonst muss es eine gültige Email sein
+                if ($email === null || $email === '') {
+                    $settings->setElternemail(null);
+                } elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $settings->setElternemail($email);
+                } else {
+                    return new JsonResponse(['error' => 'Ungültige E-Mail-Adresse'], 400);
+                }
+            }
+
+            if (array_key_exists('elternaktivierung', $data)) {
+                $settings->setElternaktivierung($data['elternaktivierung']);
+            }
+        } else {
+            // Wenn unter 18, keine Änderungen erlauben
+            if (array_key_exists('elternemail', $data) || array_key_exists('elternaktivierung', $data)) {
+                return new JsonResponse(['error' => 'Nur Schüler über 18 können die Eltern-E-Mail bearbeiten'], 403);
             }
         }
 
@@ -90,7 +135,10 @@ class SettingsController extends AbstractController
 
         return new JsonResponse([
             'light_darkmode' => $settings->getLightDarkmode(),
-            'benachrichtigungen' => $settings->getBenachrichtigungen()
+            'benachrichtigungen' => $settings->getBenachrichtigungen(),
+            'elternemail' => $settings->getElternemail(),
+            'elternaktivierung' => $settings->getElternaktivierung(),
+            'isUeber18' => $isUeber18
         ], 200);
     }
 }

@@ -108,6 +108,9 @@ class Schueler
     public function getNachname(): ?string { return $this->nachname; }
     public function setNachname(string $nachname): self { $this->nachname = $nachname; return $this; }
 
+    public function getGeburtsdatum(): ?\DateTimeInterface { return $this->geburtsdatum; }
+    public function setGeburtsdatum(?\DateTimeInterface $geburtsdatum): self { $this->geburtsdatum = $geburtsdatum; return $this; }
+
     public function getKlasse(): ?Klassen { return $this->klasse; }
     public function setKlasse(?Klassen $klasse): self { $this->klasse = $klasse; return $this; }
 

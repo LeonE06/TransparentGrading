@@ -16,27 +16,27 @@
                     </svg>
 
                 </i>
-                <div>
-                    <h3>Elternbenachrichtigung</h3>
-                    <p>Elternemail automatisch senden</p>
+
+
+                <div class="toggle">
+                    <div>
+                        <h3>Elternbenachrichtigung</h3>
+                        <p>Elternemail automatisch senden</p>
+                        <input v-if="isUeber18" type="email" v-model="elternEmail" @blur="saveElternEmail()"
+                            placeholder="Eltern-E-Mail-Adresse" :disabled="loading" />
+                        <input v-else type="text" :value="elternEmail || 'Keine E-Mail-Adresse gespeichert'" readonly />
+                    </div>
+                    <div>
+                        {{ elternEmailSenden ? 'Ein' : 'Aus' }}
+                        <label class="switch">
+                            <input type="checkbox" v-model="elternEmailSenden"
+                                @change="sendElternEmail(elternEmailSenden)" :disabled="loading || !isUeber18">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
-            </div>
-            <div class="mode-toggle">
 
-                <button class="btn theme-toggle" @click="toggleTheme"
-                    :title="isDark ? 'Wechsel zu Hell' : 'Wechsel zu Dunkel'">
-                    <span v-if="isDark">
 
-                        <span>Light</span>
-                        <span class="active">Dark</span>
-
-                    </span>
-                    <span v-else>
-
-                        <span class="active">Light</span>
-                        <span>Dark</span>
-                    </span>
-                </button>
             </div>
         </div>
 
@@ -131,18 +131,30 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useTheme } from '@/composables/useTheme.js'
-const { isDark, toggleTheme } = useTheme()// Benachrichtigungen State
+const { isDark, toggleTheme } = useTheme()
+
+// Benachrichtigungen State
 const benachrichtigungen = ref(false)
 const loading = ref(false)
-// Benachrichtigungen vom Server laden
-async function loadBenachrichtigungen() {
+
+// Eltern-Email State
+const elternEmail = ref('')
+const elternEmailSenden = ref(false)
+const isUeber18 = ref(false)
+
+// Einstellungen vom Server laden
+async function loadSettings() {
     try {
         const res = await axios.get('/settings')
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
+        elternEmail.value = res.data?.elternemail ?? ''
+        elternEmailSenden.value = res.data?.elternaktivierung ?? false
+        isUeber18.value = res.data?.isUeber18 ?? false
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
     }
 }
+
 // Benachrichtigungen zum Server speichern
 let saveTimer = null
 async function saveBenachrichtigungen(value) {
@@ -153,19 +165,68 @@ async function saveBenachrichtigungen(value) {
             await axios.put('/settings', { benachrichtigungen: !!value })
         } catch (err) {
             console.warn('Benachrichtigungen: Speichern fehlgeschlagen', err)
-            // Optional: Fehlerbehandlung/Toast anzeigen    
         } finally {
             loading.value = false
         }
     }, 300) // Debounce: 300ms warten
 }
+
+// Eltern-Email speichern
+let emailSaveTimer = null
+async function saveElternEmail() {
+    if (!isUeber18.value) return
+
+    if (emailSaveTimer) clearTimeout(emailSaveTimer)
+    emailSaveTimer = setTimeout(async () => {
+        loading.value = true
+        try {
+            await axios.put('/settings', {
+                elternemail: elternEmail.value || null
+            })
+        } catch (err) {
+            console.warn('Eltern-Email: Speichern fehlgeschlagen', err)
+        } finally {
+            loading.value = false
+        }
+    }, 500)
+}
+
+// Eltern-Email Aktivierung speichern
+async function sendElternEmail(value) {
+    if (!isUeber18.value) {
+        elternEmailSenden.value = false
+        return
+    }
+
+    loading.value = true
+    try {
+        await axios.put('/settings', {
+            elternaktivierung: !!value
+        })
+    } catch (err) {
+        console.warn('Eltern-Aktivierung: Speichern fehlgeschlagen', err)
+        elternEmailSenden.value = !value // Rollback bei Fehler
+    } finally {
+        loading.value = false
+    }
+}
+
+
 // Beim Laden der Komponente Einstellungen laden
 onMounted(() => {
-    loadBenachrichtigungen()
+    loadSettings()
 })
 </script>
 
 <style scoped>
+.info-text {
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+
 .einstellungen-view {
     padding: 1rem 2rem;
 }
@@ -191,7 +252,7 @@ onMounted(() => {
 
 .container-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
 }
 
@@ -206,6 +267,9 @@ onMounted(() => {
     color: var(--text);
 }
 
+i {
+    margin-top: 0.4rem;
+}
 
 .theme-toggle {
     min-width: auto;
@@ -297,7 +361,37 @@ input:checked+.slider:before {
 .toggle {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
+}
+
+.toggle > div:first-child {
+    flex: 1;
+    min-width: 0; /* Wichtig für Text-Overflow */
+}
+
+input,
+select {
+    max-width: 100%;
+    min-width: 250px;
+    padding: 0.6rem;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    border: none;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-top: 0.8rem;
+}
+
+input[readonly] {
+    color: var(--disabled-text);
+    background: var(--disabled);
+    cursor: not-allowed;
+}
+
+select {
+    color: var(--text);
+    background: var(--second-background-color);
+    cursor: pointer;
 }
 </style>
