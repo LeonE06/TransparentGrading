@@ -1,24 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
-  // --- ADMIN PANEL ---
-  { path: '/', redirect: '/login' },
-  { path: '/klassen', component: () => import('../views/KlassenView.vue') },
-  { path: '/schueler', component: () => import('../views/SchuelerView.vue') },
-  { path: '/lehrer', component: () => import('../views/LehrerView.vue') },
-  { path: '/einstellungen', component: () => import('../views/EinstellungenView.vue') },
-  { path: '/hilfe', component: () => import('../views/HilfeView.vue') },
+// --- ADMIN PANEL ---
+{ path: '/admin/klassen', component: () => import('../views/KlassenView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/schueler', component: () => import('../views/SchuelerView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/lehrer', component: () => import('../views/LehrerView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/einstellungen', component: () => import('../views/EinstellungenView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin' } },
 
-  // --- SCHÜLER PANEL ---
-  { path: '/schueler/Faecher', component: () => import('../views/schueler/FaecherView.vue'), meta: { layout: 'student' } },
-  { path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/BenachrichtigungenView.vue'), meta: { layout: 'student' } },
-  { path: '/schueler/moodboard', component: () => import('../views/schueler/MoodboardView.vue'), meta: { layout: 'student' } },
-  { path: '/schueler/einstellungen', component: () => import('../views/schueler/EinstellungenView.vue'), meta: { layout: 'student' } },
-  { path: '/schueler/hilfe', component: () => import('../views/schueler/HilfeView.vue'), meta: { layout: 'student' } },
+// --- SCHÜLER PANEL ---
+{ path: '/schueler/faecher', component: () => import('../views/schueler/FaecherView.vue'), meta: { navbar: 'student' } },
+{ path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/BenachrichtigungenView.vue'), meta: { navbar: 'student' } },
+{ path: '/schueler/moodboard', component: () => import('../views/schueler/MoodboardView.vue'), meta: { navbar: 'student' } },
+{ path: '/schueler/einstellungen', component: () => import('../views/schueler/EinstellungenView.vue'), meta: { navbar: 'student' } },
+{ path: '/schueler/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'student' } },
 
-  // --- LOGIN / LOGOUT ---
-  { path: '/login', component: () => import('../views/LoginView.vue') },
-  { path: '/logout', component: () => import('../views/LoginView.vue') },
+// --- LOGIN ---
+{ path: '/login', component: () => import('../views/LoginView.vue'), meta: { navbar: 'none' } },
+{ path: '/logout', redirect: '/login', meta: { navbar: 'none' } },
 
   // --- 404 FALLBACK ---
   { path: '/:pathMatch(.*)*', redirect: '/login' },
