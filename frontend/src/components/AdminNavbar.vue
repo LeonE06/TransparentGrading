@@ -2,7 +2,7 @@
   <nav class="navbar">
     <img v-if= "!isDark" src="/Logo_Transparent_Grading.png" alt="Logo Transparent Grading" class="logo">
     <img v-else src="/Logo_Transparent_Grading_Dark.png" alt="Logo Transparent Grading Dark" class="logo">
-    <router-link to="/klassen" class="nav-item" active-class="active">
+    <router-link to="/admin/klassen" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M10.05 2.53004L4.03002 6.46004C2.10002 7.72004 2.10002 10.54 4.03002 11.8L10.05 15.73C11.13 16.44 12.91 16.44 13.99 15.73L19.98 11.8C21.9 10.54 21.9 7.73004 19.98 6.47004L13.99 2.54004C12.91 1.82004 11.13 1.82004 10.05 2.53004Z"
@@ -14,7 +14,7 @@
       </svg>
       Klassen
     </router-link>
-    <router-link to="/schueler" class="nav-item" active-class="active">
+    <router-link to="/admin/schueler" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M9.16006 10.87C9.06006 10.86 8.94006 10.86 8.83006 10.87C6.45006 10.79 4.56006 8.84 4.56006 6.44C4.56006 3.99 6.54006 2 9.00006 2C11.4501 2 13.4401 3.99 13.4401 6.44C13.4301 8.84 11.5401 10.79 9.16006 10.87Z"
@@ -30,7 +30,7 @@
       </svg>
       Schüler*innen
     </router-link>
-    <router-link to="/lehrer" class="nav-item" active-class="active">
+    <router-link to="/admin/lehrer" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M9.16006 10.87C9.06006 10.86 8.94006 10.86 8.83006 10.87C6.45006 10.79 4.56006 8.84 4.56006 6.44C4.56006 3.99 6.54006 2 9.00006 2C11.4501 2 13.4401 3.99 13.4401 6.44C13.4301 8.84 11.5401 10.79 9.16006 10.87Z"
@@ -46,7 +46,7 @@
       </svg>
       Lehrer*innen
     </router-link>
-    <router-link to="/einstellungen" class="nav-item" active-class="active">
+    <router-link to="/admin/einstellungen" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
@@ -57,7 +57,7 @@
       </svg>
       Einstellungen
     </router-link>
-    <router-link to="/hilfe" class="nav-item" active-class="active">
+    <router-link to="/admin/hilfe" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M10.4899 2.23L5.49991 4.11C4.34991 4.54 3.40991 5.9 3.40991 7.12V14.55C3.40991 15.73 4.18991 17.28 5.13991 17.99L9.43991 21.2C10.8499 22.26 13.1699 22.26 14.5799 21.2L18.8799 17.99C19.8299 17.28 20.6099 15.73 20.6099 14.55V7.12C20.6099 5.89 19.6699 4.53 18.5199 4.1L13.5299 2.23C12.6799 1.92 11.3199 1.92 10.4899 2.23Z"
@@ -67,7 +67,7 @@
       </svg>
       Hilfe / Datenschutz
     </router-link>
-    <router-link to="/logout" class="nav-item" active-class="active">
+    <router-link to="/admin/logout" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M8.8999 7.55999C9.2099 3.95999 11.0599 2.48999 15.1099 2.48999H15.2399C19.7099 2.48999 21.4999 4.27999 21.4999 8.74999V15.27C21.4999 19.74 19.7099 21.53 15.2399 21.53H15.1099C11.0899 21.53 9.2399 20.08 8.9099 16.54"

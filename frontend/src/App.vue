@@ -1,7 +1,7 @@
 <template>
   <div class="app">
-    <!-- Dynamische Navbar -->
-    <component :is="currentNavbar" />
+    <!-- Dynamische Navbar: Admin, Schüler oder keine -->
+    <component :is="currentNavbar" v-if="currentNavbar" />
 
     <main class="content">
       <Header />
@@ -11,21 +11,27 @@
 </template>
 
 <script setup>
-import Navbar from './components/AdminNavbar.vue'
-import Header from './components/Header.vue';
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import Header from './components/Header.vue'
 import AdminNavbar from './components/AdminNavbar.vue'
 import StudentNavbar from './components/StudentNavbar.vue'
-import DarkLightMode from '@/components/DarkLightMode.vue'
+// import DarkLightMode from '@/components/DarkLightMode.vue' // optional, nur wenn du sie verwendest
 
 const route = useRoute()
 
-// Wenn meta.layout === 'student' → Schüler-Navbar, sonst Admin
-const currentNavbar = computed(() =>
-  route.meta.layout === 'student' ? StudentNavbar : AdminNavbar
-)
+// Navbar abhängig von meta.navbar wählen
+const currentNavbar = computed(() => {
+  switch (route.meta.navbar) {
+    case 'admin':
+      return AdminNavbar
+    case 'student':
+      return StudentNavbar
+    default:
+      return null // keine Navbar, z. B. bei Login
+  }
+})
 </script>
 
 <style>
