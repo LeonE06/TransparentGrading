@@ -92,7 +92,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import EditStudentModal from '../components/EditStudentModal.vue'
+import EditStudentModal from '../../components/EditStudentModal.vue'
 import { useTheme } from '@/composables/useTheme.js'
 const { isDark, toggleTheme } = useTheme()
 

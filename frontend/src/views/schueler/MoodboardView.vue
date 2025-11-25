@@ -1,154 +1,180 @@
 <template>
-  <div class="moodboard-container">
+  <div class="moodboard-wrapper">
     <h1>Moodboard</h1>
 
+    <!-- Mood Auswahl Card -->
     <div class="mood-card">
       <h2>Wie ist deine Lernmotivation heute?</h2>
 
       <div class="emoji-row">
-        <span
-          class="emoji"
-          :class="{ selected: selectedMood === 'motiviert' }"
-          @click="selectMood('motiviert')"
-        >😎</span>
+        <div
+          class="emoji emoji-good"
+          :class="{ active: mood === 'gut' }"
+          @click="setMood('gut')"
+        >
+          🙂
+        </div>
 
-        <span
-          class="emoji"
-          :class="{ selected: selectedMood === 'neutral' }"
-          @click="selectMood('neutral')"
-        >😐</span>
+        <div
+          class="emoji emoji-neutral"
+          :class="{ active: mood === 'neutral' }"
+          @click="setMood('neutral')"
+        >
+          😐
+        </div>
 
-        <span
-          class="emoji"
-          :class="{ selected: selectedMood === 'müde' }"
-          @click="selectMood('müde')"
-        >😴</span>
+        <div
+          class="emoji emoji-bad"
+          :class="{ active: mood === 'schlecht' }"
+          @click="setMood('schlecht')"
+        >
+          🙁
+        </div>
       </div>
 
-      <textarea
-        v-model="message"
-        placeholder="Fügen eine Nachricht hinzu (optional):"
-      ></textarea>
+      <select v-model="note">
+        <option disabled value="">Wähle eine passende Antwort aus:</option>
+        <option>Super motiviert! 💪</option>
+        <option>Geht so… 😐</option>
+        <option>Müde / unmotiviert 😴</option>
+      </select>
 
-      <button @click="saveMood">Speichern</button>
+      <button class="save-btn" @click="saveMood">Speichern</button>
     </div>
 
-    <p v-if="saved" class="saved-message">✅ Stimmung gespeichert!</p>
+    <!-- Mood Verlauf Placeholder -->
+    <div class="chart-card">
+      <h2>Dein Lern-Mood Verlauf</h2>
+
+      <div class="chart-placeholder">
+        Diagramm per Chart.js …
+      </div>
+    </div>
+
+    <p v-if="saved" class="saved-message">Deine Stimmung wurde gespeichert!</p>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 
-const selectedMood = ref(null)
-const message = ref('')
+const mood = ref('')
+const note = ref('')
 const saved = ref(false)
 
-function selectMood(mood) {
-  selectedMood.value = mood
+function setMood(m) {
+  mood.value = m
   saved.value = false
 }
 
 function saveMood() {
-  if (!selectedMood.value) {
-    alert('Bitte wähle zuerst eine Stimmung aus.')
+  if (!mood.value) {
+    alert("Bitte wähle zuerst deine Stimmung aus.")
     return
   }
 
-  console.log('Mood gespeichert:', {
-    stimmung: selectedMood.value,
-    nachricht: message.value,
+  console.log("Mood gespeichert:", {
+    stimmung: mood.value,
+    antwort: note.value
   })
 
   saved.value = true
-  message.value = ''
 }
 </script>
 
 <style scoped>
-.moodboard-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+/* --- Basic page layout --- */
+.moodboard-wrapper {
+  max-width: 900px;
+  margin: 2rem auto;
   font-family: "Inter", sans-serif;
-  margin-top: 3rem;
 }
 
 h1 {
-  font-size: 1.8rem;
-  margin-bottom: 2rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.mood-card {
-  width: 90%;
-  max-width: 500px;
-  background-color: var(--first-background-color);
-  border: 1.5px solid #ccc;
-  border-radius: 10px;
-  padding: 2rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
 }
 
 h2 {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   margin-bottom: 1.5rem;
-  color: var(--text);
+  font-weight: 600;
 }
 
+/* --- Card Styles --- */
+.mood-card,
+.chart-card {
+  background: var(--first-background-color);
+  border-radius: 14px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #ddd;
+}
+
+/* --- Emoji Row --- */
 .emoji-row {
   display: flex;
   justify-content: center;
-  gap: 2rem;
   margin-bottom: 1.5rem;
+  gap: 3rem;
 }
 
 .emoji {
-  font-size: 2.5rem;
+  font-size: 3.5rem;
   cursor: pointer;
-  transition: transform 0.2s, filter 0.2s;
+  transition: 0.2s;
+  opacity: 0.5;
 }
 
-.emoji:hover {
-  transform: scale(1.1);
+.emoji.active {
+  opacity: 1;
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px var(--primary));
 }
 
-.selected {
-  transform: scale(1.3);
-  filter: drop-shadow(0 0 8px var(--secondary));
-}
-
-textarea {
-  width: 100%;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  padding: 10px;
-  font-family: "Inter", sans-serif;
-  resize: none;
-  margin-bottom: 1rem;
-}
-
-button {
+/* --- Dropdown --- */
+select {
   width: 100%;
   padding: 0.8rem;
-  border: none;
   border-radius: 10px;
-  background: linear-gradient(to right, var(--primary), var(--secondary));
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
+  border: 1px solid #ccc;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
 }
 
-button:hover {
+/* --- Button --- */
+.save-btn {
+  width: 100%;
+  padding: 0.9rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.save-btn:hover {
   opacity: 0.9;
 }
 
+/* --- Chart Placeholder --- */
+.chart-placeholder {
+  background: #fafafa;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px dashed #bbb;
+  text-align: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+/* Saved message */
 .saved-message {
-  margin-top: 1rem;
   color: var(--primary);
-  font-weight: 500;
+  font-weight: 600;
+  text-align: center;
 }
 </style>

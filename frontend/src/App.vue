@@ -4,7 +4,7 @@
     <component :is="currentNavbar" v-if="currentNavbar" />
 
     <main class="content">
-      <Header />
+      <Header/>
       <router-view />
     </main>
   </div>
