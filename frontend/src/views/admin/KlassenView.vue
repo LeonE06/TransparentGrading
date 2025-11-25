@@ -89,8 +89,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import ClassCreateModal from '../components/ClassCreateModal.vue'
-import EditClassModal from '../components/EditClassModal.vue'
+import ClassCreateModal from '../../components/ClassCreateModal.vue'
+import EditClassModal from '../../components/EditClassModal.vue'
 
 
 const isDev = import.meta.env.DEV

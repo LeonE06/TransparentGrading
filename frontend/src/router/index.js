@@ -2,10 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
 // --- ADMIN PANEL ---
-{ path: '/admin/klassen', component: () => import('../views/KlassenView.vue'), meta: { navbar: 'admin' } },
-{ path: '/admin/schueler', component: () => import('../views/SchuelerView.vue'), meta: { navbar: 'admin' } },
-{ path: '/admin/lehrer', component: () => import('../views/LehrerView.vue'), meta: { navbar: 'admin' } },
-{ path: '/admin/einstellungen', component: () => import('../views/EinstellungenView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/klassen', component: () => import('../views/admin/KlassenView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/schueler', component: () => import('../views/admin/SchuelerView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/lehrer', component: () => import('../views/admin/LehrerView.vue'), meta: { navbar: 'admin' } },
+{ path: '/admin/einstellungen', component: () => import('../views/admin/EinstellungenView.vue'), meta: { navbar: 'admin' } },
 { path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin' } },
 
 // --- SCHÜLER PANEL ---
