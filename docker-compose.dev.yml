@@ -12,11 +12,10 @@ services:
       APP_ENV: dev
       APP_DEBUG: 1
       DATABASE_URL: mysql://tg_user:tg_pass@db:3306/transparentgrading
-       # 👇 Microsoft OAuth Testmodus-Variablen
-      AZURE_CLIENT_ID: "00000000-0000-0000-0000-000000000000"
-      AZURE_CLIENT_SECRET: "dummy"
-      AZURE_TENANT: "common"
-      AZURE_REDIRECT_URI: "http://localhost:8000/callback/microsoft"
+      AZURE_CLIENT_ID: "a50312ed-3321-4985-871b-bb1f6ed79ddd"
+      AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET}"
+      AZURE_TENANT_ID: "9ec23210-0e57-409e-beac-05e755ea3dd8"
+      AZURE_REDIRECT_URI: "https://transparentgrading.onrender.com/auth"
     ports:
       - "8000:8000"
     volumes:

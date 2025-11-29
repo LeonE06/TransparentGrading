@@ -23,7 +23,7 @@
 <script setup>
 function loginMicrosoft() {
   // ruft dein Symfony-Backend auf
-  window.location.href = '/api/login/microsoft'
+  window.location.href = 'https://transparentgrading.onrender.com/microsoft'
 }
 </script>
 
