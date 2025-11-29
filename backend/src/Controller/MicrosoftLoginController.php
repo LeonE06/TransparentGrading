@@ -73,7 +73,13 @@ class MicrosoftLoginController extends AbstractController
             // 🚀 Weiterleitung ans Frontend
             return $this->redirect($redirectUrl);
         } catch (IdentityProviderException $e) {
-            return new Response('Login fehlgeschlagen: ' . $e->getMessage(), 500);
+            return new Response(
+        'Azure Error:<br><br>' .
+        nl2br(htmlspecialchars($e->getMessage())) .
+        '<br><br>Raw Response:<br><br>' .
+        nl2br(htmlspecialchars(print_r($e->getResponseBody(), true))),
+        500
+    );
         } catch (\Throwable $e) {
             return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
         }
