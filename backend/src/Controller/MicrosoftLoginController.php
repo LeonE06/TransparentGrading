@@ -30,6 +30,7 @@ class MicrosoftLoginController extends AbstractController
             'clientSecret' => $clientSecret,
             'tenant' => $tenant,
             'redirectUri' => $redirectUri,
+            'debug' => false,
         ]);
     }
 
@@ -49,33 +50,42 @@ class MicrosoftLoginController extends AbstractController
     }
 
     #[Route('/auth', name: 'auth_alias', methods: ['GET'])]
-    public function callback(Request $request): Response
-    {
+public function callback(Request $request): Response
+{
+    try {
+        // Access Token holen
+        $token = $this->provider->getAccessToken('authorization_code', [
+            'code' => $request->get('code'),
+        ]);
+
+        // Userdaten von Microsoft Graph holen
         try {
-            // 🔑 Access Token holen
-            $token = $this->provider->getAccessToken('authorization_code', [
-                'code' => $request->get('code'),
-            ]);
-
-            // 👤 Benutzerdaten abrufen
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'] ?? null;
-            $vorname = $graphUser['givenName'] ?? 'Unbekannt';
-            $nachname = $graphUser['surname'] ?? 'Unbekannt';
-
-            if (!$email) {
-                return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
-            }
-
-            // 🧠 Benutzer anlegen oder abrufen
-            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-
-            // 🚀 Weiterleitung ans Frontend
-            return $this->redirect($redirectUrl);
-        } catch (IdentityProviderException $e) {
-            return new Response('Login fehlgeschlagen: ' . $e->getMessage(), 500);
-        } catch (\Throwable $e) {
-            return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
+        } catch (\Exception $e) {
+            return new Response("Graph-Error: " . $e->getMessage(), 500);
         }
+
+        // E-Mail / UPN beziehen
+        $email = $graphUser['userPrincipalName'] 
+               ?? $graphUser['mail'] 
+               ?? null;
+
+        $vorname = $graphUser['givenName'] ?? 'Unbekannt';
+        $nachname = $graphUser['surname'] ?? 'Unbekannt';
+
+        if (!$email) {
+            return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
+        }
+
+        // Benutzer anlegen oder abrufen
+        $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+
+        // Weiterleitung ans Frontend
+        return $this->redirect($redirectUrl);
+
+    } catch (IdentityProviderException $e) {
+        return new Response('Login fehlgeschlagen: ' . $e->getMessage(), 500);
+    } catch (\Throwable $e) {
+        return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
     }
 }
