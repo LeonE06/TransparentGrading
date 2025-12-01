@@ -63,6 +63,10 @@ public function callback(Request $request): Response
         $token = $this->provider->getAccessToken('authorization_code', [
             'code' => $request->get('code'),
         ]);
+        // DEBUG: Token Payload anzeigen
+$jwt = $token->getToken();
+$payload = json_decode(base64_decode(explode('.', $jwt)[1]), true);
+return new Response("<pre>" . print_r($payload, true) . "</pre>");
 
         // Userdaten von Microsoft Graph holen
         try {
