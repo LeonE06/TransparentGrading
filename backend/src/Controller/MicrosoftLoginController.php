@@ -30,6 +30,7 @@ class MicrosoftLoginController extends AbstractController
             'clientSecret' => $clientSecret,
             'tenant' => $tenant,
             'redirectUri' => $redirectUri,
+            'debug' => false,
         ]);
     }
 
@@ -48,70 +49,42 @@ class MicrosoftLoginController extends AbstractController
     }
 
     #[Route('/auth', name: 'auth_alias', methods: ['GET'])]
-    public function callback(Request $request): Response
-    {
+public function callback(Request $request): Response
+{
+    try {
+        // Access Token holen
+        $token = $this->provider->getAccessToken('authorization_code', [
+            'code' => $request->get('code'),
+        ]);
+
+        // Userdaten von Microsoft Graph holen
         try {
-            if (!$request->get('code')) {
-                return new Response('Kein "code" Parameter erhalten.', 400);
-            }
-
-            // Access Token anfordern
-            $token = $this->provider->getAccessToken('authorization_code', [
-                'code' => $request->get('code'),
-            ]);
-
-            // ===========================
-            // 🔥 DEBUG: JWT PAYLOAD ZEIGEN
-            // ===========================
-            $jwt = $token->getToken();
-
-            $parts = explode('.', $jwt);
-            if (count($parts) === 3) {
-                $payload = json_decode(base64_decode($parts[1]), true);
-                $pretty = json_encode($payload, JSON_PRETTY_PRINT);
-
-                return new Response(
-                    "<h1>DEBUG JWT PAYLOAD</h1>" .
-                    "<b>JWT (raw):</b><br><textarea style='width:100%;height:200px'>$jwt</textarea><br><br>" .
-                    "<b>Decoded Payload:</b><pre>$pretty</pre>",
-                    500
-                );
-            }
-
-            return new Response("Token konnte nicht dekodiert werden.", 500);
-
-            // ===========================
-            // AB HIER (wird erst aktiv, wenn debug raus ist)
-            // ===========================
-
-            /*
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'] ?? null;
-            $vorname = $graphUser['givenName'] ?? 'Unbekannt';
-            $nachname = $graphUser['surname'] ?? 'Unbekannt';
-
-            if (!$email) {
-                return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
-            }
-
-            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-
-            return $this->redirect($redirectUrl);
-            */
-
-        } catch (IdentityProviderException $e) {
-            $body = method_exists($e, 'getResponseBody')
-                ? print_r($e->getResponseBody(), true)
-                : 'No body available';
-
-            return new Response(
-                "Azure Error:<br><br>" .
-                nl2br(htmlspecialchars($e->getMessage())) .
-                "<br><br>Raw Response:<br><pre>$body</pre>",
-                500
-            );
-        } catch (\Throwable $e) {
-            return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
+        } catch (\Exception $e) {
+            return new Response("Graph-Error: " . $e->getMessage(), 500);
         }
+
+        // E-Mail / UPN beziehen
+        $email = $graphUser['userPrincipalName'] 
+               ?? $graphUser['mail'] 
+               ?? null;
+
+        $vorname = $graphUser['givenName'] ?? 'Unbekannt';
+        $nachname = $graphUser['surname'] ?? 'Unbekannt';
+
+        if (!$email) {
+            return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
+        }
+
+        // Benutzer anlegen oder abrufen
+        $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+
+        // Weiterleitung ans Frontend
+        return $this->redirect($redirectUrl);
+
+    } catch (IdentityProviderException $e) {
+        return new Response('Login fehlgeschlagen: ' . $e->getMessage(), 500);
+    } catch (\Throwable $e) {
+        return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
     }
 }
