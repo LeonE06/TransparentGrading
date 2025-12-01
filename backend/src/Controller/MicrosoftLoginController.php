@@ -19,7 +19,7 @@ class MicrosoftLoginController extends AbstractController
     {
         $this->userService = $userService;
 
-        // Azure Credentials laden
+        // 🔒 Sichere Environment-Variablen laden (funktioniert in Docker und lokal)
         $clientId = $_SERVER['AZURE_CLIENT_ID'] ?? $_ENV['AZURE_CLIENT_ID'] ?? null;
         $clientSecret = $_SERVER['AZURE_CLIENT_SECRET'] ?? $_ENV['AZURE_CLIENT_SECRET'] ?? null;
         $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;
@@ -38,9 +38,16 @@ class MicrosoftLoginController extends AbstractController
     public function login(): Response
     {
         try {
-            $authUrl = $this->provider->getAuthorizationUrl([
-                'scope' => ['openid', 'profile', 'email', 'User.Read'],
-            ]);
+            // 🔗 Microsoft-Login starten
+$authUrl = $this->provider->getAuthorizationUrl([
+    'scope' => [
+        'openid',
+        'profile',
+        'email',
+        'offline_access',
+        'https://graph.microsoft.com/User.Read'
+    ],
+]);
 
             return $this->redirect($authUrl);
         } catch (\Throwable $e) {
@@ -87,5 +94,4 @@ public function callback(Request $request): Response
     } catch (\Throwable $e) {
         return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
     }
-}
 }
