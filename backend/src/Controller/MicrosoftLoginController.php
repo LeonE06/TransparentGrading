@@ -88,3 +88,4 @@ public function callback(Request $request): Response
         return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);
     }
 }
+}
