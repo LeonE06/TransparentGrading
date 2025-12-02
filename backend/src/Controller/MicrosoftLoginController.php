@@ -25,7 +25,7 @@ class MicrosoftLoginController extends AbstractController
         $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;
         $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;
 
-        // Provider für Microsoft Graph konfigurieren
+        // Provider konfigurieren
         $this->provider = new Azure([
             'clientId' => $clientId,
             'clientSecret' => $clientSecret,
@@ -40,7 +40,6 @@ class MicrosoftLoginController extends AbstractController
     public function login(): Response
     {
         try {
-            // Login-URL bauen
             $authUrl = $this->provider->getAuthorizationUrl([
                 'scope' => [
                     'openid',
@@ -62,20 +61,19 @@ class MicrosoftLoginController extends AbstractController
     public function callback(Request $request): Response
     {
         try {
-            // Code prüfen
             if (!$request->get('code')) {
                 return new Response('Kein Code erhalten.', 400);
             }
 
-            // Access Token holen
+            // Token holen
             $token = $this->provider->getAccessToken('authorization_code', [
                 'code' => $request->get('code'),
             ]);
 
-            // Microsoft Graph → /me
+            // Microsoft Graph User
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
-            // Userdaten extrahieren
+            // Daten extrahieren
             $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'] ?? null;
             $vorname = $graphUser['givenName'] ?? 'Unbekannt';
             $nachname = $graphUser['surname'] ?? 'Unbekannt';
@@ -84,10 +82,9 @@ class MicrosoftLoginController extends AbstractController
                 return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
             }
 
-            // Benutzer erstellen oder abrufen
+            // Die Service-Methode macht ALLES, inklusive Rolle + Redirect-URL
             $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-            // Weiterleitung ins Frontend
             return $this->redirect($redirectUrl);
 
         } catch (IdentityProviderException $e) {
