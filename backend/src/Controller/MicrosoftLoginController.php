@@ -20,19 +20,17 @@ class MicrosoftLoginController extends AbstractController
         $this->userService = $userService;
 
         // Azure Credentials laden
-        $clientId = $_SERVER['AZURE_CLIENT_ID'] ?? $_ENV['AZURE_CLIENT_ID'] ?? null;
-        $clientSecret = $_SERVER['AZURE_CLIENT_SECRET'] ?? $_ENV['AZURE_CLIENT_SECRET'] ?? null;
-        $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;
-        $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;
+        $clientId = $_ENV['AZURE_CLIENT_ID'];
+        $clientSecret = $_ENV['AZURE_CLIENT_SECRET'];
+        $tenant = $_ENV['AZURE_TENANT_ID'];
+        $redirectUri = $_ENV['AZURE_REDIRECT_URI'];
 
-        // Provider konfigurieren
+        // Provider korrekt konfigurieren
         $this->provider = new Azure([
             'clientId' => $clientId,
             'clientSecret' => $clientSecret,
             'tenant' => $tenant,
             'redirectUri' => $redirectUri,
-            'resource' => 'https://graph.microsoft.com/',
-            'debug' => false,
         ]);
     }
 
@@ -40,11 +38,11 @@ class MicrosoftLoginController extends AbstractController
     public function login(): Response
     {
         try {
+            // KORREKTE SCOPE-LISTE
             $authUrl = $this->provider->getAuthorizationUrl([
                 'scope' => [
                     'openid',
                     'profile',
-                    'email',
                     'offline_access',
                     'https://graph.microsoft.com/User.Read'
                 ],
@@ -74,21 +72,14 @@ class MicrosoftLoginController extends AbstractController
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
             // Daten extrahieren
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'] ?? null;
-            $vorname = $graphUser['givenName'] ?? 'Unbekannt';
-            $nachname = $graphUser['surname'] ?? 'Unbekannt';
+            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
+            $vorname = $graphUser['givenName'];
+            $nachname = $graphUser['surname'];
 
-            if (!$email) {
-                return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);
-            }
-
-            // Die Service-Methode macht ALLES, inklusive Rolle + Redirect-URL
+            // Service verarbeitet User und gibt Redirect-URL zurück
             $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
             return $this->redirect($redirectUrl);
-
-        } catch (IdentityProviderException $e) {
-            return new Response("Azure Error: " . $e->getMessage(), 500);
 
         } catch (\Throwable $e) {
             return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
