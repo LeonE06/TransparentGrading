@@ -22,10 +22,10 @@ class MicrosoftUserService
     public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
         // 1️⃣ Benutzer im VIEW suchen
-        $user = $this->conn->fetchAssociative(
-            'SELECT * FROM view_ms365_user WHERE email = ?',
-            [$email]
-        );
+       $user = $this->conn->fetchAssociative(
+    'SELECT * FROM view_ms365_user WHERE email = ?',
+    [$email]
+);
 
         // 2️⃣ Benutzer existiert schon → nur Rolle anhand Email bestimmen
         if ($user) {
