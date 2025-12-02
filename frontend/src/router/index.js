@@ -9,7 +9,9 @@ const routes = [
 { path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin' } },
 
 // --- SCHÜLER PANEL ---
-{ path: '/schueler/faecher', component: () => import('../views/schueler/FaecherView.vue'), meta: { navbar: 'student' } },
+{ path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/NotificationsView.vue'), meta: { navbar: 'student' }},
+{ path: '/schueler/faecher', component: () => import('../views/schueler/MeineFaecherView.vue'), meta: { navbar: 'student' }},
+{ path: '/schueler/faecher/:id', component: () => import('../views/schueler/FachDetailView.vue'),meta: { navbar: 'student' }},
 { path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/BenachrichtigungenView.vue'), meta: { navbar: 'student' } },
 { path: '/schueler/moodboard', component: () => import('../views/schueler/MoodboardView.vue'), meta: { navbar: 'student' } },
 { path: '/schueler/einstellungen', component: () => import('../views/schueler/EinstellungenView.vue'), meta: { navbar: 'student' } },
