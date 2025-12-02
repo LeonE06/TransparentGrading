@@ -21,15 +21,16 @@ class MicrosoftUserService
 
     public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
-        // 1️⃣ Im View nachschauen
+        // 1️⃣ Benutzer im VIEW suchen
         $user = $this->conn->fetchAssociative(
-            "SELECT * FROM view_ms365_user WHERE email = ?",
+            'SELECT * FROM view_ms365_user WHERE email = ?',
             [$email]
         );
 
-        // 2️⃣ Falls Benutzer im View existiert → nur Redirect
+        // 2️⃣ Benutzer existiert schon → nur Rolle anhand Email bestimmen
         if ($user) {
-            return $this->redirectByRole($user['rolle']);
+            $role = $this->detectRole($email);
+            return $this->redirectByRole($role);
         }
 
         // 3️⃣ Benutzer in tbl_Microsoft365_User anlegen
@@ -47,7 +48,7 @@ class MicrosoftUserService
         // 4️⃣ Rolle anhand der Email bestimmen
         $role = $this->detectRole($email);
 
-        // 5️⃣ Abhängig von Rolle: Lehrer/Schüler Datensatz erzeugen
+        // 5️⃣ Abhängig von Rolle neuen Lehrer oder Schüler erstellen
         if ($role === 'Schueler') {
             $this->conn->insert("Schueler", [
                 'vorname' => $vorname,
