@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Service\MicrosoftUserService;
-use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,18 +18,12 @@ class MicrosoftLoginController extends AbstractController
     {
         $this->userService = $userService;
 
-        $clientId = $_ENV['AZURE_CLIENT_ID'] ?? $_SERVER['AZURE_CLIENT_ID'];
-        $clientSecret = $_ENV['AZURE_CLIENT_SECRET'] ?? $_SERVER['AZURE_CLIENT_SECRET'];
-        $tenant = $_ENV['AZURE_TENANT_ID'] ?? $_SERVER['AZURE_TENANT_ID'];
-        $redirectUri = $_ENV['AZURE_REDIRECT_URI'] ?? $_SERVER['AZURE_REDIRECT_URI'];
-
         $this->provider = new Azure([
-            'clientId'      => $clientId,
-            'clientSecret'  => $clientSecret,
-            'tenant'        => $tenant,
-            'redirectUri'   => $redirectUri,
-            'resource'      => 'https://graph.microsoft.com/',
-            'debug'         => false,
+            'clientId' => $_ENV['AZURE_CLIENT_ID'],
+            'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
+            'tenant' => $_ENV['AZURE_TENANT_ID'],
+            'redirectUri' => $_ENV['AZURE_REDIRECT_URI'],
+            'debug' => false,
         ]);
     }
 
@@ -38,7 +31,6 @@ class MicrosoftLoginController extends AbstractController
     public function login(): Response
     {
         try {
-            // KEIN STATE -> wichtig für Render
             $authUrl = $this->provider->getAuthorizationUrl([
                 'scope' => [
                     'openid',
@@ -46,13 +38,12 @@ class MicrosoftLoginController extends AbstractController
                     'offline_access',
                     'https://graph.microsoft.com/User.Read'
                 ],
-                'state' => null
+                'disableState' => true
             ]);
 
             return $this->redirect($authUrl);
-
         } catch (\Throwable $e) {
-            return new Response("Login-Fehler: " . $e->getMessage(), 500);
+            return new Response('Login-Fehler: ' . $e->getMessage(), 500);
         }
     }
 
@@ -61,31 +52,21 @@ class MicrosoftLoginController extends AbstractController
     {
         try {
             if (!$request->get('code')) {
-                return new Response("Kein Code erhalten.", 400);
+                return new Response('Kein Code erhalten.', 400);
             }
 
-            // Token holen
             $token = $this->provider->getAccessToken('authorization_code', [
                 'code' => $request->get('code'),
+                'disableState' => true
             ]);
 
-            // Daten von Graph holen
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
-            $email = $graphUser['mail']
-                ?? $graphUser['userPrincipalName']
-                ?? null;
-
+            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
             $vorname = $graphUser['givenName'] ?? '';
             $nachname = $graphUser['surname'] ?? '';
 
-            if (!$email) {
-                return new Response("Microsoft hat keine Email geliefert.", 500);
-            }
-
-            // Weiter mit Business-Logik
             $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-
             return $this->redirect($redirectUrl);
 
         } catch (\Throwable $e) {
