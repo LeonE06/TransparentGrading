@@ -29,7 +29,7 @@ class MicrosoftLoginController extends AbstractController
             'clientSecret'  => $clientSecret,
             'tenant'        => $tenant,
             'redirectUri'   => $redirectUri,
-            'resource'      => 'https://graph.microsoft.com/',   // ❗ WICHTIG!
+            'resource'      => 'https://graph.microsoft.com/',
             'debug'         => false,
         ]);
     }
@@ -38,18 +38,16 @@ class MicrosoftLoginController extends AbstractController
     public function login(): Response
     {
         try {
+            // KEIN STATE -> wichtig für Render
             $authUrl = $this->provider->getAuthorizationUrl([
                 'scope' => [
                     'openid',
                     'profile',
                     'offline_access',
-                    'https://graph.microsoft.com/User.Read',
+                    'https://graph.microsoft.com/User.Read'
                 ],
+                'state' => null
             ]);
-
-            // CSRF-Schutz
-            $state = $this->provider->getState();
-            $_SESSION['azure_oauth_state'] = $state;
 
             return $this->redirect($authUrl);
 
@@ -63,12 +61,7 @@ class MicrosoftLoginController extends AbstractController
     {
         try {
             if (!$request->get('code')) {
-                return new Response('Kein Code erhalten.', 400);
-            }
-
-            // State prüfen
-            if ($request->get('state') !== ($_SESSION['azure_oauth_state'] ?? null)) {
-                return new Response("Ungültiger OAuth-State.", 400);
+                return new Response("Kein Code erhalten.", 400);
             }
 
             // Token holen
@@ -76,7 +69,7 @@ class MicrosoftLoginController extends AbstractController
                 'code' => $request->get('code'),
             ]);
 
-            // Graph /me Request
+            // Daten von Graph holen
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
             $email = $graphUser['mail']
@@ -87,15 +80,13 @@ class MicrosoftLoginController extends AbstractController
             $nachname = $graphUser['surname'] ?? '';
 
             if (!$email) {
-                return new Response("Microsoft lieferte keine Email zurück.", 500);
+                return new Response("Microsoft hat keine Email geliefert.", 500);
             }
 
+            // Weiter mit Business-Logik
             $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
             return $this->redirect($redirectUrl);
-
-        } catch (IdentityProviderException $e) {
-            return new Response("Azure-Fehler: " . $e->getMessage(), 500);
 
         } catch (\Throwable $e) {
             return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
