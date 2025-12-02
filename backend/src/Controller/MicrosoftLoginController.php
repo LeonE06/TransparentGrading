@@ -26,15 +26,14 @@ class MicrosoftLoginController extends AbstractController
         $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;
 
         $this->provider = new Azure([
-            'clientId' => $clientId,
-            'clientSecret' => $clientSecret,
-            'tenant' => $tenant,
-            'redirectUri' => $redirectUri,
-            'debug' => false,
-        ]);
-
-        // WICHTIG: Graph Resource setzen
-        $this->provider->setResource('https://graph.microsoft.com/');
+    'clientId' => $clientId,
+    'clientSecret' => $clientSecret,
+    'tenant' => $tenant,
+    'redirectUri' => $redirectUri,
+    'resource' => 'https://graph.microsoft.com/',
+    'debug' => false,
+]);
+        // WICHTIG: Graph Resource setze
     }
 
     #[Route('/microsoft', name: 'microsoft', methods: ['GET'])]
