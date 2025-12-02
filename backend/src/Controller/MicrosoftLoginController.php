@@ -15,24 +15,25 @@ class MicrosoftLoginController extends AbstractController
     private Azure $provider;
     private MicrosoftUserService $userService;
 
-    public function __construct(MicrosoftUserService $userService)
-    {
-        $this->userService = $userService;
+ public function __construct(MicrosoftUserService $userService)
+{
+    $this->userService = $userService;
 
-        // Azure Credentials laden
-        $clientId = $_ENV['AZURE_CLIENT_ID'];
-        $clientSecret = $_ENV['AZURE_CLIENT_SECRET'];
-        $tenant = $_ENV['AZURE_TENANT_ID'];
-        $redirectUri = $_ENV['AZURE_REDIRECT_URI'];
+    $clientId = $_SERVER['AZURE_CLIENT_ID'] ?? $_ENV['AZURE_CLIENT_ID'] ?? null;
+    $clientSecret = $_SERVER['AZURE_CLIENT_SECRET'] ?? $_ENV['AZURE_CLIENT_SECRET'] ?? null;
+    $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;
+    $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;
 
-        // Provider korrekt konfigurieren
-        $this->provider = new Azure([
-            'clientId' => $clientId,
-            'clientSecret' => $clientSecret,
-            'tenant' => $tenant,
-            'redirectUri' => $redirectUri,
-        ]);
-    }
+    $this->provider = new Azure([
+        'clientId' => $clientId,
+        'clientSecret' => $clientSecret,
+        'tenant' => $tenant,
+        'redirectUri' => $redirectUri,
+        'resource' => 'https://graph.microsoft.com/',
+        'debug' => false,
+    ]);
+}
+
 
     #[Route('/microsoft', name: 'microsoft', methods: ['GET'])]
     public function login(): Response
