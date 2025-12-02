@@ -60,10 +60,11 @@ public function callback(Request $request): Response
 {
     try {
         // Access Token holen
-        $token = $this->provider->getAccessToken('authorization_code', [
-            'code' => $request->get('code'),
-        ]);
-        // DEBUG: Token Payload anzeigen
+$token = $this->provider->getAccessToken('authorization_code', [
+    'code' => $request->get('code'),
+]);
+
+// DEBUG — JWT Payload anzeigen:
 $jwt = $token->getToken();
 $payload = json_decode(base64_decode(explode('.', $jwt)[1]), true);
 return new Response("<pre>" . print_r($payload, true) . "</pre>");
