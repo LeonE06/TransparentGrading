@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vueuse/core": "^14.0.0",
     "axios": "^1.12.2",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
