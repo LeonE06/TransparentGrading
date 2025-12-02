@@ -17,6 +17,7 @@ import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import AdminNavbar from './components/AdminNavbar.vue'
 import StudentNavbar from './components/StudentNavbar.vue'
+import TeacherNavbar from './components/TeacherNavbar.vue'
 // import DarkLightMode from '@/components/DarkLightMode.vue' // optional, nur wenn du sie verwendest
 
 const route = useRoute()
@@ -28,6 +29,8 @@ const currentNavbar = computed(() => {
       return AdminNavbar
     case 'student':
       return StudentNavbar
+    case 'teacher':
+      return TeacherNavbar
     default:
       return null // keine Navbar, z. B. bei Login
   }
@@ -36,7 +39,7 @@ const currentNavbar = computed(() => {
 
 <style>
 .content {
-  margin-left: 9rem;
+  margin-left: 240px;
   padding: 1.5rem;
   background-color: var(--first-background-color);
   min-height: 100vh;

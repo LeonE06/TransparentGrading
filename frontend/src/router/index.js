@@ -8,6 +8,13 @@ const routes = [
 { path: '/admin/einstellungen', component: () => import('../views/admin/EinstellungenView.vue'), meta: { navbar: 'admin' } },
 { path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin' } },
 
+// --- LEHRER PANEL ---
+{ path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher' } },
+{ path: '/lehrer/fach/:id', component: () => import('../views/lehrer/FachDetailView.vue'), meta: { navbar: 'teacher' } },
+{ path: '/lehrer/leistungserfassung', redirect: '/lehrer/faecher', meta: { navbar: 'teacher' } },
+{ path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher' } },
+{ path: '/lehrer/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'teacher' } },
+
 // --- SCHÜLER PANEL ---
 { path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/NotificationsView.vue'), meta: { navbar: 'student' }},
 { path: '/schueler/faecher', component: () => import('../views/schueler/MeineFaecherView.vue'), meta: { navbar: 'student' }},
