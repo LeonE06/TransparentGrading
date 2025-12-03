@@ -47,31 +47,28 @@ class MicrosoftLoginController extends AbstractController
         }
     }
 
-    #[Route('/auth', name: 'auth_alias', methods: ['GET'])]
-    public function callback(Request $request): Response
-    {
-        try {
-            if (!$request->get('code')) {
-                return new Response('Kein Code erhalten.', 400);
-            }
-
-            $token = $this->provider->getAccessToken('authorization_code', [
-                'code' => $request->get('code'),
-                'disableState' => true
-            ]);
-            $accessToken = $token->getToken();
-            return new Response("<pre>" . json_encode(['access_token' => $accessToken], JSON_PRETTY_PRINT) . "</pre>")
-            $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
-            $vorname = $graphUser['givenName'] ?? '';
-            $nachname = $graphUser['surname'] ?? '';
-
-            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-            return $this->redirect($redirectUrl);
-
-        } catch (\Throwable $e) {
-            return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
+#[Route('/auth', name: 'auth_alias', methods: ['GET'])]
+public function callback(Request $request): Response
+{
+    try {
+        if (!$request->get('code')) {
+            return new Response('Kein Code erhalten.', 400);
         }
+
+        $token = $this->provider->getAccessToken('authorization_code', [
+            'code' => $request->get('code'),
+            'disableState' => true
+        ]);
+
+        // 🔍 Token zur Analyse ausgeben
+        $accessToken = $token->getToken();
+        return new Response("<pre>" . $accessToken . "</pre>");
+
+        // ❌ Rest später wieder aktivieren
+        // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
+        // ...
+    } catch (\Throwable $e) {
+        return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
     }
+}
 }
