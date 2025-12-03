@@ -21,7 +21,7 @@ class MicrosoftLoginController extends AbstractController
         $this->provider = new Azure([
             'clientId' => $_ENV['AZURE_CLIENT_ID'],
             'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
-            'tenant' => $_ENV['AZURE_TENANT_ID'] . '/v2.0', // Force v2 endpoints
+            'tenant' => $_ENV['AZURE_TENANT_ID'] . '/v2.0', // Force Microsoft Graph V2
             'redirectUri' => $_ENV['AZURE_REDIRECT_URI'],
             'resource' => 'https://graph.microsoft.com',
             'debug' => false,
@@ -37,7 +37,8 @@ class MicrosoftLoginController extends AbstractController
                     'openid',
                     'profile',
                     'offline_access',
-                    'https://graph.microsoft.com/User.Read'
+                    'https://graph.microsoft.com/User.Read',
+                    'email'
                 ],
                 'disableState' => true
             ]);
@@ -61,17 +62,20 @@ class MicrosoftLoginController extends AbstractController
                 'disableState' => true
             ]);
 
-            // Token anzeigen, damit wir Audience prüfen können
-            $accessToken = $token->getToken();
-            return new Response("<pre>" . $accessToken . "</pre>");
+            // ✔ User von Microsoft Graph holen
+            $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
-            // Erst nach Audience-Prüfung wieder aktivieren:
-            // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-            // $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
-            // $vorname = $graphUser['givenName'] ?? '';
-            // $nachname = $graphUser['surname'] ?? '';
-            // $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-            // return $this->redirect($redirectUrl);
+            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
+            $vorname = $graphUser['givenName'] ?? '';
+            $nachname = $graphUser['surname'] ?? '';
+
+            if (!$email) {
+                return new Response("Die Microsoft API hat keine E-Mail zurückgegeben.", 400);
+            }
+
+            // ✔ User speichern / Rolle bestimmen / Redirect zurückgeben
+            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+            return $this->redirect($redirectUrl);
 
         } catch (\Throwable $e) {
             return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
