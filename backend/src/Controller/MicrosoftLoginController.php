@@ -59,6 +59,8 @@ class MicrosoftLoginController extends AbstractController
                 'code' => $request->get('code'),
                 'disableState' => true
             ]);
+            dump($token->getToken());
+die();
 
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
