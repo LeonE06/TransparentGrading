@@ -9,6 +9,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use TheNetworg\OAuth2\Client\Provider\Azure;
 
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
 class MicrosoftLoginController extends AbstractController
 {
     private Azure $provider;
@@ -50,35 +54,43 @@ class MicrosoftLoginController extends AbstractController
     }
 
     #[Route('/auth', name: 'auth_alias', methods: ['GET'])]
-    public function callback(Request $request): Response
-    {
-        try {
-            if (!$request->get('code')) {
-                return new Response('Kein Code erhalten.', 400);
-            }
-
-            $token = $this->provider->getAccessToken('authorization_code', [
-                'code' => $request->get('code'),
-                'disableState' => true
-            ]);
-
-            // ✔ User von Microsoft Graph holen
-            $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
-            $vorname = $graphUser['givenName'] ?? '';
-            $nachname = $graphUser['surname'] ?? '';
-
-            if (!$email) {
-                return new Response("Die Microsoft API hat keine E-Mail zurückgegeben.", 400);
-            }
-
-            // ✔ User speichern / Rolle bestimmen / Redirect zurückgeben
-            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-            return $this->redirect($redirectUrl);
-
-        } catch (\Throwable $e) {
-            return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
+public function callback(Request $request): Response
+{
+    try {
+        if (!$request->get('code')) {
+            return new Response('Kein Code erhalten.', 400);
         }
+
+        $tokenMicrosoft = $this->provider->getAccessToken('authorization_code', [
+            'code' => $request->get('code'),
+            'disableState' => true
+        ]);
+
+        $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $tokenMicrosoft);
+
+        $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
+        $vorname = $graphUser['givenName'] ?? '';
+        $nachname = $graphUser['surname'] ?? '';
+
+        // ❗ Benutzer erzeugen / Rolle bestimmen
+        $role = $this->userService->detectRole($email);
+        $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+
+        // 🔐 JWT erzeugen
+        $payload = [
+            "email" => $email,
+            "role" => $role,
+            "exp" => time() + 3600 // 1 Stunde gültig
+        ];
+
+        $jwt = JWT::encode($payload, $_ENV['APP_SECRET'], 'HS256');
+
+        // 🔁 Zurück ins Frontend redirect
+        $frontendUrl = $_ENV['FRONTEND_URL']; // Im .env hinzufügen
+
+        return $this->redirect("{$frontendUrl}/auth/callback?token={$jwt}");
+    } catch (\Throwable $e) {
+        return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
     }
+}
 }

@@ -1,5 +1,6 @@
 {
     "require": {
-        "thenetworg/oauth2-azure": "^2.2"
+        "thenetworg/oauth2-azure": "^2.2",
+        "firebase/php-jwt": "^6.11"
     }
 }

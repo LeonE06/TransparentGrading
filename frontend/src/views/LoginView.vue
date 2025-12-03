@@ -21,8 +21,37 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+
+onMounted(() => {
+  const token = route.query.token
+
+  if (token) {
+    // 🔐 Speichern
+    localStorage.setItem("token", token)
+
+    // 🔁 URL säubern ohne token
+    router.replace({ query: {} })
+
+    // 🧠 Rolle aus Token lesen
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const role = payload.role
+
+    if (role === "Schueler") {
+        router.push("/schueler/Klassenuebersicht")
+    } else if (role === "Lehrer") {
+        router.push("/lehrer/Klassenuebersicht")
+    } else {
+        router.push("/login")
+    }
+  }
+})
+
 function loginMicrosoft() {
-  // ruft dein Symfony-Backend auf
   window.location.href = 'https://transparentgrading.onrender.com/microsoft'
 }
 </script>
