@@ -71,26 +71,27 @@ class MicrosoftUserService
         return $this->redirectByRole($role);
     }
 
-    private function detectRole(string $email): string
-    {
-        $local = explode('@', $email)[0];
+public function detectRole(string $email): string
+{
+    $local = explode('@', $email)[0];
 
-        if (preg_match('/^[0-9]{4}$/', $local)) {
-            return 'Schueler';
-        }
-
-        if (preg_match('/^[A-Za-z]{3}$/', $local)) {
-            return 'Lehrer';
-        }
-
-        return 'Unbekannt';
+    if (preg_match('/^[0-9]{4}$/', $local)) {
+        return 'Schueler';
     }
+
+    if (preg_match('/^[A-Za-z]{3}$/', $local)) {
+        return 'Lehrer';
+    }
+
+    return 'Unbekannt';
+}
+
 
     private function redirectByRole(string $role): string
     {
         return match ($role) {
-            'Schueler' => "{$this->frontendBase}/schueler/Klassenübersicht",
-            'Lehrer' => "{$this->frontendBase}/lehrer/Klassenübersicht",
+            'Schueler' => "{$this->frontendBase}/schueler/faecher",
+            'Lehrer' => "{$this->frontendBase}/lehrer/faecher",
             default => "{$this->frontendBase}/",
         };
     }
