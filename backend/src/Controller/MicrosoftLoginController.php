@@ -21,8 +21,9 @@ class MicrosoftLoginController extends AbstractController
         $this->provider = new Azure([
             'clientId' => $_ENV['AZURE_CLIENT_ID'],
             'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
-            'tenant' => $_ENV['AZURE_TENANT_ID'],
+            'tenant' => $_ENV['AZURE_TENANT_ID'] . '/v2.0', // Force v2 endpoints
             'redirectUri' => $_ENV['AZURE_REDIRECT_URI'],
+            'resource' => 'https://graph.microsoft.com',
             'debug' => false,
         ]);
     }
@@ -64,7 +65,13 @@ class MicrosoftLoginController extends AbstractController
             $accessToken = $token->getToken();
             return new Response("<pre>" . $accessToken . "</pre>");
 
+            // Erst nach Audience-Prüfung wieder aktivieren:
             // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
+            // $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
+            // $vorname = $graphUser['givenName'] ?? '';
+            // $nachname = $graphUser['surname'] ?? '';
+            // $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+            // return $this->redirect($redirectUrl);
 
         } catch (\Throwable $e) {
             return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
