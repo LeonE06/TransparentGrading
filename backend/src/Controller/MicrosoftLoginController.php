@@ -59,6 +59,8 @@ class MicrosoftLoginController extends AbstractController
                 'code' => $request->get('code'),
                 'disableState' => true
             ]);
+            $accessToken = $token->getToken();
+            return new Response("<pre>" . json_encode(['access_token' => $accessToken], JSON_PRETTY_PRINT) . "</pre>")
             $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
             $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
