@@ -59,16 +59,12 @@ class MicrosoftLoginController extends AbstractController
                 'code' => $request->get('code'),
                 'disableState' => true
             ]);
+
+            // Token anzeigen, damit wir Audience prüfen können
             $accessToken = $token->getToken();
-            return new Response("<pre>" . json_encode(['access_token' => $accessToken], JSON_PRETTY_PRINT) . "</pre>")
-            $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
+            return new Response("<pre>" . $accessToken . "</pre>");
 
-            $email = $graphUser['mail'] ?? $graphUser['userPrincipalName'];
-            $vorname = $graphUser['givenName'] ?? '';
-            $nachname = $graphUser['surname'] ?? '';
-
-            $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-            return $this->redirect($redirectUrl);
+            // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
 
         } catch (\Throwable $e) {
             return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
