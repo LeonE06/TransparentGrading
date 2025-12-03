@@ -47,28 +47,27 @@ class MicrosoftLoginController extends AbstractController
         }
     }
 
-#[Route('/auth', name: 'auth_alias', methods: ['GET'])]
-public function callback(Request $request): Response
-{
-    try {
-        if (!$request->get('code')) {
-            return new Response('Kein Code erhalten.', 400);
+    #[Route('/auth', name: 'auth_alias', methods: ['GET'])]
+    public function callback(Request $request): Response
+    {
+        try {
+            if (!$request->get('code')) {
+                return new Response('Kein Code erhalten.', 400);
+            }
+
+            $token = $this->provider->getAccessToken('authorization_code', [
+                'code' => $request->get('code'),
+                'disableState' => true
+            ]);
+
+            // Token anzeigen, damit wir Audience prüfen können
+            $accessToken = $token->getToken();
+            return new Response("<pre>" . $accessToken . "</pre>");
+
+            // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
+
+        } catch (\Throwable $e) {
+            return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
         }
-
-        $token = $this->provider->getAccessToken('authorization_code', [
-            'code' => $request->get('code'),
-            'disableState' => true
-        ]);
-
-        // 🔍 Token zur Analyse ausgeben
-        $accessToken = $token->getToken();
-        return new Response("<pre>" . $accessToken . "</pre>");
-
-        // ❌ Rest später wieder aktivieren
-        // $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);
-        // ...
-    } catch (\Throwable $e) {
-        return new Response("Allgemeiner Fehler: " . $e->getMessage(), 500);
     }
-}
 }
