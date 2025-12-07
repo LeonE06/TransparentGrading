@@ -15,16 +15,14 @@ class MicrosoftUserService
 
     public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
-        // Benutzer im VIEW suchen
+        // Prüfen ob Benutzer schon existiert
         $user = $this->conn->fetchAssociative(
-            'SELECT * FROM view_ms365_user WHERE email = ?',
+            'SELECT * FROM tbl_Microsoft365_User WHERE email = ?',
             [$email]
         );
 
-        $role = $this->detectRole($email);
-
         if (!$user) {
-            // Benutzer erstellen
+            // Benutzer in tbl_Microsoft365_User anlegen
             $this->conn->insert("tbl_Microsoft365_User", [
                 'vorname' => $vorname,
                 'nachname' => $nachname,
@@ -36,40 +34,67 @@ class MicrosoftUserService
 
             $msId = (int)$this->conn->lastInsertId();
 
+            // Rolle anhand Domain festlegen
+            $role = $this->guessRoleFromEmail($email);
+
             if ($role === 'Schueler') {
                 $this->conn->insert("Schueler", [
+                    'ms365usr_id' => $msId,
                     'vorname' => $vorname,
                     'nachname' => $nachname,
                     'geburtsdatum' => null,
-                    'klasse_id' => null,
-                    'ms365usr_id' => $msId
+                    'klasse_id' => null
                 ]);
-            }
-
-            if ($role === 'Lehrer') {
+            } elseif ($role === 'Lehrer') {
                 $this->conn->insert("Lehrer", [
+                    'ms365usr_id' => $msId,
                     'vorname' => $vorname,
                     'nachname' => $nachname,
-                    'fach' => null,
-                    'ms365usr_id' => $msId
+                    'fach' => null
                 ]);
             }
+
+            return $role;
         }
 
-        return $role;
+        // Benutzer existiert → Rolle aus DB bestimmen
+        return $this->getRoleFromDB($email);
     }
 
-    public function detectRole(string $email): string
+
+    private function guessRoleFromEmail(string $email): string
     {
         $local = explode('@', $email)[0];
 
+        // Schüler: nur Zahlen (Schulkennung)
         if (preg_match('/^[0-9]{4}$/', $local)) {
             return 'Schueler';
         }
 
-        if (preg_match('/^[A-Za-z]{3}$/', $local)) {
+        // Lehrer: Schul-Domain
+        if (str_ends_with($email, '@htl.rennweg.at')) {
             return 'Lehrer';
         }
+
+        return 'Unbekannt';
+    }
+
+
+    private function getRoleFromDB(string $email): string
+    {
+        $role = $this->conn->fetchOne(
+            "SELECT 'Schueler' FROM Schueler s JOIN tbl_Microsoft365_User u ON s.ms365usr_id = u.id WHERE u.email = ?",
+            [$email]
+        );
+
+        if ($role) return 'Schueler';
+
+        $role = $this->conn->fetchOne(
+            "SELECT 'Lehrer' FROM Lehrer l JOIN tbl_Microsoft365_User u ON l.ms365usr_id = u.id WHERE u.email = ?",
+            [$email]
+        );
+
+        if ($role) return 'Lehrer';
 
         return 'Unbekannt';
     }
