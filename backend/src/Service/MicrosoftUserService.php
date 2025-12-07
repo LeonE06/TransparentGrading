@@ -1,103 +1,46 @@
-<?php
-
-namespace App\Service;
-
-use App\Entity\MicrosoftUser;
-use App\Repository\MicrosoftUserRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-
-class MicrosoftUserService
-{
-    public function __construct(
-        private HttpClientInterface $client,
-        private EntityManagerInterface $em,
-        private MicrosoftUserRepository $repo,
-        private string $clientId = "DEINE_AZURE_CLIENT_ID",
-        private string $clientSecret = "DEIN_CLIENT_SECRET",
-        private string $tenantId = "common",
-        private string $redirectUri = "https://transparentgrading.onrender.com/auth"
-    ) {}
-
-    public function getAuthUrl(): string
-    {
-        return "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/authorize?" .
-            "client_id={$this->clientId}&response_type=code&redirect_uri={$this->redirectUri}" .
-            "&response_mode=query&scope=openid%20profile%20email%20User.Read";
-    }
-
-    public function handleMicrosoftLogin(string $code): MicrosoftUser
-    {
-        $tokenData = $this->fetchAccessToken($code);
-        $userData = $this->fetchUserData($tokenData['access_token']);
-
-        $email = $userData['mail'] ?? $userData['userPrincipalName'];
-        $role = $this->determineUserRole($email);
-
-        $user = $this->repo->findOneBy(['email' => $email]);
-
-        if (!$user) {
-            $user = new MicrosoftUser();
-            $user->setVorname($userData['givenName']);
-            $user->setNachname($userData['surname']);
-            $user->setEmail($email);
-            $user->setRole($role);
-
-            $this->em->persist($user);
-        } else {
-            $user->setRole($role); // falls Lehrer → Schüler → Lehrer Änderung
-        }
-
-        $this->em->flush();
-        return $user;
-    }
-
-    private function fetchAccessToken(string $code): array
-    {
-        $response = $this->client->request('POST', "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/token", [
-            'body' => [
-                'client_id' => $this->clientId,
-                'scope' => 'User.Read',
-                'code' => $code,
-                'redirect_uri' => $this->redirectUri,
-                'grant_type' => 'authorization_code',
-                'client_secret' => $this->clientSecret
-            ]
-        ]);
-
-        return $response->toArray();
-    }
-
-    private function fetchUserData(string $accessToken): array
-    {
-        $response = $this->client->request('GET', "https://graph.microsoft.com/v1.0/me", [
-            'headers' => [
-                'Authorization' => "Bearer $accessToken"
-            ]
-        ]);
-
-        return $response->toArray();
-    }
-
-    public function determineUserRole(string $email): string
-    {
-        $localPart = explode('@', $email)[0];
-
-        if (ctype_digit($localPart)) {
-            return "Schueler";
-        }
-
-        return "Lehrer";
-    }
-
-    public function generateJwtToken(MicrosoftUser $user): string
-    {
-        $payload = [
-            'email' => $user->getEmail(),
-            'role' => $user->getRole(),
-            'exp' => time() + 86400 // 24 Std
-        ];
-
-        return JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
-    }
-}
+#15 4.054   75/104 [====================>-------]  72%
+#15 4.394   85/104 [======================>-----]  81%
+#15 4.768   98/104 [==========================>-]  94%
+#15 4.933  104/104 [============================] 100%
+#15 5.009 Generating optimized autoload files
+#15 6.460 84 packages you are using are looking for funding.
+#15 6.460 Use the `composer fund` command to find out more!
+#15 6.460 
+#15 6.460 Run composer recipes at any time to see the status of your Symfony recipes.
+#15 6.460 
+#15 6.461 Executing script cache:clear [KO]
+#15 6.886  [KO]
+#15 6.886 Script cache:clear returned with error code 1
+#15 6.886 !!  
+#15 6.886 !!  In DefinitionErrorExceptionPass.php line 48:
+#15 6.886 !!                                                                                 
+#15 6.886 !!    Cannot autowire service "App\Service\MicrosoftUserService": argument "$repo  
+#15 6.886 !!    " of method "__construct()" has type "App\Repository\MicrosoftUserRepositor  
+#15 6.886 !!    y" but this class was not found.                                             
+#15 6.886 !!                                                                                 
+#15 6.886 !!  
+#15 6.886 !!  
+#15 6.886 Script @auto-scripts was called via post-install-cmd
+#15 ERROR: process "/bin/sh -c COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction" did not complete successfully: exit code: 1
+------
+ > [prod 2/3] RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction:
+6.886 !!  
+6.886 !!  In DefinitionErrorExceptionPass.php line 48:
+6.886 !!                                                                                 
+6.886 !!    Cannot autowire service "App\Service\MicrosoftUserService": argument "$repo  
+6.886 !!    " of method "__construct()" has type "App\Repository\MicrosoftUserRepositor  
+6.886 !!    y" but this class was not found.                                             
+6.886 !!                                                                                 
+6.886 !!  
+6.886 !!  
+6.886 Script @auto-scripts was called via post-install-cmd
+------
+Dockerfile:47
+--------------------
+  45 |     
+  46 |     # Symfony Abhängigkeiten installieren (ohne dev)
+  47 | >>> RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction
+  48 |     
+  49 |     # Cache & Rechte fixen
+--------------------
+error: failed to solve: process "/bin/sh -c COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction" did not complete successfully: exit code: 1
