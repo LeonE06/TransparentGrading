@@ -26,17 +26,9 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-function getCookie(name) {
-  const cookieMatch = document.cookie.match(
-    new RegExp('(^| )' + name + '=([^;]+)')
-  );
-  return cookieMatch ? cookieMatch[2] : null;
-}
-
 onMounted(() => {
-  const token = getCookie("auth_token");
-
-  if (!token) return; // Benutzer noch nicht eingeloggt
+  const token = localStorage.getItem("token");
+  if (!token) return;
 
   const payload = JSON.parse(atob(token.split(".")[1]));
   const role = payload.role;
@@ -64,7 +56,7 @@ function loginMicrosoft() {
   border: 1px solid #0078d4;
   border-radius: 12px;
   box-shadow: 0 0 12px rgba(0, 120, 212, 0.1);
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
 }
 
 .info-box {
@@ -85,8 +77,8 @@ function loginMicrosoft() {
   border-radius: 6px;
   padding: 10px 20px;
   cursor: pointer;
-  transition: all 0.2s;
   font-weight: 500;
+  transition: 0.2s;
 }
 
 .ms-btn:hover {
