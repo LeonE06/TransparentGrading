@@ -1,46 +1,98 @@
-#15 4.054   75/104 [====================>-------]  72%
-#15 4.394   85/104 [======================>-----]  81%
-#15 4.768   98/104 [==========================>-]  94%
-#15 4.933  104/104 [============================] 100%
-#15 5.009 Generating optimized autoload files
-#15 6.460 84 packages you are using are looking for funding.
-#15 6.460 Use the `composer fund` command to find out more!
-#15 6.460 
-#15 6.460 Run composer recipes at any time to see the status of your Symfony recipes.
-#15 6.460 
-#15 6.461 Executing script cache:clear [KO]
-#15 6.886  [KO]
-#15 6.886 Script cache:clear returned with error code 1
-#15 6.886 !!  
-#15 6.886 !!  In DefinitionErrorExceptionPass.php line 48:
-#15 6.886 !!                                                                                 
-#15 6.886 !!    Cannot autowire service "App\Service\MicrosoftUserService": argument "$repo  
-#15 6.886 !!    " of method "__construct()" has type "App\Repository\MicrosoftUserRepositor  
-#15 6.886 !!    y" but this class was not found.                                             
-#15 6.886 !!                                                                                 
-#15 6.886 !!  
-#15 6.886 !!  
-#15 6.886 Script @auto-scripts was called via post-install-cmd
-#15 ERROR: process "/bin/sh -c COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction" did not complete successfully: exit code: 1
-------
- > [prod 2/3] RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction:
-6.886 !!  
-6.886 !!  In DefinitionErrorExceptionPass.php line 48:
-6.886 !!                                                                                 
-6.886 !!    Cannot autowire service "App\Service\MicrosoftUserService": argument "$repo  
-6.886 !!    " of method "__construct()" has type "App\Repository\MicrosoftUserRepositor  
-6.886 !!    y" but this class was not found.                                             
-6.886 !!                                                                                 
-6.886 !!  
-6.886 !!  
-6.886 Script @auto-scripts was called via post-install-cmd
-------
-Dockerfile:47
---------------------
-  45 |     
-  46 |     # Symfony Abhängigkeiten installieren (ohne dev)
-  47 | >>> RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction
-  48 |     
-  49 |     # Cache & Rechte fixen
---------------------
-error: failed to solve: process "/bin/sh -c COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction" did not complete successfully: exit code: 1
+<?php
+
+namespace App\Service;
+
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Schueler;
+use App\Entity\Lehrer;
+use App\Entity\TblMicrosoft365User;
+
+class MicrosoftUserService
+{
+    private EntityManagerInterface $em;
+
+    public function __construct(EntityManagerInterface $em)
+    {
+        $this->em = $em;
+    }
+
+    /**
+     * Speichert Microsoft Benutzer & bestimmt Rolle (lehrer / schueler)
+     */
+    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
+    {
+        // 🔍 DEBUG: E-Mail ausgeben
+        // file_put_contents('/tmp/auth_debug.log', "EMAIL: $email\n", FILE_APPEND);
+
+        // Nutzer in Haupttabelle suchen
+        $existingUser = $this->em->getRepository(TblMicrosoft365User::class)
+            ->findOneBy(['email' => $email]);
+
+        if (!$existingUser) {
+            $existingUser = new TblMicrosoft365User();
+            $existingUser->setVorname($vorname);
+            $existingUser->setNachname($nachname);
+            $existingUser->setEmail($email);
+
+            $this->em->persist($existingUser);
+            $this->em->flush();
+        }
+
+        // 🔍 DEBUG: Loggen
+        // file_put_contents('/tmp/auth_debug.log', "CHECK ROLE FOR: $email\n", FILE_APPEND);
+
+        // EMAIL → ROLLENERKENNUNG
+        // Schüler → z.B. 1034@htl.rennweg.at
+        if (preg_match('/^[0-9]{4}@htl\.rennweg\.at$/i', $email)) {
+            // file_put_contents('/tmp/auth_debug.log', "ROLE: SCHUELER\n", FILE_APPEND);
+            return $this->ensureSchueler($existingUser, $vorname, $nachname);
+        }
+
+        // Lehrer → z.B. ABC@htl.rennweg.at
+        if (preg_match('/^[A-Za-z]{3}@htl\.rennweg\.at$/i', $email)) {
+            // file_put_contents('/tmp/auth_debug.log', "ROLE: LEHRER\n", FILE_APPEND);
+            return $this->ensureLehrer($existingUser, $vorname, $nachname);
+        }
+
+        // file_put_contents('/tmp/auth_debug.log', "ROLE: UNKNOWN\n", FILE_APPEND);
+        return 'Unbekannt';
+    }
+
+
+    private function ensureSchueler(TblMicrosoft365User $m365User, string $vorname, string $nachname): string
+    {
+        $schueler = $this->em->getRepository(Schueler::class)
+            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+
+        if (!$schueler) {
+            $schueler = new Schueler();
+            $schueler->setVorname($vorname);
+            $schueler->setNachname($nachname);
+            $schueler->setMicrosoftUser($m365User);
+
+            $this->em->persist($schueler);
+            $this->em->flush();
+        }
+
+        return "Schueler";
+    }
+
+
+    private function ensureLehrer(TblMicrosoft365User $m365User, string $vorname, string $nachname): string
+    {
+        $lehrer = $this->em->getRepository(Lehrer::class)
+            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+
+        if (!$lehrer) {
+            $lehrer = new Lehrer();
+            $lehrer->setVorname($vorname);
+            $lehrer->setNachname($nachname);
+            $lehrer->setMicrosoftUser($m365User);
+
+            $this->em->persist($lehrer);
+            $this->em->flush();
+        }
+
+        return "Lehrer";
+    }
+}
