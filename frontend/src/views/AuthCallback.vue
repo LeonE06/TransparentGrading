@@ -9,7 +9,7 @@ onMounted(() => {
   const token = route.query.token
 
   if (!token) {
-    router.push("/login")
+    router.replace("/login")
     return
   }
 
@@ -19,7 +19,7 @@ onMounted(() => {
   // URL bereinigen
   router.replace({ query: {} })
 
-  // Rolle aus Token auslesen
+  // Rolle aus Token bestimmen
   const payload = JSON.parse(atob(token.split('.')[1]))
   const role = payload.role
 
