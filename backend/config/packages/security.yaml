@@ -13,18 +13,15 @@ security:
         api:
             pattern: ^/api/
             stateless: true
+            provider: in_memory
             custom_authenticators:
-                App\Security\JWTAuthenticator
+                - App\Security\JWTAuthenticator
 
         main:
             lazy: true
-            provider: in_memory
-            security: false  # Main-Frontend bleibt öffentlich
+            security: false
 
     access_control:
-        # Lehrer: Darf nur Lehrer-API
         - { path: ^/api/lehrer, roles: ROLE_LEHRER }
-        # Schüler: Darf nur Schüler-API
         - { path: ^/api/schueler, roles: ROLE_SCHUELER }
-        # Alle API-Endpunkte brauchen gültiges Token
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
