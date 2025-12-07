@@ -13,7 +13,8 @@ security:
         api:
             pattern: ^/api/
             stateless: true
-            custom_jwt: true
+            custom_authenticators:
+                App\Security\JWTAuthenticator
 
         main:
             lazy: true
