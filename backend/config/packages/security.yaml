@@ -1,5 +1,5 @@
 security:
-    enable_authenticator_manager: true
+    # Symfony 7: enable_authenticator_manager entfernt!
 
     providers:
         in_memory:
