@@ -34,5 +34,8 @@ class JWTUser implements UserInterface
         return $this->roles;
     }
 
-    public function eraseCredentials() {}
+    public function eraseCredentials(): void
+    {
+        // Nichts zu löschen, keine Passwörter gespeichert
+    }
 }
