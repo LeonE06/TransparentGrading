@@ -21,38 +21,37 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted } from "vue";
+import { useRouter } from "vue-router";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+
+function getCookie(name) {
+  const cookieMatch = document.cookie.match(
+    new RegExp('(^| )' + name + '=([^;]+)')
+  );
+  return cookieMatch ? cookieMatch[2] : null;
+}
 
 onMounted(() => {
-  const token = route.query.token
+  const token = getCookie("auth_token");
 
-  if (token) {
-    // 🔐 Speichern
-    localStorage.setItem("token", token)
+  if (!token) return; // Benutzer noch nicht eingeloggt
 
-    // 🔁 URL säubern ohne token
-    router.replace({ query: {} })
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const role = payload.role;
 
-    // 🧠 Rolle aus Token lesen
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const role = payload.role
-
-    if (role === "Schueler") {
-        router.push("/schueler/Klassenuebersicht")
-    } else if (role === "Lehrer") {
-        router.push("/lehrer/Klassenuebersicht")
-    } else {
-        router.push("/login")
-    }
+  if (role === "Schueler") {
+    router.push("/schueler/faecher");
+  } else if (role === "Lehrer") {
+    router.push("/lehrer/faecher");
+  } else {
+    router.push("/login");
   }
-})
+});
 
 function loginMicrosoft() {
-  window.location.href = 'https://transparentgrading.onrender.com/microsoft'
+  window.location.href = "https://transparentgrading.onrender.com/microsoft";
 }
 </script>
 
