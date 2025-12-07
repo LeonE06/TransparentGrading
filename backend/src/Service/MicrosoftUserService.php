@@ -2,100 +2,102 @@
 
 namespace App\Service;
 
-use Doctrine\DBAL\Connection;
+use App\Entity\MicrosoftUser;
+use App\Repository\MicrosoftUserRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class MicrosoftUserService
 {
-    private Connection $conn;
+    public function __construct(
+        private HttpClientInterface $client,
+        private EntityManagerInterface $em,
+        private MicrosoftUserRepository $repo,
+        private string $clientId = "DEINE_AZURE_CLIENT_ID",
+        private string $clientSecret = "DEIN_CLIENT_SECRET",
+        private string $tenantId = "common",
+        private string $redirectUri = "https://transparentgrading.onrender.com/auth"
+    ) {}
 
-    public function __construct(Connection $conn)
+    public function getAuthUrl(): string
     {
-        $this->conn = $conn;
+        return "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/authorize?" .
+            "client_id={$this->clientId}&response_type=code&redirect_uri={$this->redirectUri}" .
+            "&response_mode=query&scope=openid%20profile%20email%20User.Read";
     }
 
-    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
+    public function handleMicrosoftLogin(string $code): MicrosoftUser
     {
-        // Prüfen ob Benutzer schon existiert
-        $user = $this->conn->fetchAssociative(
-            'SELECT * FROM tbl_Microsoft365_User WHERE email = ?',
-            [$email]
-        );
+        $tokenData = $this->fetchAccessToken($code);
+        $userData = $this->fetchUserData($tokenData['access_token']);
+
+        $email = $userData['mail'] ?? $userData['userPrincipalName'];
+        $role = $this->determineUserRole($email);
+
+        $user = $this->repo->findOneBy(['email' => $email]);
 
         if (!$user) {
-            // Benutzer in tbl_Microsoft365_User anlegen
-            $this->conn->insert("tbl_Microsoft365_User", [
-                'vorname' => $vorname,
-                'nachname' => $nachname,
-                'email' => $email,
-                'lizenzen' => '',
-                'proxyadressen' => '',
-                'erstellungszeitpunkt' => (new \DateTime())->format("Y-m-d H:i:s")
-            ]);
+            $user = new MicrosoftUser();
+            $user->setVorname($userData['givenName']);
+            $user->setNachname($userData['surname']);
+            $user->setEmail($email);
+            $user->setRole($role);
 
-            $msId = (int)$this->conn->lastInsertId();
-
-            // Rolle anhand Domain festlegen
-            $role = $this->guessRoleFromEmail($email);
-
-            if ($role === 'Schueler') {
-                $this->conn->insert("Schueler", [
-                    'ms365usr_id' => $msId,
-                    'vorname' => $vorname,
-                    'nachname' => $nachname,
-                    'geburtsdatum' => null,
-                    'klasse_id' => null
-                ]);
-            } elseif ($role === 'Lehrer') {
-                $this->conn->insert("Lehrer", [
-                    'ms365usr_id' => $msId,
-                    'vorname' => $vorname,
-                    'nachname' => $nachname,
-                    'fach' => null
-                ]);
-            }
-
-            return $role;
+            $this->em->persist($user);
+        } else {
+            $user->setRole($role); // falls Lehrer → Schüler → Lehrer Änderung
         }
 
-        // Benutzer existiert → Rolle aus DB bestimmen
-        return $this->getRoleFromDB($email);
+        $this->em->flush();
+        return $user;
     }
 
-
-    private function guessRoleFromEmail(string $email): string
+    private function fetchAccessToken(string $code): array
     {
-        $local = explode('@', $email)[0];
+        $response = $this->client->request('POST', "https://login.microsoftonline.com/{$this->tenantId}/oauth2/v2.0/token", [
+            'body' => [
+                'client_id' => $this->clientId,
+                'scope' => 'User.Read',
+                'code' => $code,
+                'redirect_uri' => $this->redirectUri,
+                'grant_type' => 'authorization_code',
+                'client_secret' => $this->clientSecret
+            ]
+        ]);
 
-        // Schüler: nur Zahlen (Schulkennung)
-        if (preg_match('/^[0-9]{4}$/', $local)) {
-            return 'Schueler';
-        }
-
-        // Lehrer: Schul-Domain
-        if (str_ends_with($email, '@htl.rennweg.at')) {
-            return 'Lehrer';
-        }
-
-        return 'Unbekannt';
+        return $response->toArray();
     }
 
-
-    private function getRoleFromDB(string $email): string
+    private function fetchUserData(string $accessToken): array
     {
-        $role = $this->conn->fetchOne(
-            "SELECT 'Schueler' FROM Schueler s JOIN tbl_Microsoft365_User u ON s.ms365usr_id = u.id WHERE u.email = ?",
-            [$email]
-        );
+        $response = $this->client->request('GET', "https://graph.microsoft.com/v1.0/me", [
+            'headers' => [
+                'Authorization' => "Bearer $accessToken"
+            ]
+        ]);
 
-        if ($role) return 'Schueler';
+        return $response->toArray();
+    }
 
-        $role = $this->conn->fetchOne(
-            "SELECT 'Lehrer' FROM Lehrer l JOIN tbl_Microsoft365_User u ON l.ms365usr_id = u.id WHERE u.email = ?",
-            [$email]
-        );
+    public function determineUserRole(string $email): string
+    {
+        $localPart = explode('@', $email)[0];
 
-        if ($role) return 'Lehrer';
+        if (ctype_digit($localPart)) {
+            return "Schueler";
+        }
 
-        return 'Unbekannt';
+        return "Lehrer";
+    }
+
+    public function generateJwtToken(MicrosoftUser $user): string
+    {
+        $payload = [
+            'email' => $user->getEmail(),
+            'role' => $user->getRole(),
+            'exp' => time() + 86400 // 24 Std
+        ];
+
+        return JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
     }
 }
