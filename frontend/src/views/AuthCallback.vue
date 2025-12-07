@@ -1,20 +1,23 @@
 <script setup>
-import { useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 
 const router = useRouter()
+const route = useRoute()
 
-function getRoleFromToken() {
-  const cookieMatch = document.cookie.match(/(?:^| )auth_token=([^;]+)/)
-  if (!cookieMatch) return null
+const token = route.query.token
 
-  const token = cookieMatch[1]
+if (token) {
+  // Token speichern
+  localStorage.setItem("token", token)
+
+  // Token-Daten auslesen
   const payload = JSON.parse(atob(token.split('.')[1]))
-  return payload.role
-}
+  const role = payload.role
 
-setTimeout(() => {
-  const role = getRoleFromToken()
+  // URL aufräumen
+  router.replace({ query: {} })
 
+  // Weiterleitung nach Rolle
   if (role === "Schueler") {
     router.push("/schueler/faecher")
   } else if (role === "Lehrer") {
@@ -22,7 +25,9 @@ setTimeout(() => {
   } else {
     router.push("/login")
   }
-}, 300)
+} else {
+  router.push("/login")
+}
 </script>
 
 <template>
