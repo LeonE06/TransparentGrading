@@ -1,23 +1,28 @@
 <script setup>
 import { useRouter, useRoute } from "vue-router"
+import { onMounted } from "vue"
 
 const router = useRouter()
 const route = useRoute()
 
-const token = route.query.token
+onMounted(() => {
+  const token = route.query.token
 
-if (token) {
+  if (!token) {
+    router.push("/login")
+    return
+  }
+
   // Token speichern
   localStorage.setItem("token", token)
 
-  // Token-Daten auslesen
+  // URL bereinigen
+  router.replace({ query: {} })
+
+  // Rolle aus Token auslesen
   const payload = JSON.parse(atob(token.split('.')[1]))
   const role = payload.role
 
-  // URL aufräumen
-  router.replace({ query: {} })
-
-  // Weiterleitung nach Rolle
   if (role === "Schueler") {
     router.push("/schueler/faecher")
   } else if (role === "Lehrer") {
@@ -25,9 +30,7 @@ if (token) {
   } else {
     router.push("/login")
   }
-} else {
-  router.push("/login")
-}
+})
 </script>
 
 <template>
