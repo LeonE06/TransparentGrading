@@ -6,25 +6,25 @@ const route = useRoute()
 
 const token = route.query.token
 
-if (token) {
-  // Token speichern
-  localStorage.setItem("token", token)
+if (!token) {
+  router.push("/login")
+  return
+}
 
-  // Token-Daten auslesen
-  const payload = JSON.parse(atob(token.split('.')[1]))
-  const role = payload.role
+// Token speichern
+localStorage.setItem("token", token)
 
-  // URL aufräumen
-  router.replace({ query: {} })
+// URL bereinigen
+router.replace({ query: {} })
 
-  // Weiterleitung nach Rolle
-  if (role === "Schueler") {
-    router.push("/schueler/faecher")
-  } else if (role === "Lehrer") {
-    router.push("/lehrer/faecher")
-  } else {
-    router.push("/login")
-  }
+// Rolle auslesen
+const payload = JSON.parse(atob(token.split('.')[1]))
+const role = payload.role
+
+if (role === "Schueler") {
+  router.push("/schueler/faecher")
+} else if (role === "Lehrer") {
+  router.push("/lehrer/faecher")
 } else {
   router.push("/login")
 }
