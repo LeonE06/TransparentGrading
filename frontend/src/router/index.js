@@ -41,7 +41,7 @@ router.beforeEach((to, from, next) => {
   const role = getRoleFromToken()
 
   // Kein Login?
-  if (!token && to.path !== "/login" && to.path !== "/auth/callback") {
+  if (!token && !to.path.startsWith("/auth")) {
     return next("/login")
   }
 
