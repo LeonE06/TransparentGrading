@@ -1,15 +1,11 @@
 <script setup>
-import { useRouter } from 'vue-router'
-const router = useRouter()
+// JWT entfernen
+localStorage.removeItem("token");
+document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure";
 
-localStorage.removeItem("token")
-document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure"
-
-// Microsoft SSO Logout → dann zurück zu Login
-setTimeout(() => {
-  window.location.href = "https://login.microsoftonline.com/logout.srf"
-}, 500)
-
+// Automatischer Microsoft Logout + Redirect zur Login-Seite
+const redirectUri = encodeURIComponent("https://transparent-grading-flax.vercel.app/login");
+window.location.href = `https://login.microsoftonline.com/logout.srf?post_logout_redirect_uri=${redirectUri}`;
 </script>
 
 <template>
