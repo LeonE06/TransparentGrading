@@ -1,50 +1,46 @@
+<template>
+  <div class="loading">
+    <h2>Authentifiziere dich...</h2>
+  </div>
+</template>
+
 <script setup>
-import { useRouter, useRoute } from "vue-router";
-import { onMounted } from "vue";
+import { useRouter } from "vue-router";
 
 const router = useRouter();
-const route = useRoute();
 
-onMounted(() => {
-  const token = route.query.token;
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get("token");
 
-  // 1) Kein Token? → Zurück zum Login
-  if (!token) {
-    console.warn("Kein Token in Callback-URL gefunden!");
-    router.push("/login");
-    return;
-  }
+if (!token) {
+  router.push("/login");
+} else {
+  // JWT speichern
+  localStorage.setItem("token", token);
 
-  try {
-    // 2) Token speichern
-    localStorage.setItem("token", token);
+  // Cookie für Symfony setzen → wichtig für Backend!
+  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
 
-    // 3) Token Payload lesen
-    const payloadBase64 = token.split(".")[1];
-    const payloadJson = atob(payloadBase64);
-    const payload = JSON.parse(payloadJson);
+  // Rolle auslesen
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const role = payload.role;
 
-    const role = payload.role;
-
-    // 4) URL bereinigen (damit Token nicht sichtbar bleibt)
-    router.replace({ path: "/auth/callback", query: {} });
-
-    // 5) Weiterleiten nach Rolle
-    if (role === "Schueler") {
-      router.push("/schueler/faecher");
-    } else if (role === "Lehrer") {
-      router.push("/lehrer/faecher");
-    } else {
-      console.warn("Unbekannte Rolle:", role);
-      router.push("/login");
-    }
-  } catch (err) {
-    console.error("Token konnte nicht verarbeitet werden:", err);
+  // Weiterleitung basierend auf Rolle
+  if (role === "Schueler") {
+    router.push("/schueler/faecher");
+  } else if (role === "Lehrer") {
+    router.push("/admin/klassen"); // Lehrerbereich richtig definieren!
+  } else {
     router.push("/login");
   }
-});
+}
 </script>
 
-<template>
-  <p style="margin: 50px; font-size: 22px;">Authentifizierung läuft…</p>
-</template>
+<style scoped>
+.loading {
+  margin-top: 100px;
+  text-align: center;
+  font-size: 22px;
+  color: #0078d4;
+}
+</style>
