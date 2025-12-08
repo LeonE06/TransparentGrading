@@ -28,17 +28,23 @@ const router = useRouter();
 
 onMounted(() => {
   const token = localStorage.getItem("token");
-  if (!token) return;
 
-  const payload = JSON.parse(atob(token.split(".")[1]));
-  const role = payload.role;
+  if (!token) {
+    return; // bleibe auf Login
+  }
 
-  if (role === "Schueler") {
-    router.push("/schueler/faecher");
-  } else if (role === "Lehrer") {
-    router.push("/lehrer/faecher");
-  } else {
-    router.push("/login");
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const role = payload.role;
+
+    if (role === "Schueler") {
+      router.push("/schueler/faecher");
+    } else if (role === "Lehrer") {
+      router.push("/admin/klassen");
+    }
+  } catch(e) {
+    // Ungültiger Token -> sauber ausloggen
+    localStorage.removeItem("token");
   }
 });
 
