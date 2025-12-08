@@ -69,34 +69,23 @@ class MicrosoftUserService
      * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
      */
     private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
-    {
-        // ACHTUNG: Der Key im findOneBy muss zum Property-Namen im Schueler-Entity passen!
-        // Wenn dein Property z.B. $ms365usr_id heißt, ist das hier korrekt.
-        $schueler = $this->em->getRepository(Schueler::class)
-            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+{
+    $schueler = $this->em->getRepository(Schueler::class)
+        ->findOneBy(['ms365User' => $m365User]);
 
-        if ($schueler) {
-            return;
-        }
-
-        $schueler = new Schueler();
-        if (method_exists($schueler, 'setVorname')) {
-            $schueler->setVorname($vorname);
-        }
-        if (method_exists($schueler, 'setNachname')) {
-            $schueler->setNachname($nachname);
-        }
-
-        // Beziehung setzen – Methode ggf. an deinen Entity-Namen anpassen
-        if (method_exists($schueler, 'setMicrosoftUser')) {
-            $schueler->setMicrosoftUser($m365User);
-        } elseif (method_exists($schueler, 'setMs365usr')) {
-            $schueler->setMs365usr($m365User);
-        }
-
-        $this->em->persist($schueler);
-        $this->em->flush();
+    if ($schueler) {
+        return;
     }
+
+    $schueler = new Schueler();
+    $schueler->setVorname($vorname);
+    $schueler->setNachname($nachname);
+    $schueler->setMs365User($m365User);
+
+    $this->em->persist($schueler);
+    $this->em->flush();
+}
+
 
     /**
      * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
