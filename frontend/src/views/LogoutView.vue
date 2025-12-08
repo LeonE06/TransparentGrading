@@ -1,26 +1,17 @@
 <script setup>
-import { useRouter } from "vue-router"
-
+import { useRouter } from 'vue-router'
 const router = useRouter()
 
-// HTTP-only Cookie löschen
-document.cookie = "auth_token=; Max-Age=0; Path=/; SameSite=Strict"
+localStorage.removeItem("token")
+document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure"
 
-// Kleine Wartezeit, dann Redirect
+// Microsoft SSO Logout → dann zurück zu Login
 setTimeout(() => {
-  router.push("/login")
-}, 300)
+  window.location.href = "https://login.microsoftonline.com/logout.srf"
+}, 500)
+
 </script>
 
 <template>
-  <p>Abmeldung...</p>
+  <div>Abmeldung...</div>
 </template>
-
-<style scoped>
-p {
-  text-align: center;
-  margin-top: 40px;
-  font-size: 18px;
-  color: #666;
-}
-</style>
