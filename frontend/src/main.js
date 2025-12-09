@@ -17,4 +17,4 @@ createApp(App)
 
 // Theme initialisieren (nicht-blockierend)
 const { loadFromServer } = useTheme()
-loadFromServer()
+loadFromServer()  

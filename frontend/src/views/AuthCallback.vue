@@ -19,7 +19,8 @@ if (!token) {
   localStorage.setItem("token", token);
 
   // Cookie für Symfony (Backend Auth)
-  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
+  localStorage.setItem("token", token);
+
 
   // Token-Infos (Rolle) auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
