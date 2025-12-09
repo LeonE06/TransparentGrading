@@ -54,19 +54,30 @@ function loginMicrosoft() {
 </script>
 
 <style scoped>
+
+span {
+  color: var(--text)
+}
 .login-container {
   max-width: 400px;
   margin: 60px auto;
   text-align: center;
   padding: 40px;
-  border: 1px solid #0078d4;
-  border-radius: 12px;
+  background: 
+    linear-gradient(var(--first-background-color) 0 0) padding-box,
+    linear-gradient(to right, var(--primary), var(--secondary)) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
   box-shadow: 0 0 12px rgba(0, 120, 212, 0.1);
   font-family: "Segoe UI", sans-serif;
+      display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: 60vh;
 }
 
 .info-box {
-  background: #f8f8f8;
+  background: var(--first-background-color);
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -78,9 +89,9 @@ function loginMicrosoft() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: white;
-  border: 1px solid #5e5e5e;
-  border-radius: 6px;
+  background: var(--first-background-color);
+  border: 1.5px solid var(--aczent-color);
+  border-radius: 10px;
   padding: 10px 20px;
   cursor: pointer;
   font-weight: 500;
@@ -88,8 +99,11 @@ function loginMicrosoft() {
 }
 
 .ms-btn:hover {
-  border-color: #0078d4;
-  color: #0078d4;
+  background: 
+    linear-gradient(var(--first-background-color) 0 0) padding-box,
+    linear-gradient(to right, var(--primary), var(--secondary)) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
   transform: scale(1.02);
 }
 </style>
