@@ -48,10 +48,12 @@ router.beforeEach((to, from, next) => {
   const role = getRoleFromToken()
 
   // Kein Login?
-if (!token && to.path !== "/login" && !to.path.startsWith("/auth") && to.path !== "/logout") {
+if (!token &&
+    to.path !== "/login" &&
+    !to.path.startsWith("/auth") &&
+    to.path !== "/logout") {
   return next("/login")
 }
-
   // Kein Zugriff mit falscher Rolle?
   if (to.meta.role && to.meta.role !== role) {
     return next("/login")

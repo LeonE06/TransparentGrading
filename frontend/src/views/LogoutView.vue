@@ -2,6 +2,7 @@
 import { onMounted } from "vue";
 
 onMounted(() => {
+    console.log("Logout executed!");
   // JWT entfernen
   localStorage.removeItem("token");
   document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure";
