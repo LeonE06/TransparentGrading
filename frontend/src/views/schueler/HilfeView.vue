@@ -1,13 +1,13 @@
 <template>
     <div class="klassen-view">
         <!-- Überschrift -->
-        
+
 
         <!-- obere Steuerleiste -->
         <div class="toolbar">
 
             <div class="left-controls">
-<h1 class="title">Datenschutzkonzept</h1>
+                <h1 class="title">Datenschutzkonzept</h1>
             </div>
             <div class="right-controls">
 
@@ -328,18 +328,57 @@ function downloadPDF() {
 </script>
 
 <style scoped>
-header{margin-bottom:1.25rem}
-h1{font-size:1.6rem;margin:0 0 .25rem}
+header {
+    margin-bottom: 1.25rem
+}
 
-h2{margin-top:1.25rem;color:var(--accent)}
-h3{margin-top:1rem}
-p{margin:.6rem 0}
-.toc{margin:1rem 0;padding:0}
-.toc ul{padding-left:1rem}
-table{width:100%;border-collapse:collapse;margin:.75rem 0}
-th,td{border:1px solid var(--second-background-color);padding:.5rem;text-align:left}
-th{background:var(--second-background-color)}
-a {color: var(--primary)}
+h1 {
+    font-size: 1.6rem;
+    margin: 0 0 .25rem
+}
+
+h2 {
+    margin-top: 1.25rem;
+    color: var(--accent)
+}
+
+h3 {
+    margin-top: 1rem
+}
+
+p {
+    margin: .6rem 0
+}
+
+.toc {
+    margin: 1rem 0;
+    padding: 0
+}
+
+.toc ul {
+    padding-left: 1rem
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: .75rem 0
+}
+
+th,
+td {
+    border: 1px solid var(--second-background-color);
+    padding: .5rem;
+    text-align: left
+}
+
+th {
+    background: var(--second-background-color)
+}
+
+a {
+    color: var(--primary)
+}
 
 .pdf-frame {
     width: 100%;
