@@ -1,13 +1,15 @@
 <script setup>
-// Token sofort entfernen
-localStorage.removeItem("token");
-document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure";
+import { onMounted } from "vue";
 
-// Richtige Redirect-URL nach MS Logout
-const redirectUri = encodeURIComponent("https://transparent-grading-flax.vercel.app/auth/login");
+onMounted(() => {
+  // JWT entfernen
+  localStorage.removeItem("token");
+  document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=None; Secure";
 
-window.location.href =
-  `https://login.microsoftonline.com/logout.srf?post_logout_redirect_uri=${redirectUri}`;
+  // Automatischer Microsoft Logout + Redirect zur Login-Seite
+  const redirectUri = encodeURIComponent("https://transparent-grading-flax.vercel.app/login");
+  window.location.href = `https://login.microsoftonline.com/logout.srf?post_logout_redirect_uri=${redirectUri}`;
+});
 </script>
 
 <template>
