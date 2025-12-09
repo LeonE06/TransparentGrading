@@ -29,7 +29,7 @@ if (!token) {
   if (role === "Schueler") {
     router.push("/schueler/faecher");
   } else if (role === "Lehrer") {
-    router.push("/admin/klassen"); // Lehrerbereich richtig definieren!
+    router.push("/lehrer/faecher"); // Lehrerbereich richtig definieren!
   } else {
     router.push("/login");
   }
