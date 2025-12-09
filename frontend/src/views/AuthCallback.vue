@@ -13,25 +13,26 @@ const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get("token");
 
 if (!token) {
-  router.push("/login");
+  router.replace("/login");
 } else {
-  // JWT speichern
+  // Token speichern
   localStorage.setItem("token", token);
 
-  // Cookie für Symfony setzen → wichtig für Backend!
+  // Cookie für Symfony (Backend Auth)
   document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
 
-  // Rolle auslesen
+  // Token-Infos (Rolle) auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
   const role = payload.role;
 
-  // Weiterleitung basierend auf Rolle
+  console.log("ROLE:", role);
+
   if (role === "Schueler") {
-    router.push("/schueler/faecher");
+    router.replace("/schueler/faecher");
   } else if (role === "Lehrer") {
-    router.push("/lehrer/faecher"); // Lehrerbereich richtig definieren!
+    router.replace("/admin/klassen");
   } else {
-    router.push("/login");
+    router.replace("/login");
   }
 }
 </script>
