@@ -23,41 +23,37 @@ class MicrosoftUserService
      */
     public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
-        // --- M365-User in Haupttabelle suchen ---
+        // Microsoft365User heraussuchen oder erstellen
         $existingUser = $this->em->getRepository(Microsoft365User::class)
             ->findOneBy(['email' => $email]);
 
-        // Falls noch nicht vorhanden → anlegen
         if (!$existingUser) {
             $existingUser = new Microsoft365User();
             $existingUser->setVorname($vorname);
             $existingUser->setNachname($nachname);
             $existingUser->setEmail($email);
-
-            // Falls es die Felder in der Entity gibt:
-            if (method_exists($existingUser, 'setLizenzen')) {
-                $existingUser->setLizenzen('');
-            }
-            if (method_exists($existingUser, 'setProxyadressen')) {
-                $existingUser->setProxyadressen('');
-            }
+            $existingUser->setLizenzen('');
+            $existingUser->setProxyadressen('');
 
             $this->em->persist($existingUser);
             $this->em->flush();
         }
 
-        // --- Rolle aus der Mail bestimmen ---
-        // 1034@htl.rennweg.at  → Schüler
-        // ABC@htl.rennweg.at   → Lehrer
+        // Rolle bestimmen durch Email
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
+        // Schüler: 4 Zahlen
         if (preg_match('/^[0-9]{4}$/', $localPart)) {
             $this->ensureSchueler($existingUser, $vorname, $nachname);
             return 'Schueler';
         }
 
-        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+        // Lehrer: 3 Buchstaben oder vorname.nachname
+        if (
+            preg_match('/^[a-z]{3}$/', $localPart) ||
+            preg_match('/^[a-z]+\.[a-z]+$/', $localPart)
+        ) {
             $this->ensureLehrer($existingUser, $vorname, $nachname);
             return 'Lehrer';
         }
@@ -65,53 +61,39 @@ class MicrosoftUserService
         return 'Unbekannt';
     }
 
-    /**
-     * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
-     */
-    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
-{
-    $schueler = $this->em->getRepository(Schueler::class)
-        ->findOneBy(['ms365User' => $m365User]);
 
-    if ($schueler) {
-        return;
+    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
+    {
+        $schueler = $this->em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $m365User]);
+
+        if ($schueler) {
+            return;
+        }
+
+        $schueler = new Schueler();
+        $schueler->setVorname($vorname);
+        $schueler->setNachname($nachname);
+        $schueler->setMs365User($m365User);
+
+        $this->em->persist($schueler);
+        $this->em->flush();
     }
 
-    $schueler = new Schueler();
-    $schueler->setVorname($vorname);
-    $schueler->setNachname($nachname);
-    $schueler->setMs365User($m365User);
 
-    $this->em->persist($schueler);
-    $this->em->flush();
-}
-
-
-    /**
-     * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
-     */
     private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
     {
         $lehrer = $this->em->getRepository(Lehrer::class)
-            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+            ->findOneBy(['ms365usr' => $m365User]); // <-- korrektes Feld
 
         if ($lehrer) {
             return;
         }
 
         $lehrer = new Lehrer();
-        if (method_exists($lehrer, 'setVorname')) {
-            $lehrer->setVorname($vorname);
-        }
-        if (method_exists($lehrer, 'setNachname')) {
-            $lehrer->setNachname($nachname);
-        }
-
-        if (method_exists($lehrer, 'setMicrosoftUser')) {
-            $lehrer->setMicrosoftUser($m365User);
-        } elseif (method_exists($lehrer, 'setMs365usr')) {
-            $lehrer->setMs365usr($m365User);
-        }
+        $lehrer->setVorname($vorname);
+        $lehrer->setNachname($nachname);
+        $lehrer->setMs365usr($m365User); // <-- korrektes Setter
 
         $this->em->persist($lehrer);
         $this->em->flush();

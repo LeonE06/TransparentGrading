@@ -104,14 +104,5 @@ class Microsoft365User
         $this->erstellungszeitpunkt = $erstellungszeitpunkt;
         return $this;
     }
-    public function getMs365User(): ?Microsoft365User
-{
-    return $this->ms365User;
-}
-
-public function setMs365User(?Microsoft365User $ms365User): self
-{
-    $this->ms365User = $ms365User;
-    return $this;
-}
+    
 }
