@@ -48,10 +48,15 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
-  // Kein Token -> nur Login / Logout erlaubt
-  if (!token && !["/login", "/logout"].includes(to.path)) {
-    return next("/login")
-  }
+// Auth Callback IMMER erlauben – auch mit Query ?token=...
+if (to.path.startsWith("/auth/callback")) {
+  return next()
+}
+
+// Kein Login + kein Zugriff auf Login/Logout?
+if (!token && !["/login", "/logout"].includes(to.path)) {
+  return next("/login")
+}
 
   // Rolle prüfen NACH Login
   const role = getRoleFromToken()
