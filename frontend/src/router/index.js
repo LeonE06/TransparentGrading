@@ -42,20 +42,20 @@ const router = createRouter({
 // Route Guard
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token")
-  const role = getRoleFromToken()
 
-  const publicRoutes = [
-    "/login",
-    "/logout",
-    "/auth/callback"
-  ]
+  // AuthCallback immer zulassen -> Token wird hier erst gespeichert!
+  if (to.path.startsWith("/auth/callback")) {
+    return next()
+  }
 
-  // Kein Login + kein Zugriff auf öffentliche Route?
-  if (!token && !publicRoutes.includes(to.path)) {
+  // Kein Token -> nur Login / Logout erlaubt
+  if (!token && !["/login", "/logout"].includes(to.path)) {
     return next("/login")
   }
 
-  // Kein Zugriff mit falscher Rolle?
+  // Rolle prüfen NACH Login
+  const role = getRoleFromToken()
+
   if (to.meta.role && to.meta.role !== role) {
     return next("/login")
   }
