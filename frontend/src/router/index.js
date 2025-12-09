@@ -4,8 +4,12 @@ function getRoleFromToken() {
   const token = localStorage.getItem("token")
   if (!token) return null
 
-  const payload = JSON.parse(atob(token.split(".")[1]))
-  return payload.role
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]))
+    return payload.role
+  } catch {
+    return null
+  }
 }
 
 const router = createRouter({
@@ -24,18 +28,11 @@ const router = createRouter({
     { path: '/schueler/moodboard', component: () => import('../views/schueler/MoodboardView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
     { path: '/schueler/einstellungen', component: () => import('../views/schueler/EinstellungenView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
     { path: '/schueler/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
-/*
-    // LEHRER
-    { path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-    { path: '/lehrer/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-    { path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-*/
 
     // LOGIN / LOGOUT / CALLBACK
     { path: '/login', component: () => import('../views/LoginView.vue'), meta: { navbar: 'none' }},
     { path: '/logout', name: 'logout', component: () => import('../views/LogoutView.vue'), meta: { navbar: 'none' }},
     { path: '/auth/callback', component: () => import('../views/AuthCallback.vue'), meta: { navbar: 'none' }},
-
 
     // FALLBACK
     { path: '/:pathMatch(.*)*', redirect: '/login' }
@@ -47,13 +44,17 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token")
   const role = getRoleFromToken()
 
-  // Kein Login?
-if (!token &&
-    to.path !== "/login" &&
-    !to.path.startsWith("/auth") &&
-    to.path !== "/logout") {
-  return next("/login")
-}
+  const publicRoutes = [
+    "/login",
+    "/logout",
+    "/auth/callback"
+  ]
+
+  // Kein Login + kein Zugriff auf öffentliche Route?
+  if (!token && !publicRoutes.includes(to.path)) {
+    return next("/login")
+  }
+
   // Kein Zugriff mit falscher Rolle?
   if (to.meta.role && to.meta.role !== role) {
     return next("/login")
