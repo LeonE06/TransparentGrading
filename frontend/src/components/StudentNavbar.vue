@@ -2,7 +2,7 @@
   <nav class="navbar">
     <img v-if="!isDark" src="/Logo_Transparent_Grading.png" alt="Logo Transparent Grading" class="logo">
     <img v-else src="/Logo_Transparent_Grading_Dark.png" alt="Logo Transparent Grading Dark" class="logo">
-    <router-link to="/schueler/Faecher" class="nav-item" active-class="active">
+    <router-link to="/schueler/faecher" class="nav-item" active-class="active">
       <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M10.05 2.53004L4.03002 6.46004C2.10002 7.72004 2.10002 10.54 4.03002 11.8L10.05 15.73C11.13 16.44 12.91 16.44 13.99 15.73L19.98 11.8C21.9 10.54 21.9 7.73004 19.98 6.47004L13.99 2.54004C12.91 1.82004 11.13 1.82004 10.05 2.53004Z"
