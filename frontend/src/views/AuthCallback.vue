@@ -1,6 +1,6 @@
 <template>
   <div class="loading">
-    <h2>Authentifiziere dich...</h2>
+    <h2>Wird geladen...</h2>
   </div>
 </template>
 
@@ -9,30 +9,36 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-const urlParams = new URLSearchParams(window.location.search);
-const token = urlParams.get("token");
+// Token aus URL holen
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
 
 if (!token) {
+  // Kein Token -> zurück zum Login
   router.replace("/login");
 } else {
-  // Token speichern
-  localStorage.setItem("token", token);
+  try {
+    // Token speichern
+    localStorage.setItem("token", token);
 
-  // Cookie für Symfony (Backend Auth)
-  localStorage.setItem("token", token);
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const role = payload.role;
 
+    console.log("Token gespeichert:", token);
+    console.log("Rolle erkannt:", role);
 
-  // Token-Infos (Rolle) auslesen
-  const payload = JSON.parse(atob(token.split(".")[1]));
-  const role = payload.role;
+    // Weiterleitung nach Rolle
+    if (role === "Schueler") {
+      router.replace("/schueler/faecher");
+    } else if (role === "Lehrer") {
+      router.replace("/admin/klassen");
+    } else {
+      router.replace("/login");
+    }
 
-  console.log("ROLE:", role);
-
-  if (role === "Schueler") {
-    router.replace("/schueler/faecher");
-  } else if (role === "Lehrer") {
-    router.replace("/admin/klassen");
-  } else {
+  } catch (err) {
+    console.error("Token ungültig", err);
+    localStorage.clear();
     router.replace("/login");
   }
 }
