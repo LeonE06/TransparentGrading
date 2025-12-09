@@ -30,13 +30,13 @@ const router = createRouter({
     { path: '/lehrer/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
     { path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
 
-
+/*
     // LOGIN / LOGOUT / CALLBACK
     { path: '/login', component: () => import('../views/LoginView.vue'), meta: { navbar: 'none' }},
     { path: '/logout', name: 'logout', component: () => import('../views/LogoutView.vue'), meta: { navbar: 'none' }},
     { path: '/auth/callback', component: () => import('../views/AuthCallback.vue'), meta: { navbar: 'none' }},
 
-
+*/
     // FALLBACK
     { path: '/:pathMatch(.*)*', redirect: '/login' }
   ]
