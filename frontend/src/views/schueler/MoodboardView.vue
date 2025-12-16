@@ -2,56 +2,56 @@
   <div class="moodboard-wrapper">
     <h1>Moodboard</h1>
 
-    <!-- Mood Auswahl Card -->
+    <!-- Mood Auswahl -->
     <div class="mood-card">
       <h2>Wie ist deine Lernmotivation heute?</h2>
 
       <div class="emoji-row">
         <div
-          class="emoji emoji-good"
+          class="emoji"
           :class="{ active: mood === 'gut' }"
           @click="setMood('gut')"
-        >
-          🙂
-        </div>
+        >🙂</div>
 
         <div
-          class="emoji emoji-neutral"
+          class="emoji"
           :class="{ active: mood === 'neutral' }"
           @click="setMood('neutral')"
-        >
-          😐
-        </div>
+        >😐</div>
 
         <div
-          class="emoji emoji-bad"
+          class="emoji"
           :class="{ active: mood === 'schlecht' }"
           @click="setMood('schlecht')"
-        >
-          🙁
-        </div>
+        >🙁</div>
       </div>
 
-      <select v-model="note">
+      <select v-if="mood" v-model="note">
         <option disabled value="">Wähle eine passende Antwort aus:</option>
-        <option>Super motiviert! 💪</option>
-        <option>Geht so… 😐</option>
-        <option>Müde / unmotiviert 😴</option>
+        <option
+          v-for="option in moodOptions[mood]"
+          :key="option"
+        >
+          {{ option }}
+        </option>
       </select>
 
-      <button class="save-btn" @click="saveMood">Speichern</button>
+      <button class="save-btn" @click="saveMood">
+        Speichern
+      </button>
     </div>
 
-    <!-- Mood Verlauf Placeholder -->
+    <!-- Verlauf -->
     <div class="chart-card">
       <h2>Dein Lern-Mood Verlauf</h2>
-
       <div class="chart-placeholder">
         Diagramm per Chart.js …
       </div>
     </div>
 
-    <p v-if="saved" class="saved-message">Deine Stimmung wurde gespeichert!</p>
+    <p v-if="saved" class="saved-message">
+      Deine Stimmung wurde gespeichert!
+    </p>
   </div>
 </template>
 
@@ -62,20 +62,46 @@ const mood = ref('')
 const note = ref('')
 const saved = ref(false)
 
+/* Nur Frontend-Logik */
+const moodOptions = {
+  gut: [
+    'Super motiviert! 💪',
+    'Voller Energie 🚀',
+    'Heute läuft’s richtig gut 😄'
+  ],
+  neutral: [
+    'Geht so… 😐',
+    'Könnte besser sein 🤷‍♂️',
+    'Weder gut noch schlecht'
+  ],
+  schlecht: [
+    'Müde / unmotiviert 😴',
+    'Konzentration fällt schwer 😞',
+    'Heute ist kein guter Lerntag 😔'
+  ]
+}
+
 function setMood(m) {
   mood.value = m
+  note.value = ''
   saved.value = false
 }
 
-function saveMood() {
-  if (!mood.value) {
-    alert("Bitte wähle zuerst deine Stimmung aus.")
+async function saveMood() {
+  if (!mood.value || !note.value) {
+    alert('Bitte wähle Stimmung UND Antwort aus.')
     return
   }
 
-  console.log("Mood gespeichert:", {
-    stimmung: mood.value,
-    antwort: note.value
+  await fetch('https://transparentgrading.onrender.com/api/mood', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      schueler_id: 1, // später aus Auth
+      mood: mood.value
+    })
   })
 
   saved.value = true
@@ -83,7 +109,6 @@ function saveMood() {
 </script>
 
 <style scoped>
-/* --- Basic page layout --- */
 .moodboard-wrapper {
   max-width: 900px;
   margin: 2rem auto;
@@ -102,7 +127,6 @@ h2 {
   font-weight: 600;
 }
 
-/* --- Card Styles --- */
 .mood-card,
 .chart-card {
   background: var(--first-background-color);
@@ -112,19 +136,18 @@ h2 {
   border: 1px solid #ddd;
 }
 
-/* --- Emoji Row --- */
 .emoji-row {
   display: flex;
   justify-content: center;
-  margin-bottom: 1.5rem;
   gap: 3rem;
+  margin-bottom: 1.5rem;
 }
 
 .emoji {
   font-size: 3.5rem;
   cursor: pointer;
-  transition: 0.2s;
   opacity: 0.5;
+  transition: 0.2s;
 }
 
 .emoji.active {
@@ -133,34 +156,29 @@ h2 {
   filter: drop-shadow(0 0 8px var(--primary));
 }
 
-/* --- Dropdown --- */
 select {
   width: 100%;
   padding: 0.8rem;
   border-radius: 10px;
   border: 1px solid #ccc;
   margin-bottom: 1.5rem;
-  font-size: 0.95rem;
 }
 
-/* --- Button --- */
 .save-btn {
   width: 100%;
   padding: 0.9rem;
   border: none;
   border-radius: 12px;
   font-weight: 600;
-  background: linear-gradient(to right, var(--primary), var(--secondary));
+  background: linear-gradient(
+    to right,
+    var(--primary),
+    var(--secondary)
+  );
   color: white;
   cursor: pointer;
-  transition: 0.2s;
 }
 
-.save-btn:hover {
-  opacity: 0.9;
-}
-
-/* --- Chart Placeholder --- */
 .chart-placeholder {
   background: #fafafa;
   padding: 2rem;
@@ -168,10 +186,8 @@ select {
   border: 1px dashed #bbb;
   text-align: center;
   color: #666;
-  font-size: 1rem;
 }
 
-/* Saved message */
 .saved-message {
   color: var(--primary);
   font-weight: 600;
