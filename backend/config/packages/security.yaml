@@ -8,15 +8,16 @@ security:
             pattern: ^/(_profiler|_wdt|css|images|js)
             security: false
 
-        # 🔐 API → Bearer Token
+        # JWT nur für Login / Token
         api:
-            pattern: ^/api
+            pattern: ^/api/(login|token)
             stateless: true
             custom_authenticators:
                 - App\Security\ApiJWTAuthenticator
 
-        # 🍪 Login / normale Seiten → Cookie
+        # Session / Cookie (Mood, Schüler, Lehrer)
         main:
+            pattern: ^/
             lazy: true
             custom_authenticators:
                 - App\Security\JWTAuthenticator
