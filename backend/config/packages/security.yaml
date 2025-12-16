@@ -19,8 +19,6 @@ security:
         main:
             pattern: ^/
             lazy: true
-            custom_authenticators:
-                - App\Security\JWTAuthenticator
 
     access_control:
         - { path: ^/api/mood, roles: ROLE_SCHUELER }
