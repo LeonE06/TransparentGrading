@@ -5,10 +5,28 @@
     <div class="mood-card">
       <h2>Wie ist deine Lernmotivation heute?</h2>
 
+      <!-- ✅ NUR DIESE ZEILE IST GEÄNDERT -->
       <div class="emoji-row">
-        <div class="emoji" :class="{ active: mood === 'gut' }" @click="setMood('gut')">🙂</div>
-        <div class="emoji" :class="{ active: mood === 'neutral' }" @click="setMood('neutral')">😐</div>
-        <div class="emoji" :class="{ active: mood === 'schlecht' }" @click="setMood('schlecht')">🙁</div>
+        <div
+          class="emoji"
+          :class="{ active: mood === 'gut' }"
+          @click="setMood('gut')"
+          v-html="getSvg('gut')"
+        ></div>
+
+        <div
+          class="emoji"
+          :class="{ active: mood === 'neutral' }"
+          @click="setMood('neutral')"
+          v-html="getSvg('neutral')"
+        ></div>
+
+        <div
+          class="emoji"
+          :class="{ active: mood === 'schlecht' }"
+          @click="setMood('schlecht')"
+          v-html="getSvg('schlecht')"
+        ></div>
       </div>
 
       <select v-if="mood" v-model="note">
@@ -18,15 +36,21 @@
         </option>
       </select>
 
-      <button class="save-btn" @click="saveMood">Speichern</button>
+      <button class="save-btn" @click="saveMood">
+        Speichern
+      </button>
     </div>
 
     <div class="chart-card">
       <h2>Dein Lern-Mood Verlauf</h2>
-      <div class="chart-placeholder">Diagramm per Chart.js …</div>
+      <div class="chart-placeholder">
+        Diagramm per Chart.js …
+      </div>
     </div>
 
-    <p v-if="saved" class="saved-message">Deine Stimmung wurde gespeichert!</p>
+    <p v-if="saved" class="saved-message">
+      Deine Stimmung wurde gespeichert!
+    </p>
   </div>
 </template>
 
@@ -38,9 +62,21 @@ const note = ref('')
 const saved = ref(false)
 
 const moodOptions = {
-  gut: ['Super motiviert! 💪', 'Voller Energie 🚀', 'Heute läuft’s richtig gut 😄'],
-  neutral: ['Geht so… 😐', 'Könnte besser sein 🤷‍♂️', 'Weder gut noch schlecht'],
-  schlecht: ['Müde / unmotiviert 😴', 'Konzentration fällt schwer 😞', 'Heute ist kein guter Lerntag 😔']
+  gut: [
+    'Super motiviert! 💪',
+    'Voller Energie 🚀',
+    'Heute läuft’s richtig gut 😄'
+  ],
+  neutral: [
+    'Geht so… 😐',
+    'Könnte besser sein 🤷‍♂️',
+    'Weder gut noch schlecht'
+  ],
+  schlecht: [
+    'Müde / unmotiviert 😴',
+    'Konzentration fällt schwer 😞',
+    'Heute ist kein guter Lerntag 😔'
+  ]
 }
 
 function setMood(m) {
@@ -49,6 +85,44 @@ function setMood(m) {
   saved.value = false
 }
 
+/* 🔥 SVG-LOGIK */
+function getSvg(type) {
+  const active = mood.value === type
+
+  if (type === 'gut') {
+    return active ? svgGutAktiv : svgGut
+  }
+  if (type === 'neutral') {
+    return active ? svgNeutralAktiv : svgNeutral
+  }
+  return active ? svgSchlechtAktiv : svgSchlecht
+}
+
+/* 🖼️ SVGs – HIER kannst du später 1:1 Laras finale SVGs reinkopieren */
+const svgGut = `
+<svg width="108" height="108" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+  <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+  <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+  <path d="M28 76.5H83" stroke="#B6B6B6" stroke-width="3"/>
+</svg>
+`
+
+const svgGutAktiv = `
+<svg width="108" height="108" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="54" cy="54" r="52.5" stroke="var(--primary)" stroke-width="3"/>
+  <circle cx="31.5" cy="40.5" r="4" stroke="var(--primary)" stroke-width="3"/>
+  <circle cx="75.5" cy="40.5" r="4" stroke="var(--primary)" stroke-width="3"/>
+  <path d="M28 76.5H83" stroke="var(--primary)" stroke-width="3"/>
+</svg>
+`
+
+const svgNeutral = svgGut
+const svgNeutralAktiv = svgGutAktiv
+const svgSchlecht = svgGut
+const svgSchlechtAktiv = svgGutAktiv
+
+/* ✅ 401 FIX: COOKIE AUTH */
 async function saveMood() {
   if (!mood.value || !note.value) {
     alert('Bitte wähle Stimmung UND Antwort aus.')
@@ -57,11 +131,11 @@ async function saveMood() {
 
   await fetch('https://transparentgrading.onrender.com/api/mood', {
     method: 'POST',
+    credentials: 'include', // 🔥 DAS IST DER FIX
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      schueler_id: 1,
       mood: mood.value
     })
   })
@@ -77,10 +151,18 @@ async function saveMood() {
   font-family: "Inter", sans-serif;
 }
 
-h1 { font-size: 2rem; margin-bottom: 1.5rem; }
-h2 { font-size: 1.3rem; margin-bottom: 1.5rem; }
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
 
-.mood-card, .chart-card {
+h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.mood-card,
+.chart-card {
   background: var(--first-background-color);
   border-radius: 14px;
   padding: 2rem;
@@ -96,14 +178,16 @@ h2 { font-size: 1.3rem; margin-bottom: 1.5rem; }
 }
 
 .emoji {
-  font-size: 3.5rem;
+  width: 108px;
+  height: 108px;
   cursor: pointer;
   opacity: 0.5;
+  transition: 0.2s;
 }
 
 .emoji.active {
   opacity: 1;
-  transform: scale(1.2);
+  transform: scale(1.15);
   filter: drop-shadow(0 0 8px var(--primary));
 }
 
