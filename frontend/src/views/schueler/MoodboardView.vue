@@ -258,23 +258,17 @@ const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="n
 
 /* ✅ 401 FIX: COOKIE AUTH */
 async function saveMood() {
-  if (!mood.value || !note.value) {
-    alert('Bitte wähle Stimmung UND Antwort aus.')
-    return
-  }
+  const token = localStorage.getItem('token')
+  console.log('JWT:', token)
 
   await fetch('https://transparentgrading.onrender.com/api/mood', {
     method: 'POST',
-    credentials: 'include', // 🔥 DAS IST DER FIX
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({
-      mood: mood.value
-    })
+    body: JSON.stringify({ mood: mood.value })
   })
-
-  saved.value = true
 }
 </script>
 
