@@ -99,7 +99,7 @@ function getSvg(type) {
 }
 
 /* 🖼️ SVGs – HIER kannst du später 1:1 Laras finale SVGs reinkopieren */
-const svgSchlecht = `
+const svgNeutral = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
@@ -111,7 +111,7 @@ const svgSchlecht = `
 </svg>
 `
 
-const svgSchlechtAktiv = `
+const svgNeutralAktiv = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8761)" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8761)" stroke-width="3"/>
@@ -153,7 +153,7 @@ const svgSchlechtAktiv = `
 </svg>
 `
 
-const svgNeutral = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+const svgSchlecht = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
@@ -162,7 +162,7 @@ const svgNeutral = `<svg width="108" height="108" viewBox="0 0 108 108" fill="no
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="#B6B6B6" stroke-width="3"/>
 </svg>`
-const svgNeutralAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+const svgSchlechtAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8753)" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8753)" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8753)" stroke-width="3"/>
