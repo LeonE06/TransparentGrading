@@ -100,27 +100,161 @@ function getSvg(type) {
 
 /* 🖼️ SVGs – HIER kannst du später 1:1 Laras finale SVGs reinkopieren */
 const svgGut = `
-<svg width="108" height="108" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
-  <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
-  <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
-  <path d="M28 76.5H83" stroke="#B6B6B6" stroke-width="3"/>
+<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<line x1="28" y1="76.5" x2="83" y2="76.5" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
 `
 
 const svgGutAktiv = `
-<svg width="108" height="108" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="54" cy="54" r="52.5" stroke="var(--primary)" stroke-width="3"/>
-  <circle cx="31.5" cy="40.5" r="4" stroke="var(--primary)" stroke-width="3"/>
-  <circle cx="75.5" cy="40.5" r="4" stroke="var(--primary)" stroke-width="3"/>
-  <path d="M28 76.5H83" stroke="var(--primary)" stroke-width="3"/>
+<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8761)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8761)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8761)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8761)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8761)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8761)" stroke-width="3"/>
+<line x1="28" y1="76.5" x2="83" y2="76.5" stroke="url(#paint6_linear_2217_8761)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8761" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8761" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8761" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8761" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8761" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8761" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8761" x1="55.5" y1="78" x2="55.5" y2="79" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
 </svg>
 `
 
-const svgNeutral = svgGut
-const svgNeutralAktiv = svgGutAktiv
-const svgSchlecht = svgGut
-const svgSchlechtAktiv = svgGutAktiv
+const svgNeutral = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="#B6B6B6" stroke-width="3"/>
+</svg>`
+const svgNeutralAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8753)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8753)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8753)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8753)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8753)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8753)" stroke-width="3"/>
+<path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="url(#paint6_linear_2217_8753)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8753" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8753" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8753" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8753" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8753" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8753" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8753" x1="54" y1="83" x2="54" y2="69" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
+</svg>`
+const svgSchlecht = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="#B6B6B6" stroke-width="3"/>
+<path d="M27.5 68.5H82.5" stroke="#B6B6B6" stroke-width="3"/>
+</svg>`
+const svgSchlechtAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8769)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8769)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8769)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8769)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8769)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8769)" stroke-width="3"/>
+<path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="url(#paint6_linear_2217_8769)" stroke-width="3"/>
+<path d="M27.5 68.5H82.5" stroke="url(#paint7_linear_2217_8769)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8769" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8769" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8769" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8769" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8769" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8769" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8769" x1="55" y1="70" x2="55" y2="84" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint7_linear_2217_8769" x1="55" y1="68.5" x2="55" y2="69.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
+</svg>`
 
 /* ✅ 401 FIX: COOKIE AUTH */
 async function saveMood() {
