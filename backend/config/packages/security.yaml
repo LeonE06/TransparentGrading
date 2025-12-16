@@ -1,6 +1,4 @@
 security:
-    # Symfony 7: enable_authenticator_manager entfernt!
-
     providers:
         in_memory:
             memory: ~
@@ -10,18 +8,20 @@ security:
             pattern: ^/(_profiler|_wdt|css|images|js)
             security: false
 
+        # 🔐 API → Bearer Token
         api:
-            pattern: ^/api/
+            pattern: ^/api
             stateless: true
-            provider: in_memory
+            custom_authenticators:
+                - App\Security\ApiJWTAuthenticator
+
+        # 🍪 Login / normale Seiten → Cookie
+        main:
+            lazy: true
             custom_authenticators:
                 - App\Security\JWTAuthenticator
 
-        main:
-            lazy: true
-            security: false
-
     access_control:
+        - { path: ^/api/mood, roles: ROLE_SCHUELER }
         - { path: ^/api/lehrer, roles: ROLE_LEHRER }
         - { path: ^/api/schueler, roles: ROLE_SCHUELER }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
