@@ -43,6 +43,7 @@ const currentNavbar = computed(() => {
   padding: 1.5rem;
   background-color: var(--first-background-color);
   min-height: 100vh;
-  width: 100%;
+  width: 75vw;
+  padding-left: 100px;
 }
 </style>

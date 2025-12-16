@@ -2,95 +2,78 @@
 
 namespace App\Controller;
 
-use App\Entity\Kurse;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
 
-/**
- * Controller für Schüler-bezogene Ansichten
- * z. B. Anzeige der Fächer, in denen der Schüler eingeschrieben ist.
- */
-#[Route('/api')]
+#[Route('/api/schueler')]
 class StudentClassController extends AbstractController
 {
-    /**
-     * Gibt alle Fächer (Kurse) mit Fach- und Klassenbezug zurück.
-     * GET /api/schueler/faecher
-     */
-    #[Route('/schueler/faecher', name: 'api_schueler_faecher', methods: ['GET'])]
-public function getFaecher(EntityManagerInterface $em): JsonResponse
-{
-    // DEBUG: Schüler 1 verwenden
-    $DEBUG = true;
+    #[Route('/faecher', methods: ['GET'])]
+    public function getFaecher(EntityManagerInterface $em): JsonResponse
+    {
+        $schuelerId = 1; // TODO: Auth später
 
-    if ($DEBUG) {
-        $schuelerId = 1;
-    } else {
-        $user = $this->getUser();
-        if (!$user) {
-            return new JsonResponse(['error' => 'Not authorized'], 401);
-        }
+        $rows = $em->getConnection()->executeQuery("
+            SELECT 
+                k.id AS kurs_id,
+                f.name AS fach_name,
+                c.name AS klasse_name,
+                COALESCE(ke.benachrichtigung, 1) AS notif_enabled,
+                COALESCE(ke.sichtbar, 1) AS sichtbar
+            FROM Kurs_Schueler ks
+            JOIN Kurse k ON ks.kurs_id = k.id
+            JOIN Faecher f ON f.id = k.fach_id
+            LEFT JOIN Klassen c ON c.id = k.klasse_id
+            LEFT JOIN Kurs_Einstellungen ke
+                ON ke.kurs_id = k.id AND ke.schueler_id = ks.schueler_id
+            WHERE ks.schueler_id = :sid
+            ORDER BY f.name ASC
+        ", [
+            'sid' => $schuelerId
+        ])->fetchAllAssociative();
 
-        $schueler = $em->getRepository(Schueler::class)->findOneBy(['ms365usr' => $user->getId()]);
-        if (!$schueler) {
-            return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
-        }
-
-        $schuelerId = $schueler->getId();
+        return new JsonResponse($rows);
     }
 
-    // Flacher Query ohne Entities
-    $rows = $em->getConnection()->executeQuery("
-        SELECT 
-            k.id AS kurs_id,
-            k.name AS kurs_name,
-            f.id AS fach_id,
-            f.name AS fach_name,
-            c.name AS klasse_name
-        FROM Kurs_Schueler ks
-        JOIN Kurse k ON ks.kurs_id = k.id
-        JOIN Faecher f ON f.id = k.fach_id
-        LEFT JOIN Klassen c ON c.id = k.klasse_id
-        WHERE ks.schueler_id = :sid
-    ", [
-        'sid' => $schuelerId
-    ])->fetchAllAssociative();
 
-    return new JsonResponse($rows);
-}
+    #[Route('/faecher/{kursId}/toggle-visibility', methods: ['PUT'])]
+    public function toggleVisibility(int $kursId, EntityManagerInterface $em): JsonResponse
+    {
+        $schuelerId = 1;
 
+        $sql = "
+            INSERT INTO Kurs_Einstellungen (schueler_id, kurs_id, sichtbar)
+            VALUES (:sid, :kid, 0)
+            ON DUPLICATE KEY UPDATE sichtbar = NOT sichtbar
+        ";
 
-    /**
-     * Gibt ein bestimmtes Fach (Kurs) mit Details zurück.
-     * GET /api/schueler/faecher/{id}
-     */
-    #[Route('/faecher/{id}', name: 'api_schueler_fach_detail', methods: ['GET'])]
-    public function getFachDetail(
-        int $id,
-        EntityManagerInterface $em,
-        SerializerInterface $serializer
-    ): JsonResponse {
-        $kurs = $em->getRepository(Kurse::class)
-            ->createQueryBuilder('k')
-            ->leftJoin('k.fach', 'f')
-            ->leftJoin('k.klasse', 'c')
-            ->addSelect('f', 'c')
-            ->where('k.id = :id')
-            ->setParameter('id', $id)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        if (!$kurs) {
-            return new JsonResponse(['error' => 'Fach nicht gefunden'], 404);
-        }
-
-        $json = $serializer->serialize($kurs, 'json', [
-            'circular_reference_handler' => fn($object) => $object->getId(),
+        $em->getConnection()->executeStatement($sql, [
+            'sid' => $schuelerId,
+            'kid' => $kursId
         ]);
 
-        return new JsonResponse($json, 200, [], true);
+        return new JsonResponse(['status' => 'ok']);
+    }
+
+
+    #[Route('/faecher/{kursId}/toggle-notif', methods: ['PUT'])]
+    public function toggleNotif(int $kursId, EntityManagerInterface $em): JsonResponse
+    {
+        $schuelerId = 1;
+
+        $sql = "
+            INSERT INTO Kurs_Einstellungen (schueler_id, kurs_id, benachrichtigung)
+            VALUES (:sid, :kid, 0)
+            ON DUPLICATE KEY UPDATE benachrichtigung = NOT benachrichtigung
+        ";
+
+        $em->getConnection()->executeStatement($sql, [
+            'sid' => $schuelerId,
+            'kid' => $kursId
+        ]);
+
+        return new JsonResponse(['status' => 'ok']);
     }
 }

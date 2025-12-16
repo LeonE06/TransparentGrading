@@ -3,12 +3,10 @@
     <h1 class="title">Meine Fächer</h1>
 
     <div class="toolbar">
-      <div class="left-controls">
-        <button class="btn" @click="loadSubjects">Alle</button>
-        <button class="btn">Eingeblendete</button>
-        <button class="btn">Ausgeblendete</button>
-        <button class="btn" @click="sortByName">Sortiert A–Z</button>
-      </div>
+      <button class="btn" :class="{active: tab === 'alle'}" @click="tab = 'alle'">Alle</button>
+      <button class="btn" :class="{active: tab === 'visible'}" @click="tab = 'visible'">Eingeblendete</button>
+      <button class="btn" :class="{active: tab === 'hidden'}" @click="tab = 'hidden'">Ausgeblendete</button>
+      <button class="btn" @click="toggleSorting">Sortiert A–Z</button>
     </div>
 
     <input
@@ -18,159 +16,224 @@
       placeholder="Nach Fächern suchen..."
     />
 
-    <div class="subject-list">
-      <div v-if="loading" class="loading">⏳ Lade Fächer...</div>
+    <ul class="subject-list">
+      <li
+        v-for="fach in visibleSubjects"
+        :key="fach.kurs_id"
+        class="subject-item"
+      >
+        <div class="subject-info" @click="goToDetail(fach.kurs_id)">
+          <div class="fach-image">{{ fach.fach_name.charAt(0) }}</div>
 
-      <div v-else-if="filteredSubjects.length === 0">
-        <p>Keine Fächer gefunden.</p>
-      </div>
-
-      <ul v-else>
-        <li
-          v-for="fach in filteredSubjects"
-          :key="fach.kurs_id"
-          class="subject-item"
-          @click="goToDetail(fach.kurs_id)"
-        >
-          <div class="subject-info">
-            <img
-              class="fach-image"
-              :src="getImage(fach.fach_name)"
-              alt="Fachbild"
-            />
-
-            <div class="fach-text">
-              <strong>{{ fach.fach_name }}</strong>
-              <span class="class-name">
-                {{ fach.klasse_name || 'Keine Klasse' }}
-              </span>
-            </div>
+          <div class="fach-text">
+            <strong>{{ fach.fach_name }}</strong>
+            <span class="class-name">{{ fach.klasse_name }}</span>
           </div>
-        </li>
-      </ul>
-    </div>
+        </div>
+
+        <div class="actions">
+          <span
+            class="bell"
+            @click.stop="toggleNotif(fach.kurs_id)">
+            <span v-if="fach.notif_enabled == 1">🔔</span>
+            <span v-else>🔕</span>
+          </span>
+
+          <span
+            class="menu"
+            @click.stop="toggleMenu(fach.kurs_id)"
+          >⋮</span>
+
+          <div
+            v-if="openMenuId === fach.kurs_id"
+            class="context-menu"
+          >
+            <div
+              class="context-item"
+              v-if="fach.sichtbar == 1"
+              @click="toggleVisibility(fach.kurs_id)"
+            >👁 Fach ausblenden</div>
+
+            <div
+              class="context-item"
+              v-else
+              @click="toggleVisibility(fach.kurs_id)"
+            >➕ Fach einblenden</div>
+          </div>
+
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
 
-const router = useRouter()
-const searchTerm = ref('')
-const subjects = ref([])
-const loading = ref(false)
+const router = useRouter();
+const searchTerm = ref("");
+const subjects = ref([]);
+const tab = ref("alle");
+const sortByName = ref(false);
+
+const openMenuId = ref(null);
 
 async function loadSubjects() {
-  loading.value = true
-  try {
-    const response = await axios.get(`/schueler/faecher`)
-    subjects.value = response.data
-  } catch (error) {
-    console.error('❌ Fehler beim Laden der Fächer:', error)
-  } finally {
-    loading.value = false
+  const res = await axios.get("/schueler/faecher");
+  subjects.value = res.data;
+}
+
+async function toggleVisibility(id) {
+  await axios.put(`/schueler/faecher/${id}/toggle-visibility`);
+  await loadSubjects();
+  openMenuId.value = null;
+}
+
+async function toggleNotif(id) {
+  await axios.put(`/schueler/faecher/${id}/toggle-notif`);
+  await loadSubjects();
+}
+
+function toggleSorting() {
+  sortByName.value = !sortByName.value;
+}
+
+const visibleSubjects = computed(() => {
+  let list = subjects.value;
+
+  if (tab.value === "visible") list = list.filter(s => s.sichtbar == 1);
+  if (tab.value === "hidden") list = list.filter(s => s.sichtbar == 0);
+
+  if (searchTerm.value)
+    list = list.filter(s =>
+      s.fach_name.toLowerCase().includes(searchTerm.value.toLowerCase())
+    );
+
+  if (sortByName.value)
+    list = [...list].sort((a, b) =>
+      a.fach_name.localeCompare(b.fach_name)
+    );
+
+  return list;
+});
+
+function toggleMenu(id) {
+  openMenuId.value = openMenuId.value === id ? null : id;
+}
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".menu") && !e.target.closest(".context-menu")) {
+    openMenuId.value = null;
   }
-}
-
-const filteredSubjects = computed(() => {
-  if (!searchTerm.value.trim()) return subjects.value
-  return subjects.value.filter((s) =>
-    s.fach_name.toLowerCase().includes(searchTerm.value.toLowerCase())
-  )
-})
-
-function sortByName() {
-  subjects.value.sort((a, b) => a.fach_name.localeCompare(b.fach_name))
-}
-
-function getImage(name) {
-  const map = {
-    Mathematik: '/images/m.png',
-    Englisch: '/img/englisch.png',
-    Deutsch: '/images/d.png',
-    Softwareentwicklung: '/img/software.png',
-    Medientechnik: '/img/medien.png',
-  }
-  return map[name] || '/img/default.png'
-}
+});
 
 function goToDetail(id) {
-  router.push(`/schueler/faecher/${id}`)
+  router.push(`/schueler/faecher/${id}`);
 }
 
-onMounted(() => {
-  loadSubjects()
-})
+onMounted(loadSubjects);
 </script>
 
 <style scoped>
-.faecher-view {
-  padding: 1rem 2rem;
-}
 .title {
   font-size: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-weight: 650;
 }
+
 .toolbar {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 2.2rem;
+  gap: .7rem;
+  margin-bottom: 1.2rem;
 }
+
 .btn {
-  background-color: var(--first-background-color);
-  border: 1.5px solid #EAEAEA;
+  border: 1px solid #ccc;
+  padding: 10px 18px;
   border-radius: 20px;
-  padding: 16px 30px;
-  min-width: 180px;
   cursor: pointer;
 }
-.btn:hover {
-  background-color: #f1f1f1;
+.btn.active {
+  background: #111;
+  color: #fff;
 }
+
 .search-input {
-  padding: 0.8rem 1.6rem;
-  border: 1px solid #4D495C;
-  border-radius: 10px;
-  width: 94%;
-  margin-bottom: 1.5rem;
-}
-.subject-list {
-  background-color: #fff;
+  width: 100%;
+  padding: .8rem;
+  margin-bottom: 1rem;
+  border: 1px solid #bbb;
   border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
+
+.subject-list {
+  list-style: none;
+  padding: 0;
+}
+
 .subject-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 1.2rem 0;
+  align-items: center;
+  padding: .9rem 0;
   border-bottom: 1px solid #eee;
-  cursor: pointer;
 }
-.subject-item:hover {
-  background: #f8f8f8;
-}
+
 .subject-info {
   display: flex;
   align-items: center;
   gap: 1rem;
+  cursor: pointer;
 }
+
 .fach-image {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
+  background: #efefef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
   border-radius: 10px;
-  object-fit: cover;
 }
-.class-name {
-  color: #777;
-  font-size: 0.9rem;
+
+.actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
-.loading {
-  color: #555;
-  font-style: italic;
+
+.bell, .menu {
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.off {
+  opacity: .35;
+}
+
+.context-menu {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  padding: 8px 0;
+  min-width: 160px;
+  z-index: 999;
+}
+
+.context-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.context-item:hover {
+  background: #efefef;
 }
 </style>
