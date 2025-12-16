@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller\Api;
+namespace App\Controller;
 
 use App\Entity\Schueler;
 use App\Entity\SchuelerMood;
@@ -18,6 +18,7 @@ class MoodController extends AbstractController
         Request $request,
         EntityManagerInterface $em
     ): JsonResponse {
+        // 🔐 aktuell eingeloggter User
         $user = $this->getUser();
 
         if (!$user instanceof Schueler) {
@@ -30,10 +31,11 @@ class MoodController extends AbstractController
             return $this->json(['error' => 'Mood fehlt'], 400);
         }
 
-        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'])) {
+        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'], true)) {
             return $this->json(['error' => 'Ungültiger Mood-Wert'], 400);
         }
 
+        // 💾 Mood speichern
         $mood = new SchuelerMood();
         $mood->setMood($data['mood']);
         $mood->setSchueler($user);
@@ -45,5 +47,28 @@ class MoodController extends AbstractController
             'status' => 'ok',
             'message' => 'Mood gespeichert'
         ], 201);
+    }
+
+    #[Route('/me', name: 'api_mood_me', methods: ['GET'])]
+    public function listMyMoods(
+        EntityManagerInterface $em
+    ): JsonResponse {
+        $user = $this->getUser();
+
+        if (!$user instanceof Schueler) {
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        }
+
+        $conn = $em->getConnection();
+
+        $data = $conn->fetchAllAssociative(
+            'SELECT erstellt_am, mood
+             FROM Schueler_Mood
+             WHERE schueler_id = ?
+             ORDER BY erstellt_am ASC',
+            [$user->getId()]
+        );
+
+        return $this->json($data);
     }
 }
