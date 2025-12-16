@@ -1,24 +1,22 @@
 security:
     providers:
-        in_memory:
-            memory: ~
+        app_user_provider:
+            entity:
+                class: App\Entity\Schueler
+                property: email
 
     firewalls:
         dev:
             pattern: ^/(_profiler|_wdt|css|images|js)
             security: false
 
-        # JWT nur für Login / Token
+        # 🔐 Alle API-Endpunkte → JWT
         api:
-            pattern: ^/api/(login|token)
+            pattern: ^/api
             stateless: true
+            provider: app_user_provider
             custom_authenticators:
                 - App\Security\ApiJWTAuthenticator
-
-        # Session / Cookie (Mood, Schüler, Lehrer)
-        main:
-            pattern: ^/
-            lazy: true
 
     access_control:
         - { path: ^/api/mood, roles: ROLE_SCHUELER }
