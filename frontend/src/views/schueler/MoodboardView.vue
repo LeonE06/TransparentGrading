@@ -88,24 +88,27 @@ function setMood(m) {
 }
 
 async function saveMood() {
-  if (!mood.value || !note.value) {
-    alert('Bitte wähle Stimmung UND Antwort aus.')
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    alert('Nicht eingeloggt')
     return
   }
 
   await fetch('https://transparentgrading.onrender.com/api/mood', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
     },
     body: JSON.stringify({
-      schueler_id: 1, // später aus Auth
       mood: mood.value
     })
   })
 
   saved.value = true
 }
+
 </script>
 
 <style scoped>
