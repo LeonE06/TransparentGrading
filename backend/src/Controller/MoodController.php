@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller\Api;
+namespace App\Controller;   // ✅ WICHTIG: Api entfernen
 
 use App\Entity\Schueler;
 use App\Entity\SchuelerMood;
@@ -20,7 +20,6 @@ class MoodController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        // Basic Validation
         if (!isset($data['schueler_id'], $data['mood'])) {
             return $this->json(['error' => 'Ungültige Daten'], 400);
         }
@@ -29,7 +28,6 @@ class MoodController extends AbstractController
             return $this->json(['error' => 'Ungültiger Mood-Wert'], 400);
         }
 
-        // Schüler laden
         $schueler = $em->getRepository(Schueler::class)
             ->find($data['schueler_id']);
 
@@ -37,7 +35,6 @@ class MoodController extends AbstractController
             return $this->json(['error' => 'Schüler nicht gefunden'], 404);
         }
 
-        // Mood speichern
         $mood = new SchuelerMood();
         $mood->setMood($data['mood']);
         $mood->setSchueler($schueler);
