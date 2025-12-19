@@ -24,7 +24,7 @@ class MicrosoftLoginController extends AbstractController
         $clientSecret = $_SERVER['AZURE_CLIENT_SECRET'] ?? $_ENV['AZURE_CLIENT_SECRET'] ?? null;
         $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;
         $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;
-
+        
         $this->provider = new Azure([
             'clientId' => $clientId,
             'clientSecret' => $clientSecret,
