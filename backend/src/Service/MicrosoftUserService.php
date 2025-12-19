@@ -2,81 +2,118 @@
 
 namespace App\Service;
 
-use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Microsoft365User;
+use App\Entity\Schueler;
+use App\Entity\Lehrer;
 
 class MicrosoftUserService
 {
-    private Connection $conn;
-    private string $frontendBase;
+    private EntityManagerInterface $em;
 
-    public function __construct(Connection $conn)
+    public function __construct(EntityManagerInterface $em)
     {
-        $this->conn = $conn;
-
-        // Umgebung automatisch erkennen
-        $env = $_ENV['APP_ENV'] ?? 'prod';
-
-        // Basis-URL fürs Frontend je nach Umgebung
-        if ($env === 'dev') {
-            // Lokale Entwicklungsumgebung (Docker + Vite)
-            $this->frontendBase = 'http://localhost:5173';
-        } else {
-            // Produktionsumgebung (Vercel)
-            $this->frontendBase = 'https://transparent-grading-flax.vercel.app';
-        }
+        $this->em = $em;
     }
 
+    /**
+     * Speichert den Microsoft-Benutzer (falls nötig) und gibt die Rolle zurück.
+     *
+     * @return string "Schueler" | "Lehrer" | "Unbekannt"
+     */
     public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
-        // 👀 1️⃣ Prüfen, ob User im View existiert
-        $existing = $this->conn->fetchAssociative(
-            'SELECT * FROM view_ms365_user WHERE email = ?',
-            [$email]
-        );
+        // --- M365-User in Haupttabelle suchen ---
+        $existingUser = $this->em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $email]);
 
-        if (!$existing) {
-            // 👤 2️⃣ Neuen Microsoft365-User in Basistabelle anlegen
-            $this->conn->insert('tbl_Microsoft365_User', [
-                'vorname' => $vorname,
-                'nachname' => $nachname,
-                'email' => $email,
-                'lizenzen' => '',
-                'proxyadressen' => '',
-            ]);
+        // Falls noch nicht vorhanden → anlegen
+        if (!$existingUser) {
+            $existingUser = new Microsoft365User();
+            $existingUser->setVorname($vorname);
+            $existingUser->setNachname($nachname);
+            $existingUser->setEmail($email);
 
-            $userId = $this->conn->lastInsertId();
-
-            // 🎓 3️⃣ Lehrer oder Schüler erkennen
-            if (preg_match('/^[0-9]{4}@htl\.rennweg\.at$/', $email)) {
-                // ➕ Schüler hinzufügen
-                $this->conn->insert('Schueler', [
-                    'ms365usr_id' => $userId,
-                    'vorname' => $vorname,
-                    'nachname' => $nachname,
-                    'geburtsdatum' => null,
-                    'klasse_id' => null,
-                ]);
-                return "{$this->frontendBase}/schueler/Klassenübersicht";
-            } elseif (preg_match('/^[a-zA-Z]+@htl\.rennweg\.at$/', $email)) {
-                // ➕ Lehrer hinzufügen
-                $this->conn->insert('Lehrer', [
-                    'ms365usr_id' => $userId,
-                    'vorname' => $vorname,
-                    'nachname' => $nachname,
-                    'fach' => null,
-                ]);
-                return "{$this->frontendBase}/lehrer/Klassenübersicht";
+            // Falls es die Felder in der Entity gibt:
+            if (method_exists($existingUser, 'setLizenzen')) {
+                $existingUser->setLizenzen('');
             }
-        } else {
-            // 🔁 4️⃣ Benutzer existiert bereits → nur Redirect anhand Rolle
-            if ($existing['rolle'] === 'Schueler') {
-                return "{$this->frontendBase}/schueler/Klassenübersicht";
-            } elseif ($existing['rolle'] === 'Lehrer') {
-                return "{$this->frontendBase}/lehrer/Klassenübersicht";
+            if (method_exists($existingUser, 'setProxyadressen')) {
+                $existingUser->setProxyadressen('');
             }
+
+            $this->em->persist($existingUser);
+            $this->em->flush();
         }
 
-        // 🧩 Fallback
-        return "{$this->frontendBase}/";
+        // --- Rolle aus der Mail bestimmen ---
+        // 1034@htl.rennweg.at  → Schüler
+        // ABC@htl.rennweg.at   → Lehrer
+        $emailLower = strtolower($email);
+        [$localPart] = explode('@', $emailLower);
+
+        if (preg_match('/^[0-9]{4}$/', $localPart)) {
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            return 'Schueler';
+        }
+
+        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+            $this->ensureLehrer($existingUser, $vorname, $nachname);
+            return 'Lehrer';
+        }
+
+        return 'Unbekannt';
+    }
+
+    /**
+     * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
+     */
+    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
+{
+    $schueler = $this->em->getRepository(Schueler::class)
+        ->findOneBy(['ms365User' => $m365User]);
+
+    if ($schueler) {
+        return;
+    }
+
+    $schueler = new Schueler();
+    $schueler->setVorname($vorname);
+    $schueler->setNachname($nachname);
+    $schueler->setMs365User($m365User);
+
+    $this->em->persist($schueler);
+    $this->em->flush();
+}
+
+
+    /**
+     * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
+     */
+    private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
+    {
+        $lehrer = $this->em->getRepository(Lehrer::class)
+            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+
+        if ($lehrer) {
+            return;
+        }
+
+        $lehrer = new Lehrer();
+        if (method_exists($lehrer, 'setVorname')) {
+            $lehrer->setVorname($vorname);
+        }
+        if (method_exists($lehrer, 'setNachname')) {
+            $lehrer->setNachname($nachname);
+        }
+
+        if (method_exists($lehrer, 'setMicrosoftUser')) {
+            $lehrer->setMicrosoftUser($m365User);
+        } elseif (method_exists($lehrer, 'setMs365usr')) {
+            $lehrer->setMs365usr($m365User);
+        }
+
+        $this->em->persist($lehrer);
+        $this->em->flush();
     }
 }
