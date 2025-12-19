@@ -1,10 +1,24 @@
 import axios from 'axios'
-import { useDark, useToggle } from '@vueuse/core'
 import { ref, watch } from 'vue'
 
-const isDark = useDark() // verwaltet html.class und localStorage automatisch
-const _toggle = useToggle(isDark)
+const STORAGE_KEY = 'tg-theme'
+const isDark = ref(false)
 const ready = ref(false)
+
+function applyTheme(value) {
+  const root = document.documentElement
+  if (value) root.classList.add('dark')
+  else root.classList.remove('dark')
+  localStorage.setItem(STORAGE_KEY, value ? 'dark' : 'light')
+}
+
+function loadLocal() {
+  const saved = localStorage.getItem(STORAGE_KEY)
+  if (saved === 'dark') isDark.value = true
+  if (saved === 'light') isDark.value = false
+  applyTheme(isDark.value)
+  ready.value = true
+}
 
 export async function loadFromServer() {
   try {
@@ -12,6 +26,7 @@ export async function loadFromServer() {
     const serverValue = res.data?.light_darkmode
     if (serverValue !== null && serverValue !== undefined) {
       isDark.value = !!serverValue
+      applyTheme(isDark.value)
     }
   } catch (err) {
     console.warn('Theme: load failed', err)
@@ -36,18 +51,19 @@ function writeToServer(value) {
 watch(isDark, (v) => {
   if (!ready.value) {
     // initiale Änderung während Laden ignorieren
-    console.debug('Theme: change ignored until ready', v)
+    applyTheme(v)
     return
   }
-  console.debug('Theme: changed ->', v)
+  applyTheme(v)
   writeToServer(v)
 })
 
 // Exponiere sauberen Toggle-Namen, kein Namenskonflikt
 export function toggleTheme() {
-  _toggle()
+  isDark.value = !isDark.value
 }
 
 export function useTheme() {
+  if (!ready.value) loadLocal()
   return { isDark, toggleTheme, loadFromServer, ready }
 }
