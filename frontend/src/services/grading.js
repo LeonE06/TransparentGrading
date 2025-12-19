@@ -40,6 +40,145 @@ export function loadScheme() {
 }
 
 /**
+ * Multi-Schema support: store multiple named schemes and an active id
+ */
+const STORAGE_KEY_SCHEMES = 'gradingSchemes'
+const STORAGE_KEY_ACTIVE = 'gradingActiveSchemeId'
+
+function loadAllSchemes() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SCHEMES)
+    if (!raw) {
+      // migrate single scheme if present
+      const single = localStorage.getItem(STORAGE_KEY)
+      if (single) {
+        const s = JSON.parse(single)
+        const defaultScheme = { id: 'default', name: 'Standard', scheme: s }
+        localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify([defaultScheme]))
+        return [defaultScheme]
+      }
+      const def = { id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }
+      localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify([def]))
+      return [def]
+    }
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) throw new Error('gradingSchemes is not an array')
+
+    // Deduplicate exact duplicates (same name + same scheme)
+    const seen = new Set()
+    const unique = []
+    for (const s of parsed) {
+      try {
+        const key = (s.name || '') + '::' + JSON.stringify(s.scheme || {})
+        if (!seen.has(key)) {
+          seen.add(key)
+          unique.push(s)
+        }
+      } catch (e) {
+        // on stringify error, keep item
+        unique.push(s)
+      }
+    }
+
+    // If we only have many auto-created placeholders like 'Neues Schema',
+    // collapse to single default to restore original behaviour.
+    const onlyPlaceholders = unique.length > 1 && unique.every(u => {
+      const n = (u.name || '').toLowerCase()
+      return n === 'neues schema' || n.startsWith('neues schema') || n === 'neues'
+    })
+    if (onlyPlaceholders) {
+      const def = { id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }
+      localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify([def]))
+      localStorage.setItem(STORAGE_KEY_ACTIVE, 'default')
+      return [def]
+    }
+
+    if (unique.length !== parsed.length) {
+      // save deduped list to avoid re-rendering the same duplicates
+      try { localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify(unique)) } catch (e) {}
+    }
+
+    return unique
+  } catch (err) {
+    console.error('Fehler beim Laden aller Schemas', err)
+    // Repair: reset to single default schema to avoid corrupt state
+    try {
+      const def = { id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }
+      localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify([def]))
+      localStorage.setItem(STORAGE_KEY_ACTIVE, 'default')
+    } catch (e) {
+      console.error('Fehler beim Reparieren des gradingSchemes keys', e)
+    }
+    return [{ id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }]
+  }
+}
+
+function saveAllSchemes(arr) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SCHEMES, JSON.stringify(arr))
+  } catch (err) {
+    console.error('Fehler beim Speichern aller Schemas', err)
+  }
+}
+
+function createScheme(name = 'Neues Schema', schemeObj = null) {
+  const schemes = loadAllSchemes()
+  const id = String(Date.now())
+  const s = { id, name, scheme: schemeObj || { ...DEFAULT_SCHEME } }
+  schemes.push(s)
+  saveAllSchemes(schemes)
+  return s
+}
+
+function updateScheme(id, { name, scheme }) {
+  const schemes = loadAllSchemes()
+  const idx = schemes.findIndex(s => s.id === id)
+  if (idx === -1) return null
+  if (name != null) schemes[idx].name = name
+  if (scheme != null) schemes[idx].scheme = scheme
+  saveAllSchemes(schemes)
+  return schemes[idx]
+}
+
+function deleteScheme(id) {
+  let schemes = loadAllSchemes()
+  schemes = schemes.filter(s => s.id !== id)
+  saveAllSchemes(schemes)
+  const active = getActiveSchemeId()
+  if (active === id) {
+    if (schemes.length) setActiveSchemeId(schemes[0].id)
+    else localStorage.removeItem(STORAGE_KEY_ACTIVE)
+  }
+  return true
+}
+
+function setActiveSchemeId(id) {
+  try {
+    localStorage.setItem(STORAGE_KEY_ACTIVE, String(id))
+    return true
+  } catch (err) {
+    console.error('Fehler beim Setzen des aktiven Schemas', err)
+    return false
+  }
+}
+
+function getActiveSchemeId() {
+  return localStorage.getItem(STORAGE_KEY_ACTIVE) || null
+}
+
+function getSchemeById(id) {
+  const schemes = loadAllSchemes()
+  return schemes.find(s => s.id === id) || null
+}
+
+function getActiveScheme() {
+  const id = getActiveSchemeId()
+  const schemes = loadAllSchemes()
+  if (!id) return schemes[0] || { id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }
+  return schemes.find(s => s.id === id) || schemes[0] || { id: 'default', name: 'Standard', scheme: DEFAULT_SCHEME }
+}
+
+/**
  * Speichert das Schema lokal (localStorage).
  * @param {Object} scheme
  */
@@ -259,5 +398,16 @@ export default {
   validateScheme,
   computeFinalGrade,
   percentageToGrade,
-  pointsToGrade
+  pointsToGrade,
+
+  // multi-schema API
+  loadAllSchemes,
+  saveAllSchemes,
+  createScheme,
+  updateScheme,
+  deleteScheme,
+  setActiveSchemeId,
+  getActiveSchemeId,
+  getSchemeById,
+  getActiveScheme
 }
