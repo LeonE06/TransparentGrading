@@ -46,9 +46,9 @@ if (!token && to.path !== "/login" && !to.path.startsWith("/auth")) {
 }
 
   // Kein Zugriff mit falscher Rolle?
-  if (to.meta.role && to.meta.role !== role) {
-    return next("/login")
-  }
+if (to.meta.role && role !== 'Schueler' && to.meta.role !== role) {
+  return next("/login")
+}
 
   next()
 })
