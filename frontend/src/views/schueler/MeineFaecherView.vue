@@ -178,7 +178,7 @@ async function checkStatus() {
 }
 
 async function saveBirthdate() {
-  await axios.post('/schueler/geburtsdatum', {
+  await axios.post('api/schueler/geburtsdatum', {
     geburtsdatum: birthdate.value
   })
 
