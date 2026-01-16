@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Service\MicrosoftUserService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,8 +15,10 @@ class MicrosoftLoginController extends AbstractController
 {
     private Azure $provider;
 
-    public function __construct(private MicrosoftUserService $userService)
-    {
+    public function __construct(
+        private MicrosoftUserService $userService,
+        private EntityManagerInterface $em
+    ) {
         $this->provider = new Azure([
             'clientId' => $_ENV['AZURE_CLIENT_ID'],
             'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
@@ -61,14 +64,10 @@ class MicrosoftLoginController extends AbstractController
                 'disableState' => true,
             ]);
 
-            // $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
-
             $graphUser = $this->provider->get(
                 'https://graph.microsoft.com/v1.0/me?$select=givenName,surname,mail,proxyAddresses,userPrincipalName',
                 $tokenMicrosoft
             );
-
-
 
             $email = strtolower($graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '');
             $proxyAddresses = $graphUser['proxyAddresses'] ?? [];
@@ -100,7 +99,6 @@ class MicrosoftLoginController extends AbstractController
 
             $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-
             // Microsoft-Benutzer holen
             $m365User = $this->em->getRepository(\App\Entity\Microsoft365User::class)
                 ->findOneBy(['email' => $email]);
@@ -129,17 +127,15 @@ class MicrosoftLoginController extends AbstractController
             $payload = [
                 'email' => $email,
                 'role' => $role,
-                'birthdate' => $schueler->getGeburtsdatum()?->format('Y-m-d') ?? null,
+                'birthdate' => $schueler?->getGeburtsdatum()?->format('Y-m-d') ?? null,
                 'needsBirthdate' => $needsBirthdate,
                 'needsParentEmail' => $needsParentEmail,
                 'exp' => time() + 3600 // 1h gültig
             ];
 
-
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 
             return $this->redirect($_ENV['FRONTEND_URL'] . '/auth/callback?token=' . $jwt);
-
         } catch (\Throwable $e) {
             return new Response('Fehler: ' . $e->getMessage(), 500);
         }
