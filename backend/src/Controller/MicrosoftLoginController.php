@@ -17,12 +17,12 @@ class MicrosoftLoginController extends AbstractController
     public function __construct(private MicrosoftUserService $userService)
     {
         $this->provider = new Azure([
-            'clientId'     => $_ENV['AZURE_CLIENT_ID'],
+            'clientId' => $_ENV['AZURE_CLIENT_ID'],
             'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
-            'tenant'       => $_ENV['AZURE_TENANT_ID'] . '/v2.0',
-            'redirectUri'  => $_ENV['AZURE_REDIRECT_URI'],
-            'resource'     => 'https://graph.microsoft.com',
-            'debug'        => false,
+            'tenant' => $_ENV['AZURE_TENANT_ID'] . '/v2.0',
+            'redirectUri' => $_ENV['AZURE_REDIRECT_URI'],
+            'resource' => 'https://graph.microsoft.com',
+            'debug' => false,
         ]);
     }
 
@@ -57,11 +57,26 @@ class MicrosoftLoginController extends AbstractController
             }
 
             $tokenMicrosoft = $this->provider->getAccessToken('authorization_code', [
-                'code'         => $code,
+                'code' => $code,
                 'disableState' => true,
             ]);
 
-            $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
+            // $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
+
+            $graphUser = $this->provider->get(
+                'https://graph.microsoft.com/v1.0/me?$select=birthday,givenName,surname,mail,proxyAddresses,userPrincipalName',
+                $tokenMicrosoft
+            );
+
+            // Birthday parsen (Format: YYYY-MM-DD)
+            $birthdate = null;
+            if (!empty($graphUser['birthday'])) {
+                try {
+                    $birthdate = new \DateTime($graphUser['birthday']);
+                } catch (\Exception $e) {
+                    $birthdate = null;
+                }
+            }
 
             $email = strtolower($graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '');
             $proxyAddresses = $graphUser['proxyAddresses'] ?? [];
@@ -88,15 +103,16 @@ class MicrosoftLoginController extends AbstractController
                 $email = $teacherEmail;
             }
 
-            $vorname  = $graphUser['givenName'] ?? '';
+            $vorname = $graphUser['givenName'] ?? '';
             $nachname = $graphUser['surname'] ?? '';
 
-            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email, $birthdate);
 
             $payload = [
                 'email' => $email,
-                'role'  => $role,
-                'exp'   => time() + 3600 // 1h gültig
+                'role' => $role,
+                'birthdate' => $birthdate ? $birthdate->format('Y-m-d') : null,
+                'exp' => time() + 3600 // 1h gültig
             ];
 
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');

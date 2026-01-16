@@ -21,7 +21,7 @@ class MicrosoftUserService
      *
      * @return string "Schueler" | "Lehrer" | "Unbekannt"
      */
-    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
+    public function handleMicrosoftUser(string $vorname, string $nachname, string $email, ?\DateTimeInterface $geburtsdatum = null): string
     {
         // Microsoft365User heraussuchen oder erstellen
         $existingUser = $this->em->getRepository(Microsoft365User::class)
@@ -45,7 +45,7 @@ class MicrosoftUserService
 
         // Schüler: 4 Zahlen
         if (preg_match('/^[0-9]{4}$/', $localPart)) {
-            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            $this->ensureSchueler($existingUser, $vorname, $nachname, $geburtsdatum);
             return 'Schueler';
         }
 
@@ -62,7 +62,7 @@ class MicrosoftUserService
     }
 
 
-    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
+    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname, ?\DateTimeInterface $geburtsdatum = null): void
     {
         $schueler = $this->em->getRepository(Schueler::class)
             ->findOneBy(['ms365User' => $m365User]);
@@ -75,6 +75,11 @@ class MicrosoftUserService
         $schueler->setVorname($vorname);
         $schueler->setNachname($nachname);
         $schueler->setMs365User($m365User);
+
+        // Geburtsdatum setzen, falls vorhanden
+        if ($geburtsdatum !== null) {
+            $schueler->setGeburtsdatum($geburtsdatum);
+        }
 
         $this->em->persist($schueler);
         $this->em->flush();

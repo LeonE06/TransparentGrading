@@ -24,7 +24,7 @@ if (!token) {
   // Rolle auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
   const role = payload.role;
-
+  
   // Weiterleitung basierend auf Rolle
   if (role === "Schueler") {
     router.push("/schueler/faecher");

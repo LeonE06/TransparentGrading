@@ -37,6 +37,7 @@ class SettingsController extends AbstractController
             'benachrichtigungen' => $settings ? $settings->getBenachrichtigungen() : null,
             'elternemail' => $settings ? $settings->getElternemail() : null,
             'elternaktivierung' => $settings ? $settings->getElternaktivierung() : null,
+            'geburtsdatum' => $user->getGeburtsdatum()?->format('Y-m-d'),
             'isUeber18' => $isUeber18
         ], 200);
     }
