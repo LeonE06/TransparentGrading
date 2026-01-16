@@ -213,7 +213,7 @@ async function saveParentEmail() {
 
 onMounted(async () => {
   console.log('MeineFaecherView mounted')
-  await loadSubjects()
+  //  await loadSubjects()
   await checkStatus() // <-- Jetzt sollte es laufen
 })
 
