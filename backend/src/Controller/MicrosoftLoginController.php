@@ -100,22 +100,31 @@ class MicrosoftLoginController extends AbstractController
 
             $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-            // Annahme: $this->userService kann den Schüler laden
-            $schueler = $this->userService->getSchuelerByEmail($email);
 
-            $needsBirthdate = $schueler->getGeburtsdatum() === null;
+            // Microsoft-Benutzer holen
+            $m365User = $this->em->getRepository(\App\Entity\Microsoft365User::class)
+                ->findOneBy(['email' => $email]);
 
-            $needsParentEmail = false;
-            if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
-                $today = new \DateTime();
-                $age = $today->diff($schueler->getGeburtsdatum())->y;
-
-                if ($age < 18) {
-                    $einstellungen = $schueler->getEinstellungen(); // Eltern-Email ggf. aus Einstellungen
-                    $needsParentEmail = !$einstellungen || !$einstellungen->getElternemail();
-                }
+            $schueler = null;
+            if ($m365User) {
+                $schueler = $this->em->getRepository(\App\Entity\Schueler::class)
+                    ->findOneBy(['ms365User' => $m365User]);
             }
 
+            // Popup-Flags berechnen
+            $needsBirthdate = false;
+            $needsParentEmail = false;
+
+            if ($schueler) {
+                $needsBirthdate = $schueler->getGeburtsdatum() === null;
+
+                if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
+                    $age = (new \DateTime())->diff($schueler->getGeburtsdatum())->y;
+                    if ($age < 18) {
+                        $needsParentEmail = !$schueler->getEinstellungen()?->getElternemail();
+                    }
+                }
+            }
 
             $payload = [
                 'email' => $email,
