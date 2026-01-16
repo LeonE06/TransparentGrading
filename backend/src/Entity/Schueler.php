@@ -6,6 +6,7 @@ use Doctrine\Common\Collections\Collection;
 use App\Repository\SchuelerRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use App\Entity\Mood;
 
 #[ORM\Entity(repositoryClass: SchuelerRepository::class)]
 #[ORM\Table(name: "Schueler")]
@@ -53,8 +54,12 @@ class Schueler
     #[Groups(['class_read', 'student_read'])]
     private ?Microsoft365User $ms365User = null;
 
+    #[ORM\OneToMany(mappedBy: 'schueler', targetEntity: Mood::class, orphanRemoval: true)]
+private Collection $moods;
+
     public function __construct()
     {
+        $this->moods = new ArrayCollection();
         $this->empfangeneNachrichten = new ArrayCollection();
         $this->nachrichtenStatus = new ArrayCollection();
         $this->kursSchueler = new ArrayCollection();
@@ -133,5 +138,9 @@ public function setMs365User(?Microsoft365User $ms365User): self
 {
     $this->ms365User = $ms365User;
     return $this;
+}
+public function getMoods(): Collection
+{
+    return $this->moods;
 }
 }
