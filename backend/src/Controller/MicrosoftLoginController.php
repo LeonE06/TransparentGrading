@@ -1,5 +1,5 @@
 <?php
-
+// backend/src/Controller/MicrosoftLoginController.php
 namespace App\Controller;
 
 use App\Service\MicrosoftUserService;
@@ -17,12 +17,12 @@ class MicrosoftLoginController extends AbstractController
     public function __construct(private MicrosoftUserService $userService)
     {
         $this->provider = new Azure([
-            'clientId'     => $_ENV['AZURE_CLIENT_ID'],
+            'clientId' => $_ENV['AZURE_CLIENT_ID'],
             'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],
-            'tenant'       => $_ENV['AZURE_TENANT_ID'] . '/v2.0',
-            'redirectUri'  => $_ENV['AZURE_REDIRECT_URI'],
-            'resource'     => 'https://graph.microsoft.com',
-            'debug'        => false,
+            'tenant' => $_ENV['AZURE_TENANT_ID'] . '/v2.0',
+            'redirectUri' => $_ENV['AZURE_REDIRECT_URI'],
+            'resource' => 'https://graph.microsoft.com',
+            'debug' => false,
         ]);
     }
 
@@ -57,49 +57,89 @@ class MicrosoftLoginController extends AbstractController
             }
 
             $tokenMicrosoft = $this->provider->getAccessToken('authorization_code', [
-                'code'         => $code,
+                'code' => $code,
                 'disableState' => true,
             ]);
 
-            // User von Microsoft holen
-            $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
+            // $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
 
-            // Echte Login-Adresse beeinflusst Rolle
-$email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';
+            $graphUser = $this->provider->get(
+                'https://graph.microsoft.com/v1.0/me?$select=givenName,surname,mail,proxyAddresses,userPrincipalName',
+                $tokenMicrosoft
+            );
 
-$local = explode('@', strtolower($email))[0];
 
-// Falls Hauptadresse kein Schüler → Proxy-Aliase prüfen
-if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {
-    foreach ($graphUser['proxyAddresses'] as $address) {
-        $address = strtolower(str_replace('smtp:', '', $address));
-        $localAlias = explode('@', $address)[0];
 
-        if (preg_match('/^[0-9]{4}$/', $localAlias)) {
-            $email = $address;
-            break;
-        }
-    }
-}
-            $vorname  = $graphUser['givenName'] ?? '';
+            $email = strtolower($graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '');
+            $proxyAddresses = $graphUser['proxyAddresses'] ?? [];
+
+            $studentEmail = null;
+            $teacherEmail = null;
+
+            foreach ($proxyAddresses as $address) {
+                $address = strtolower(str_replace('smtp:', '', $address));
+                $local = explode('@', $address)[0];
+
+                if (preg_match('/^[0-9]{4}$/', $local)) {
+                    $studentEmail = $address;
+                }
+
+                if (preg_match('/^[a-z]{3}$/', $local)) {
+                    $teacherEmail = $address;
+                }
+            }
+
+            if ($studentEmail) {
+                $email = $studentEmail;
+            } elseif ($teacherEmail) {
+                $email = $teacherEmail;
+            }
+
+            $vorname = $graphUser['givenName'] ?? '';
             $nachname = $graphUser['surname'] ?? '';
 
-            // Benutzer in DB anlegen/finden + Rolle bestimmen
             $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-            // JWT bauen
+
+            // Microsoft-Benutzer holen
+            $m365User = $this->em->getRepository(\App\Entity\Microsoft365User::class)
+                ->findOneBy(['email' => $email]);
+
+            $schueler = null;
+            if ($m365User) {
+                $schueler = $this->em->getRepository(\App\Entity\Schueler::class)
+                    ->findOneBy(['ms365User' => $m365User]);
+            }
+
+            // Popup-Flags berechnen
+            $needsBirthdate = false;
+            $needsParentEmail = false;
+
+            if ($schueler) {
+                $needsBirthdate = $schueler->getGeburtsdatum() === null;
+
+                if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
+                    $age = (new \DateTime())->diff($schueler->getGeburtsdatum())->y;
+                    if ($age < 18) {
+                        $needsParentEmail = !$schueler->getEinstellungen()?->getElternemail();
+                    }
+                }
+            }
+
             $payload = [
                 'email' => $email,
-                'role'  => $role,
-                'exp'   => time() + 3600, // 1 Stunde gültig
+                'role' => $role,
+                'birthdate' => $schueler->getGeburtsdatum()?->format('Y-m-d') ?? null,
+                'needsBirthdate' => $needsBirthdate,
+                'needsParentEmail' => $needsParentEmail,
+                'exp' => time() + 3600 // 1h gültig
             ];
+
 
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 
-            // Redirect ins Frontend
-            $frontendUrl = $_ENV['FRONTEND_URL'];
+            return $this->redirect($_ENV['FRONTEND_URL'] . '/auth/callback?token=' . $jwt);
 
-            return $this->redirect($frontendUrl . '/auth/callback?token=' . $jwt);
         } catch (\Throwable $e) {
             return new Response('Fehler: ' . $e->getMessage(), 500);
         }

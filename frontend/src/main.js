@@ -10,6 +10,8 @@ axios.defaults.baseURL = import.meta.env.PROD
   ? 'https://transparentgrading.onrender.com/' // dein echtes Render-Backend hier eintragen!
   : '/api'
 
+
+
 // 🚀 App starten + Router aktivieren
 createApp(App)
   .use(router)

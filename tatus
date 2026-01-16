@@ -1,0 +1,543 @@
+[1mdiff --git a/backend/config/packages/framework.yaml b/backend/config/packages/framework.yaml[m
+[1mindex d4b493c..e424509 100644[m
+[1m--- a/backend/config/packages/framework.yaml[m
+[1m+++ b/backend/config/packages/framework.yaml[m
+[36m@@ -1,11 +1,9 @@[m
+ # see https://symfony.com/doc/current/reference/configuration/framework.html[m
+ framework:[m
+     secret: '%env(APP_SECRET)%'[m
+[31m-[m
+[31m-    session:[m
+[31m-        cookie_samesite: none[m
+[31m-        cookie_secure: auto[m
+[31m-        handler_id: null[m
+[32m+[m[41m    [m
+[32m+[m[32m    # Note that the session will be started ONLY if you read or write from it.[m
+[32m+[m[32m    session: true[m
+ [m
+     #esi: true[m
+     #fragments: true[m
+[1mdiff --git a/backend/config/packages/nelmio_cors.yaml b/backend/config/packages/nelmio_cors.yaml[m
+[1mindex 59ea19e..f2f10e9 100644[m
+[1m--- a/backend/config/packages/nelmio_cors.yaml[m
+[1m+++ b/backend/config/packages/nelmio_cors.yaml[m
+[36m@@ -6,7 +6,7 @@[m [mnelmio_cors:[m
+         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With'][m
+         expose_headers: [][m
+         max_age: 3600[m
+[31m-        allow_credentials: true[m
+[32m+[m[32m        allow_credentials: false[m
+ [m
+     paths:[m
+         '.*':  # ⚠️ vorher '^/' → jetzt '.*' (greift global)[m
+[36m@@ -14,4 +14,3 @@[m [mnelmio_cors:[m
+             allow_methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'][m
+             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With'][m
+             max_age: 3600[m
+[31m-            allow_credentials: true[m
+[1mdiff --git a/backend/config/packages/security.yaml b/backend/config/packages/security.yaml[m
+[1mindex 2159daa..367af25 100644[m
+[1m--- a/backend/config/packages/security.yaml[m
+[1m+++ b/backend/config/packages/security.yaml[m
+[36m@@ -1,24 +1,39 @@[m
+ security:[m
+[32m+[m[32m    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords[m
+[32m+[m[32m    password_hashers:[m
+[32m+[m[32m        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'[m
+[32m+[m[32m    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider[m
+     providers:[m
+[31m-        app_user_provider:[m
+[31m-            entity:[m
+[31m-                class: App\Entity\Schueler[m
+[31m-                property: email[m
+[31m-[m
+[32m+[m[32m        users_in_memory: { memory: null }[m
+     firewalls:[m
+         dev:[m
+[31m-            pattern: ^/(_profiler|_wdt|css|images|js)[m
+[32m+[m[32m            pattern: ^/(_(profiler|wdt)|css|images|js)/[m
+             security: false[m
+[32m+[m[32m        main:[m
+[32m+[m[32m            lazy: true[m
+[32m+[m[32m            provider: users_in_memory[m
+[32m+[m
+[32m+[m[32m            # activate different ways to authenticate[m
+[32m+[m[32m            # https://symfony.com/doc/current/security.html#the-firewall[m
+ [m
+[31m-        # 🔐 Alle API-Endpunkte → JWT[m
+[31m-        api:[m
+[31m-            pattern: ^/api[m
+[31m-            stateless: true[m
+[31m-            provider: app_user_provider[m
+[31m-            custom_authenticators:[m
+[31m-                - App\Security\ApiJWTAuthenticator[m
+[32m+[m[32m            # https://symfony.com/doc/current/security/impersonating_user.html[m
+[32m+[m[32m            # switch_user: true[m
+ [m
+[32m+[m[32m    # Easy way to control access for large sections of your site[m
+[32m+[m[32m    # Note: Only the *first* access control that matches will be used[m
+     access_control:[m
+[31m-        - { path: ^/api/mood, roles: ROLE_SCHUELER }[m
+[31m-        - { path: ^/api/lehrer, roles: ROLE_LEHRER }[m
+[31m-        - { path: ^/api/schueler, roles: ROLE_SCHUELER }[m
+[32m+[m[32m        # - { path: ^/admin, roles: ROLE_ADMIN }[m
+[32m+[m[32m        # - { path: ^/profile, roles: ROLE_USER }[m
+[32m+[m
+[32m+[m[32mwhen@test:[m
+[32m+[m[32m    security:[m
+[32m+[m[32m        password_hashers:[m
+[32m+[m[32m            # By default, password hashers are resource intensive and take time. This is[m
+[32m+[m[32m            # important to generate secure password hashes. In tests however, secure hashes[m
+[32m+[m[32m            # are not important, waste resources and increase test times. The following[m
+[32m+[m[32m            # reduces the work factor to the lowest possible values.[m
+[32m+[m[32m            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:[m
+[32m+[m[32m                algorithm: auto[m
+[32m+[m[32m                cost: 4 # Lowest possible value for bcrypt[m
+[32m+[m[32m                time_cost: 3 # Lowest possible value for argon[m
+[32m+[m[32m                memory_cost: 10 # Lowest possible value for argon[m
+[1mdiff --git a/backend/config/services.yaml b/backend/config/services.yaml[m
+[1mindex 81fe93b..6bbad87 100644[m
+[1m--- a/backend/config/services.yaml[m
+[1m+++ b/backend/config/services.yaml[m
+[36m@@ -18,6 +18,3 @@[m [mservices:[m
+ [m
+     # add more service definitions when explicit configuration is needed[m
+     # please note that last definitions always *replace* previous ones[m
+[31m-[m
+[31m-    App\Security\JWTAuthenticator:[m
+[31m-        tags: ['security.authenticator'][m
+[1mdiff --git a/backend/src/Controller/MicrosoftLoginController.php b/backend/src/Controller/MicrosoftLoginController.php[m
+[1mindex 8a652a7..92b4a2a 100644[m
+[1m--- a/backend/src/Controller/MicrosoftLoginController.php[m
+[1m+++ b/backend/src/Controller/MicrosoftLoginController.php[m
+[36m@@ -3,26 +3,34 @@[m
+ namespace App\Controller;[m
+ [m
+ use App\Service\MicrosoftUserService;[m
+[32m+[m[32muse League\OAuth2\Client\Provider\Exception\IdentityProviderException;[m
+ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;[m
+ use Symfony\Component\HttpFoundation\Request;[m
+ use Symfony\Component\HttpFoundation\Response;[m
+ use Symfony\Component\Routing\Annotation\Route;[m
+ use TheNetworg\OAuth2\Client\Provider\Azure;[m
+[31m-use Firebase\JWT\JWT;[m
+ [m
+ class MicrosoftLoginController extends AbstractController[m
+ {[m
+     private Azure $provider;[m
+[32m+[m[32m    private MicrosoftUserService $userService;[m
+ [m
+[31m-    public function __construct(private MicrosoftUserService $userService)[m
+[32m+[m[32m    public function __construct(MicrosoftUserService $userService)[m
+     {[m
+[32m+[m[32m        $this->userService = $userService;[m
+[32m+[m
+[32m+[m[32m        // 🔒 Sichere Environment-Variablen laden (funktioniert in Docker und lokal)[m
+[32m+[m[32m        $clientId = $_SERVER['AZURE_CLIENT_ID'] ?? $_ENV['AZURE_CLIENT_ID'] ?? null;[m
+[32m+[m[32m        $clientSecret = $_SERVER['AZURE_CLIENT_SECRET'] ?? $_ENV['AZURE_CLIENT_SECRET'] ?? null;[m
+[32m+[m[32m        $tenant = $_SERVER['AZURE_TENANT_ID'] ?? $_ENV['AZURE_TENANT_ID'] ?? null;[m
+[32m+[m[32m        $redirectUri = $_SERVER['AZURE_REDIRECT_URI'] ?? $_ENV['AZURE_REDIRECT_URI'] ?? null;[m
+[32m+[m[41m        [m
+         $this->provider = new Azure([[m
+[31m-            'clientId'     => $_ENV['AZURE_CLIENT_ID'],[m
+[31m-            'clientSecret' => $_ENV['AZURE_CLIENT_SECRET'],[m
+[31m-            'tenant'       => $_ENV['AZURE_TENANT_ID'] . '/v2.0',[m
+[31m-            'redirectUri'  => $_ENV['AZURE_REDIRECT_URI'],[m
+[31m-            'resource'     => 'https://graph.microsoft.com',[m
+[31m-            'debug'        => false,[m
+[32m+[m[32m            'clientId' => $clientId,[m
+[32m+[m[32m            'clientSecret' => $clientSecret,[m
+[32m+[m[32m            'tenant' => $tenant,[m
+[32m+[m[32m            'redirectUri' => $redirectUri,[m
+[32m+[m[32m            'debug' => false,[m
+         ]);[m
+     }[m
+ [m
+[36m@@ -30,16 +38,16 @@[m [mclass MicrosoftLoginController extends AbstractController[m
+     public function login(): Response[m
+     {[m
+         try {[m
+[31m-            $authUrl = $this->provider->getAuthorizationUrl([[m
+[31m-                'scope' => [[m
+[31m-                    'openid',[m
+[31m-                    'profile',[m
+[31m-                    'offline_access',[m
+[31m-                    'email',[m
+[31m-                    'https://graph.microsoft.com/User.Read',[m
+[31m-                ],[m
+[31m-                'disableState' => true,[m
+[31m-            ]);[m
+[32m+[m[32m            // 🔗 Microsoft-Login starten[m
+[32m+[m[32m$authUrl = $this->provider->getAuthorizationUrl([[m
+[32m+[m[32m    'scope' => [[m
+[32m+[m[32m        'openid',[m
+[32m+[m[32m        'profile',[m
+[32m+[m[32m        'email',[m
+[32m+[m[32m        'offline_access',[m
+[32m+[m[32m        'https://graph.microsoft.com/User.Read'[m
+[32m+[m[32m    ],[m
+[32m+[m[32m]);[m
+ [m
+             return $this->redirect($authUrl);[m
+         } catch (\Throwable $e) {[m
+[36m@@ -48,60 +56,47 @@[m [mclass MicrosoftLoginController extends AbstractController[m
+     }[m
+ [m
+     #[Route('/auth', name: 'auth_alias', methods: ['GET'])][m
+[31m-    public function callback(Request $request): Response[m
+[31m-    {[m
+[31m-        try {[m
+[31m-            $code = $request->query->get('code');[m
+[31m-            if (!$code) {[m
+[31m-                return new Response('Kein Code erhalten', 400);[m
+[31m-            }[m
+[31m-[m
+[31m-            $tokenMicrosoft = $this->provider->getAccessToken('authorization_code', [[m
+[31m-                'code'         => $code,[m
+[31m-                'disableState' => true,[m
+[31m-            ]);[m
+[31m-[m
+[31m-            // User von Microsoft holen[m
+[31m-            $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);[m
+[32m+[m[32mpublic function callback(Request $request): Response[m
+[32m+[m[32m{[m
+[32m+[m[32m    try {[m
+[32m+[m[32m        // Access Token holen[m
+[32m+[m[32m        $token = $this->provider->getAccessToken('authorization_code', [[m
+[32m+[m[32m            'code' => $request->get('code'),[m
+[32m+[m[32m        ]);[m
+[32m+[m[32m        // DEBUG: Token Payload anzeigen[m
+[32m+[m[32m$jwt = $token->getToken();[m
+[32m+[m[32m$payload = json_decode(base64_decode(explode('.', $jwt)[1]), true);[m
+[32m+[m[32mreturn new Response("<pre>" . print_r($payload, true) . "</pre>");[m
+ [m
+[31m-            // Echte Login-Adresse beeinflusst Rolle[m
+[31m-$email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';[m
+[32m+[m[32m        // Userdaten von Microsoft Graph holen[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            $graphUser = $this->provider->get("https://graph.microsoft.com/v1.0/me", $token);[m
+[32m+[m[32m        } catch (\Exception $e) {[m
+[32m+[m[32m            return new Response("Graph-Error: " . $e->getMessage(), 500);[m
+[32m+[m[32m        }[m
+ [m
+[31m-$local = explode('@', strtolower($email))[0];[m
+[32m+[m[32m        // E-Mail / UPN beziehen[m
+[32m+[m[32m        $email = $graphUser['userPrincipalName'][m[41m [m
+[32m+[m[32m               ?? $graphUser['mail'][m[41m [m
+[32m+[m[32m               ?? null;[m
+ [m
+[31m-// Falls Hauptadresse kein Schüler → Proxy-Aliase prüfen[m
+[31m-if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {[m
+[31m-    foreach ($graphUser['proxyAddresses'] as $address) {[m
+[31m-        $address = strtolower(str_replace('smtp:', '', $address));[m
+[31m-        $localAlias = explode('@', $address)[0];[m
+[32m+[m[32m        $vorname = $graphUser['givenName'] ?? 'Unbekannt';[m
+[32m+[m[32m        $nachname = $graphUser['surname'] ?? 'Unbekannt';[m
+ [m
+[31m-        if (preg_match('/^[0-9]{4}$/', $localAlias)) {[m
+[31m-            $email = $address;[m
+[31m-            break;[m
+[32m+[m[32m        if (!$email) {[m
+[32m+[m[32m            return new Response('Keine gültige E-Mail-Adresse erhalten.', 400);[m
+         }[m
+[31m-    }[m
+[31m-}[m
+[31m-            $vorname  = $graphUser['givenName'] ?? '';[m
+[31m-            $nachname = $graphUser['surname'] ?? '';[m
+[31m-[m
+[31m-            // Benutzer in DB anlegen/finden + Rolle bestimmen[m
+[31m-            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);[m
+ [m
+[31m-            // JWT bauen[m
+[31m-            $payload = [[m
+[31m-                'email' => $email,[m
+[31m-                'role'  => $role,[m
+[31m-                'exp'   => time() + 3600, // 1 Stunde gültig[m
+[31m-            ];[m
+[32m+[m[32m        // Benutzer anlegen oder abrufen[m
+[32m+[m[32m        $redirectUrl = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);[m
+ [m
+[31m-            $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');[m
+[32m+[m[32m        // Weiterleitung ans Frontend[m
+[32m+[m[32m        return $this->redirect($redirectUrl);[m
+ [m
+[31m-            // Redirect ins Frontend[m
+[31m-            $frontendUrl = $_ENV['FRONTEND_URL'];[m
+[31m-[m
+[31m-            return $this->redirect($frontendUrl . '/auth/callback?token=' . $jwt);[m
+[31m-        } catch (\Throwable $e) {[m
+[31m-            return new Response('Fehler: ' . $e->getMessage(), 500);[m
+[31m-        }[m
+[32m+[m[32m    } catch (IdentityProviderException $e) {[m
+[32m+[m[32m        return new Response('Login fehlgeschlagen: ' . $e->getMessage(), 500);[m
+[32m+[m[32m    } catch (\Throwable $e) {[m
+[32m+[m[32m        return new Response('Allgemeiner Fehler: ' . $e->getMessage(), 500);[m
+     }[m
+ }[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/backend/src/Controller/MoodController.php b/backend/src/Controller/MoodController.php[m
+[1mdeleted file mode 100644[m
+[1mindex 4d39e94..0000000[m
+[1m--- a/backend/src/Controller/MoodController.php[m
+[1m+++ /dev/null[m
+[36m@@ -1,74 +0,0 @@[m
+[31m-<?php[m
+[31m-[m
+[31m-namespace App\Controller;[m
+[31m-[m
+[31m-use App\Entity\Schueler;[m
+[31m-use App\Entity\SchuelerMood;[m
+[31m-use Doctrine\ORM\EntityManagerInterface;[m
+[31m-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;[m
+[31m-use Symfony\Component\HttpFoundation\JsonResponse;[m
+[31m-use Symfony\Component\HttpFoundation\Request;[m
+[31m-use Symfony\Component\Routing\Annotation\Route;[m
+[31m-[m
+[31m-#[Route('/api/mood')][m
+[31m-class MoodController extends AbstractController[m
+[31m-{[m
+[31m-    #[Route('', name: 'api_mood_create', methods: ['POST'])][m
+[31m-    public function create([m
+[31m-        Request $request,[m
+[31m-        EntityManagerInterface $em[m
+[31m-    ): JsonResponse {[m
+[31m-        // 🔐 aktuell eingeloggter User[m
+[31m-        $user = $this->getUser();[m
+[31m-[m
+[31m-        if (!$user instanceof Schueler) {[m
+[31m-            return $this->json(['error' => 'Nicht authentifiziert'], 401);[m
+[31m-        }[m
+[31m-[m
+[31m-        $data = json_decode($request->getContent(), true);[m
+[31m-[m
+[31m-        if (!isset($data['mood'])) {[m
+[31m-            return $this->json(['error' => 'Mood fehlt'], 400);[m
+[31m-        }[m
+[31m-[m
+[31m-        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'], true)) {[m
+[31m-            return $this->json(['error' => 'Ungültiger Mood-Wert'], 400);[m
+[31m-        }[m
+[31m-[m
+[31m-        // 💾 Mood speichern[m
+[31m-        $mood = new SchuelerMood();[m
+[31m-        $mood->setMood($data['mood']);[m
+[31m-        $mood->setSchueler($user);[m
+[31m-[m
+[31m-        $em->persist($mood);[m
+[31m-        $em->flush();[m
+[31m-[m
+[31m-        return $this->json([[m
+[31m-            'status' => 'ok',[m
+[31m-            'message' => 'Mood gespeichert'[m
+[31m-        ], 201);[m
+[31m-    }[m
+[31m-[m
+[31m-    #[Route('/me', name: 'api_mood_me', methods: ['GET'])][m
+[31m-    public function listMyMoods([m
+[31m-        EntityManagerInterface $em[m
+[31m-    ): JsonResponse {[m
+[31m-        $user = $this->getUser();[m
+[31m-[m
+[31m-        if (!$user instanceof Schueler) {[m
+[31m-            return $this->json(['error' => 'Nicht authentifiziert'], 401);[m
+[31m-        }[m
+[31m-[m
+[31m-        $conn = $em->getConnection();[m
+[31m-[m
+[31m-        $data = $conn->fetchAllAssociative([m
+[31m-            'SELECT erstellt_am, mood[m
+[31m-             FROM Schueler_Mood[m
+[31m-             WHERE schueler_id = ?[m
+[31m-             ORDER BY erstellt_am ASC',[m
+[31m-            [$user->getId()][m
+[31m-        );[m
+[31m-[m
+[31m-        return $this->json($data);[m
+[31m-    }[m
+[31m-}[m
+[1mdiff --git a/backend/src/Entity/Microsoft365User.php b/backend/src/Entity/Microsoft365User.php[m
+[1mindex 9639891..9b664fc 100644[m
+[1m--- a/backend/src/Entity/Microsoft365User.php[m
+[1m+++ b/backend/src/Entity/Microsoft365User.php[m
+[36m@@ -104,14 +104,4 @@[m [mclass Microsoft365User[m
+         $this->erstellungszeitpunkt = $erstellungszeitpunkt;[m
+         return $this;[m
+     }[m
+[31m-    public function getMs365User(): ?Microsoft365User[m
+[31m-{[m
+[31m-    return $this->ms365User;[m
+[31m-}[m
+[31m-[m
+[31m-public function setMs365User(?Microsoft365User $ms365User): self[m
+[31m-{[m
+[31m-    $this->ms365User = $ms365User;[m
+[31m-    return $this;[m
+[31m-}[m
+ }[m
+[1mdiff --git a/backend/src/Entity/Schueler.php b/backend/src/Entity/Schueler.php[m
+[1mindex ff6e08f..687d3b3 100644[m
+[1m--- a/backend/src/Entity/Schueler.php[m
+[1m+++ b/backend/src/Entity/Schueler.php[m
+[36m@@ -124,14 +124,4 @@[m [mpublic function setEinstellungen(?Einstellungen $einstellungen): self[m
+     $this->einstellungen = $einstellungen;[m
+     return $this;[m
+ }[m
+[31m-public function getMs365User(): ?Microsoft365User[m
+[31m-{[m
+[31m-    return $this->ms365User;[m
+[31m-}[m
+[31m-[m
+[31m-public function setMs365User(?Microsoft365User $ms365User): self[m
+[31m-{[m
+[31m-    $this->ms365User = $ms365User;[m
+[31m-    return $this;[m
+[31m-}[m
+ }[m
+[1mdiff --git a/backend/src/Security/ApiJWTAuthenticator.php b/backend/src/Security/ApiJWTAuthenticator.php[m
+[1mdeleted file mode 100644[m
+[1mindex 7e340f5..0000000[m
+[1m--- a/backend/src/Security/ApiJWTAuthenticator.php[m
+[1m+++ /dev/null[m
+[36m@@ -1,75 +0,0 @@[m
+[31m-<?php[m
+[31m-[m
+[31m-namespace App\Security;[m
+[31m-[m
+[31m-use Firebase\JWT\JWT;[m
+[31m-use Firebase\JWT\Key;[m
+[31m-use Symfony\Component\HttpFoundation\Request;[m
+[31m-use Symfony\Component\HttpFoundation\Response;[m
+[31m-use Symfony\Component\Security\Core\Exception\AuthenticationException;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\AbstractAuthenticator;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;[m
+[31m-[m
+[31m-class ApiJWTAuthenticator extends AbstractAuthenticator[m
+[31m-{[m
+[31m-    public function supports(Request $request): ?bool[m
+[31m-    {[m
+[31m-        return $request->headers->has('Authorization');[m
+[31m-    }[m
+[31m-[m
+[31m-    public function authenticate(Request $request): SelfValidatingPassport[m
+[31m-    {[m
+[31m-        $authHeader = $request->headers->get('Authorization');[m
+[31m-[m
+[31m-        if (!str_starts_with($authHeader, 'Bearer ')) {[m
+[31m-            throw new AuthenticationException('Kein Bearer Token');[m
+[31m-        }[m
+[31m-[m
+[31m-        $token = substr($authHeader, 7);[m
+[31m-[m
+[31m-        try {[m
+[31m-            $decoded = JWT::decode([m
+[31m-                $token,[m
+[31m-                new Key($_ENV['JWT_SECRET'], 'HS256')[m
+[31m-            );[m
+[31m-        } catch (\Throwable $e) {[m
+[31m-            throw new AuthenticationException('Ungültiges Token');[m
+[31m-        }[m
+[31m-[m
+[31m-        if (!isset($decoded->email, $decoded->role)) {[m
+[31m-            throw new AuthenticationException('Token unvollständig');[m
+[31m-        }[m
+[31m-[m
+[31m-        return new SelfValidatingPassport([m
+[31m-            new UserBadge($decoded->email, function () use ($decoded) {[m
+[31m-                return new JWTUser($decoded->email, $decoded->role);[m
+[31m-            })[m
+[31m-        );[m
+[31m-    }[m
+[31m-[m
+[31m-    /** ✅ PFLICHT in Symfony 7 */[m
+[31m-    public function onAuthenticationSuccess([m
+[31m-        Request $request,[m
+[31m-        $token,[m
+[31m-        string $firewallName[m
+[31m-    ): ?Response {[m
+[31m-        // nichts tun → Request darf weiter[m
+[31m-        return null;[m
+[31m-    }[m
+[31m-[m
+[31m-    /** ✅ PFLICHT in Symfony 7 */[m
+[31m-    public function onAuthenticationFailure([m
+[31m-        Request $request,[m
+[31m-        AuthenticationException $exception[m
+[31m-    ): ?Response {[m
+[31m-        return new Response([m
+[31m-            json_encode([[m
+[31m-                'error' => 'Unauthorized',[m
+[31m-                'message' => $exception->getMessage(),[m
+[31m-            ]),[m
+[31m-            Response::HTTP_UNAUTHORIZED,[m
+[31m-            ['Content-Type' => 'application/json'][m
+[31m-        );[m
+[31m-    }[m
+[31m-}[m
+[1mdiff --git a/backend/src/Security/JWTAuthenticator.php b/backend/src/Security/JWTAuthenticator.php[m
+[1mdeleted file mode 100644[m
+[1mindex 3fcffff..0000000[m
+[1m--- a/backend/src/Security/JWTAuthenticator.php[m
+[1m+++ /dev/null[m
+[36m@@ -1,62 +0,0 @@[m
+[31m-<?php[m
+[31m-[m
+[31m-namespace App\Security;[m
+[31m-[m
+[31m-use Firebase\JWT\JWT;[m
+[31m-use Firebase\JWT\Key;[m
+[31m-use Symfony\Component\HttpFoundation\Request;[m
+[31m-use Symfony\Component\HttpFoundation\Response;[m
+[31m-use Symfony\Component\Security\Core\Exception\AuthenticationException;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\AbstractAuthenticator;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\Passport\Passport;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;[m
+[31m-use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;[m
+[31m-[m
+[31m-class JWTAuthenticator extends AbstractAuthenticator[m
+[31m-{[m
+[31m-    public function supports(Request $request): ?bool[m
+[31m-    {[m
+[31m-        // Cookie muss gesetzt sein[m
+[31m-        return $request->cookies->has('auth_token');[m
+[31m-    }[m
+[31m-[m
+[31m-    public function authenticate(Request $request): Passport[m
+[31m-    {[m
+[31m-        $token = $request->cookies->get('auth_token');[m
+[31m-[m
+[31m-        if (!$token) {[m
+[31m-            throw new AuthenticationException("Kein Token vorhanden");[m
+[31m-        }[m
+[31m-[m
+[31m-        try {[m
+[31m-            $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));[m
+[31m-[m
+[31m-            $email = $decoded->email ?? null;[m
+[31m-            $role = $decoded->role ?? 'Unbekannt';[m
+[31m-[m
+[31m-            if (!$email) {[m
+[31m-                throw new AuthenticationException("Ungültiges Token: Keine Email enthalten");[m
+[31m-            }[m
+[31m-[m
+[31m-            return new SelfValidatingPassport([m
+[31m-                new UserBadge($email, function () use ($email, $role) {[m
+[31m-                    return new JWTUser($email, $role);[m
+[31m-                })[m
+[31m-            );[m
+[31m-[m
+[31m-        } catch (\Throwable $e) {[m
+[31m-            throw new AuthenticationException("Ungültiges Token: " . $e->getMessage());[m
+[31m-        }[m
+[31m-    }[m
+[31m-[m
+[31m-    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response[m
+[31m-    {[m
+[31m-        return new Response("Unauthorized: " . $exception->getMessage(), Response::HTTP_UNAUTHORIZED);[m
+[31m-    }[m
+[31m-[m
+[31m-    public function onAuthenticationSuccess(Request $request, $token, string $firewallName): ?Response[m
+[31m-    {[m
+[31m-        // Einfach weiterlaufen lassen → Controller antwortet[m
+[31m-        return null;[m

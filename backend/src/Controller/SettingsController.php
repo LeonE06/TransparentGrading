@@ -1,5 +1,5 @@
 <?php
-
+// backend/src/Controller/SettingsController.php
 namespace App\Controller;
 
 use App\Entity\Einstellungen;
@@ -12,22 +12,30 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class SettingsController extends AbstractController
 {
+    private CurrentSchuelerResolver $resolver;
+
+    // ✅ HIER – das ist der Constructor
+    public function __construct(CurrentSchuelerResolver $resolver)
+    {
+        $this->resolver = $resolver;
+    }
+
     #[Route('/api/settings', name: 'api_get_settings', methods: ['GET'])]
     public function getSettings(ManagerRegistry $doctrine): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $schueler = $this->resolver->get();
+        if (!$schueler) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
         $repo = $doctrine->getRepository(Einstellungen::class);
-        $settings = $repo->findOneBy(['schueler' => $user]);
+        $settings = $repo->findOneBy(['schueler' => $schueler]);
 
         // Prüfe ob Schüler über 18 ist
         $isUeber18 = false;
-        if ($user->getGeburtsdatum()) {
+        if ($schueler->getGeburtsdatum()) {
             $today = new \DateTime();
-            $geburtsdatum = $user->getGeburtsdatum();
+            $geburtsdatum = $schueler->getGeburtsdatum();
             $age = $today->diff($geburtsdatum)->y;
             $isUeber18 = $age >= 18;
         }
@@ -37,6 +45,7 @@ class SettingsController extends AbstractController
             'benachrichtigungen' => $settings ? $settings->getBenachrichtigungen() : null,
             'elternemail' => $settings ? $settings->getElternemail() : null,
             'elternaktivierung' => $settings ? $settings->getElternaktivierung() : null,
+            'geburtsdatum' => $schueler->getGeburtsdatum()?->format('Y-m-d'),
             'isUeber18' => $isUeber18
         ], 200);
     }
@@ -44,8 +53,8 @@ class SettingsController extends AbstractController
     #[Route('/api/settings', name: 'api_put_settings', methods: ['PUT'])]
     public function putSettings(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $schueler = $this->resolver->get();
+        if (!$schueler) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
@@ -55,19 +64,19 @@ class SettingsController extends AbstractController
         $repo = $doctrine->getRepository(Einstellungen::class);
         $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
 
-        $settings = $repo->findOneBy(['schueler' => $user]);
+        $settings = $repo->findOneBy(['schueler' => $schueler]);
 
         if (!$settings) {
             $settings = new Einstellungen();
-            $settings->setSchueler($user);
+            $settings->setSchueler($schueler);
             $em->persist($settings);
         }
 
         // Prüfe ob Schüler über 18 ist
         $isUeber18 = false;
-        if ($user->getGeburtsdatum()) {
+        if ($schueler->getGeburtsdatum()) {
             $today = new \DateTime();
-            $geburtsdatum = $user->getGeburtsdatum();
+            $geburtsdatum = $schueler->getGeburtsdatum();
             $age = $today->diff($geburtsdatum)->y;
             $isUeber18 = $age >= 18;
         }
@@ -83,21 +92,21 @@ class SettingsController extends AbstractController
 
             // Alle KursEinstellungen für diesen Schüler aktualisieren
             // 1. Alle Kurse des Schülers finden (über KursSchueler)
-            $kursSchueler = $user->getKursSchueler();
+            $kursSchueler = $schueler->getKursSchueler();
 
             foreach ($kursSchueler as $ks) {
                 $kurs = $ks->getKurs();
 
                 // 2. Prüfen ob bereits eine KursEinstellung existiert
                 $kursEinstellung = $kursEinstellungenRepo->findOneBy([
-                    'schueler' => $user,
+                    'schueler' => $schueler,
                     'kurs' => $kurs
                 ]);
 
                 // 3. Falls nicht vorhanden, neue erstellen
                 if (!$kursEinstellung) {
                     $kursEinstellung = new KursEinstellungen();
-                    $kursEinstellung->setSchueler($user);
+                    $kursEinstellung->setSchueler($schueler);
                     $kursEinstellung->setKurs($kurs);
                     $em->persist($kursEinstellung);
                 }

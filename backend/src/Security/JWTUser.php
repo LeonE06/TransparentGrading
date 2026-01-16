@@ -1,5 +1,5 @@
 <?php
-
+// backend/src/Security/JWTUser.php
 namespace App\Security;
 
 use Symfony\Component\Security\Core\User\UserInterface;

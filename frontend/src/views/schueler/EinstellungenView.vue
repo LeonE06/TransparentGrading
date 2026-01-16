@@ -1,4 +1,5 @@
 <template>
+    <!-- EinstellungenView.vue -->
     <div class="einstellungen-view">
 
         <h1 class="title">Einstellungen</h1>
@@ -16,7 +17,6 @@
                     </svg>
 
                 </i>
-
 
                 <div class="toggle">
                     <div>
@@ -41,6 +41,10 @@
         </div>
 
         <div class="container">
+
+            <div class="debug-info">
+                    <p><strong>Geburtsdatum im Token:</strong> {{ geburtsdatum }}</p>
+                </div>
 
             <div class="container-header">
                 <i class="icon">
@@ -140,6 +144,7 @@ const loading = ref(false)
 // Eltern-Email State
 const elternEmail = ref('')
 const elternEmailSenden = ref(false)
+const geburtsdatum = ref(null)
 const isUeber18 = ref(false)
 
 // Einstellungen vom Server laden
@@ -149,6 +154,7 @@ async function loadSettings() {
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
         elternEmail.value = res.data?.elternemail ?? ''
         elternEmailSenden.value = res.data?.elternaktivierung ?? false
+        geburtsdatum.value = res.data?.geburtsdatum ?? null
         isUeber18.value = res.data?.isUeber18 ?? false
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
@@ -365,9 +371,10 @@ input:checked+.slider:before {
     width: 100%;
 }
 
-.toggle > div:first-child {
+.toggle>div:first-child {
     flex: 1;
-    min-width: 0; /* Wichtig für Text-Overflow */
+    min-width: 0;
+    /* Wichtig für Text-Overflow */
 }
 
 input,
