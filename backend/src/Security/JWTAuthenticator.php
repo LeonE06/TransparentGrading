@@ -16,22 +16,17 @@ class JWTAuthenticator extends AbstractAuthenticator
 {
     public function supports(Request $request): ?bool
     {
-        // Token kann im Header oder Cookie sein
-        return $request->headers->has('Authorization') || $request->cookies->has('auth_token');
+        // Cookie muss gesetzt sein
+        return $request->cookies->has('auth_token');
     }
 
 
     public function authenticate(Request $request): Passport
     {
-        $token = $request->headers->get('Authorization');
-        if ($token && str_starts_with($token, 'Bearer ')) {
-            $token = substr($token, 7);
-        } else {
-            $token = $request->cookies->get('auth_token');
-        }
+        $token = $request->cookies->get('auth_token');
 
         if (!$token) {
-            throw new AuthenticationException('Kein Token vorhanden');
+            throw new AuthenticationException("Kein Token vorhanden");
         }
 
 
