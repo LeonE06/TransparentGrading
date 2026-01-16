@@ -21,7 +21,7 @@ class MicrosoftUserService
      *
      * @return string "Schueler" | "Lehrer" | "Unbekannt"
      */
-    public function handleMicrosoftUser(string $vorname, string $nachname, string $email, ?\DateTimeInterface $geburtsdatum = null): string
+    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
     {
         // Microsoft365User heraussuchen oder erstellen
         $existingUser = $this->em->getRepository(Microsoft365User::class)
@@ -76,10 +76,7 @@ class MicrosoftUserService
         $schueler->setNachname($nachname);
         $schueler->setMs365User($m365User);
 
-        // Geburtsdatum setzen, falls vorhanden
-        if ($geburtsdatum !== null) {
-            $schueler->setGeburtsdatum($geburtsdatum);
-        }
+    
 
         $this->em->persist($schueler);
         $this->em->flush();
