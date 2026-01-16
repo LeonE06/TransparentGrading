@@ -172,16 +172,15 @@ function goToDetail(id) {
 }
 
 async function checkStatus() {
-  try {
-    const res = await axios.get('/api/schueler/status')
-    console.log('Status Response:', res.data)
+  const res = await axios.get('/api/schueler/status')
 
-    showBirthdatePopup.value = res.data.needsBirthdate
-    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
-  } catch (err) {
-    console.error('Status Check Fehler', err)
-  }
+  // Debug: prüfen, was vom Backend kommt
+  alert('Backend Response: ' + JSON.stringify(res.data))
+
+  showBirthdatePopup.value = res.data.needsBirthdate
+  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
 }
+
 
 
 async function saveBirthdate() {
