@@ -118,20 +118,19 @@ const showBirthdatePopup = ref(false)
 const showParentPopup = ref(false)
 
 async function checkStatus() {
-  console.log('checkStatus() aufgerufen')
-
   try {
-    const res = await axios.get('/api/schueler/status') // ECHTE API
-    console.log('Status vom Backend:', res.data)
+    const res = await axios.get('/api/schueler/status', { withCredentials: true });
+    console.log('checkStatus() response:', res.data);
 
-    showBirthdatePopup.value = res.data.needsBirthdate
-    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+    showBirthdatePopup.value = res.data.needsBirthdate;
+    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail;
 
-    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup!') // Test
+    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup!');
   } catch (err) {
-    console.error('Fehler beim Status abrufen', err)
+    console.error('Fehler bei checkStatus():', err.response?.status, err.response?.data);
   }
 }
+
 
 
 
@@ -210,8 +209,9 @@ async function saveParentEmail() {
 
 onMounted(async () => {
   console.log('MeineFaecherView mounted')
-  await loadSubjects()      // wieder aktivieren
   await checkStatus()       // Popup prüfen
+  await loadSubjects()      // wieder aktivieren
+  
 })
 
 
