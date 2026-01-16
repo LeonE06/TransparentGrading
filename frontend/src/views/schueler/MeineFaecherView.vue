@@ -97,7 +97,7 @@
 </div>
 
 </template>
-
+  
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
@@ -111,17 +111,27 @@ const sortByName = ref(false);
 
 const openMenuId = ref(null);
 
-const showBirthdatePopup = ref(false)
-const showParentPopup = ref(false)
-
 const birthdate = ref('')
 const parentEmail = ref('')
 
+const showBirthdatePopup = ref(false)
+const showParentPopup = ref(false)
+
+async function checkStatus() {
+  console.log('checkStatus() aufgerufen') // <-- Debug
+  const res = await axios.get('/api/schueler/status')
+  console.log('Backend Response:', res.data)
+
+  showBirthdatePopup.value = res.data.needsBirthdate
+  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+}
 
 async function loadSubjects() {
   const res = await axios.get("/schueler/faecher");
-  subjects.value = res.data;
+  console.log('loadSubjects() aufgerufen', res.data)
 }
+
+
 
 async function toggleVisibility(id) {
   await axios.put(`/schueler/faecher/${id}/toggle-visibility`);
@@ -171,23 +181,6 @@ function goToDetail(id) {
   router.push(`/schueler/faecher/${id}`);
 }
 
-async function checkStatus() {
-  console.log('checkStatus() aufgerufen')  // <-- kommt das?
-  
-  try {
-    const res = await axios.get('/api/schueler/status')
-    console.log('Backend Response:', res.data)
-    
-    showBirthdatePopup.value = res.data.needsBirthdate
-    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
-  } catch (err) {
-    console.error('Fehler beim Backend-Call:', err)
-  }
-}
-
-
-
-
 async function saveBirthdate() {
   await axios.post('/api/schueler/geburtsdatum', {
     geburtsdatum: birthdate.value
@@ -207,9 +200,9 @@ async function saveParentEmail() {
 
 
 onMounted(async () => {
-  console.log('MeineFaecherView mounted')  // <-- kommt das?
+  console.log('MeineFaecherView mounted')
   await loadSubjects()
-  await checkStatus()
+  await checkStatus() // <-- Jetzt sollte es laufen
 })
 
 
