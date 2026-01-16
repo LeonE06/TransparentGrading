@@ -40,12 +40,17 @@ if (!token) {
 
   // Weiterleitung basierend auf Rolle
   if (role === "Schueler") {
-    router.push("/schueler/faecher");
-  } else if (role === "Lehrer") {
-    router.push("/lehrer/faecher"); // Lehrerbereich richtig definieren!
+  if (payload.needsBirthdate || payload.needsParentEmail) {
+    // Popups anzeigen, keine Weiterleitung
   } else {
-    router.push("/login");
+    router.push("/schueler/faecher");
   }
+} else if (role === "Lehrer") {
+  router.push("/lehrer/faecher");
+} else {
+  router.push("/login");
+}
+
 }
 </script>
 
