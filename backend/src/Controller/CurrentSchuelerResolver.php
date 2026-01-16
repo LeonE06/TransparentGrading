@@ -4,7 +4,7 @@ namespace App\Controller;
 use App\Entity\Schueler;
 use App\Entity\Microsoft365User;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
+use Symfony\Bundle\SecurityBundle\Security;
 
 class CurrentSchuelerResolver
 {
