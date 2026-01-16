@@ -103,6 +103,7 @@ class MicrosoftLoginController extends AbstractController
             $payload = [
                 'email' => $email,
                 'role' => $role,
+                'birthdate' => null,
                 'exp' => time() + 3600 // 1h gültig
             ];
 
