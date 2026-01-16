@@ -97,7 +97,7 @@
 </div>
 
 </template>
-  
+
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
@@ -118,13 +118,25 @@ const showBirthdatePopup = ref(false)
 const showParentPopup = ref(false)
 
 async function checkStatus() {
-  console.log('checkStatus() aufgerufen') // <-- Debug
-  const res = await axios.get('/api/schueler/status')
-  console.log('Backend Response:', res.data)
+  console.log('checkStatus() aufgerufen') // Debug
 
-  showBirthdatePopup.value = res.data.needsBirthdate
-  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+  try {
+    const res = await axios.get('/api/schueler/status')
+    console.log('Backend Response:', res.data)
+
+    showBirthdatePopup.value = res.data.needsBirthdate
+    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+
+    // Test Alert
+    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup sollte erscheinen!')
+    if (!res.data.needsBirthdate && res.data.needsParentEmail) alert('Eltern-Popup!')
+    
+  } catch (err) {
+    console.error('Fehler bei checkStatus():', err)
+    alert('Fehler bei checkStatus(): ' + err.message)
+  }
 }
+
 
 async function loadSubjects() {
   const res = await axios.get("/schueler/faecher");
