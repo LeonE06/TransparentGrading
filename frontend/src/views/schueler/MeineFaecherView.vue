@@ -89,6 +89,9 @@ const parentEmail = ref('')
 const showBirthdatePopup = ref(false)
 const showParentPopup = ref(false)
 
+const token = localStorage.getItem("token"); // <-- token holen
+
+
 // Payload aus JWT lesen und Popups direkt setzen
 const payload = JSON.parse(atob(token.split(".")[1]));
 showBirthdatePopup.value = payload.needsBirthdate;
