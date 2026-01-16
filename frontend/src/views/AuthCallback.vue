@@ -26,7 +26,8 @@ if (!token) {
 
 
   // Cookie für Symfony setzen → wichtig für Backend!
-  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
+  document.cookie = `auth_token=${token}; Path=/; SameSite=Lax`; // oder SameSite=None + Secure nur in Prod
+
 
   // Rolle auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
