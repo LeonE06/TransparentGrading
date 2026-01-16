@@ -45,7 +45,7 @@ class MicrosoftUserService
 
         // Schüler: 4 Zahlen
         if (preg_match('/^[0-9]{4}$/', $localPart)) {
-            $this->ensureSchueler($existingUser, $vorname, $nachname, $geburtsdatum);
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
             return 'Schueler';
         }
 
@@ -62,7 +62,7 @@ class MicrosoftUserService
     }
 
 
-    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname, ?\DateTimeInterface $geburtsdatum = null): void
+    private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
     {
         $schueler = $this->em->getRepository(Schueler::class)
             ->findOneBy(['ms365User' => $m365User]);
