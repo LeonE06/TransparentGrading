@@ -1,5 +1,5 @@
 <?php
-
+// backend/src/Security/ApiJWTAuthenticator.php
 namespace App\Security;
 
 use Firebase\JWT\JWT;

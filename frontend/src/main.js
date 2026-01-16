@@ -10,6 +10,11 @@ axios.defaults.baseURL = import.meta.env.PROD
   ? 'https://transparentgrading.onrender.com/' // dein echtes Render-Backend hier eintragen!
   : '/api'
 
+
+axios.defaults.withCredentials = true
+const token = localStorage.getItem('token')
+if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+
 // 🚀 App starten + Router aktivieren
 createApp(App)
   .use(router)

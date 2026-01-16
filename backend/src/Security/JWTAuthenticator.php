@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Security;
-
+// backend/src/Security/JWTAuthenticator.php
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,17 +16,24 @@ class JWTAuthenticator extends AbstractAuthenticator
 {
     public function supports(Request $request): ?bool
     {
-        // Cookie muss gesetzt sein
-        return $request->cookies->has('auth_token');
+        // Token kann im Header oder Cookie sein
+        return $request->headers->has('Authorization') || $request->cookies->has('auth_token');
     }
+
 
     public function authenticate(Request $request): Passport
     {
-        $token = $request->cookies->get('auth_token');
+        $token = $request->headers->get('Authorization');
+        if ($token && str_starts_with($token, 'Bearer ')) {
+            $token = substr($token, 7);
+        } else {
+            $token = $request->cookies->get('auth_token');
+        }
 
         if (!$token) {
-            throw new AuthenticationException("Kein Token vorhanden");
+            throw new AuthenticationException('Kein Token vorhanden');
         }
+
 
         try {
             $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));
