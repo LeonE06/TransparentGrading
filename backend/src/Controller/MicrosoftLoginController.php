@@ -68,15 +68,7 @@ class MicrosoftLoginController extends AbstractController
                 $tokenMicrosoft
             );
 
-            // Birthday parsen (Format: YYYY-MM-DD)
-            $birthdate = null;
-            if (!empty($graphUser['birthday'])) {
-                try {
-                    $birthdate = new \DateTime($graphUser['birthday']);
-                } catch (\Exception $e) {
-                    $birthdate = null;
-                }
-            }
+            
 
             $email = strtolower($graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '');
             $proxyAddresses = $graphUser['proxyAddresses'] ?? [];
@@ -106,12 +98,11 @@ class MicrosoftLoginController extends AbstractController
             $vorname = $graphUser['givenName'] ?? '';
             $nachname = $graphUser['surname'] ?? '';
 
-            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email, $birthdate);
+            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
             $payload = [
                 'email' => $email,
                 'role' => $role,
-                'birthdate' => $birthdate ? $birthdate->format('Y-m-d') : null,
                 'exp' => time() + 3600 // 1h gültig
             ];
 
