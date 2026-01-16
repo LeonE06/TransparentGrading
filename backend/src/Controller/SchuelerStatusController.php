@@ -2,8 +2,8 @@
 
 namespace App\Controller;
 
-use App\Entity\Schueler;
 use App\Entity\Einstellungen;
+use App\Service\CurrentSchuelerResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,11 +12,18 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class SchuelerStatusController extends AbstractController
 {
+    private CurrentSchuelerResolver $resolver;
+
+    // ✅ HIER – das ist der Constructor
+    public function __construct(CurrentSchuelerResolver $resolver)
+    {
+        $this->resolver = $resolver;
+    }
+
     #[Route('/api/schueler/status', methods: ['GET'])]
     public function status(): JsonResponse
     {
-        /** @var Schueler $schueler */
-        $schueler = $this->getUser();
+        $schueler = $this->resolver->get();
 
         if (!$schueler) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
@@ -25,7 +32,7 @@ class SchuelerStatusController extends AbstractController
         $needsBirthdate = $schueler->getGeburtsdatum() === null;
         $needsParentEmail = false;
 
-        if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
+        if (!$needsBirthdate) {
             $today = new \DateTime();
             $age = $today->diff($schueler->getGeburtsdatum())->y;
 
@@ -44,10 +51,14 @@ class SchuelerStatusController extends AbstractController
     #[Route('/api/schueler/geburtsdatum', methods: ['POST'])]
     public function saveBirthdate(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        /** @var Schueler $schueler */
-        $schueler = $this->getUser();
+        $schueler = $this->resolver->get();
+
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
 
         $data = json_decode($request->getContent(), true);
+
         if (empty($data['geburtsdatum'])) {
             return new JsonResponse(['error' => 'Geburtsdatum fehlt'], 400);
         }
@@ -61,8 +72,11 @@ class SchuelerStatusController extends AbstractController
     #[Route('/api/schueler/elternemail', methods: ['POST'])]
     public function saveParentEmail(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        /** @var Schueler $schueler */
-        $schueler = $this->getUser();
+        $schueler = $this->resolver->get();
+
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
 
         $data = json_decode($request->getContent(), true);
         $email = $data['email'] ?? null;

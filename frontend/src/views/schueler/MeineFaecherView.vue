@@ -1,4 +1,5 @@
 <template>
+  /* MeineFaecherView.vue */
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
@@ -171,14 +172,14 @@ function goToDetail(id) {
 }
 
 async function checkStatus() {
-  const res = await axios.get('api/schueler/status')
+  const res = await axios.get('/api/schueler/status')
 
   showBirthdatePopup.value = res.data.needsBirthdate
   showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
 }
 
 async function saveBirthdate() {
-  await axios.post('api/schueler/geburtsdatum', {
+  await axios.post('/api/schueler/geburtsdatum', {
     geburtsdatum: birthdate.value
   })
 
@@ -187,7 +188,7 @@ async function saveBirthdate() {
 }
 
 async function saveParentEmail() {
-  await axios.post('api/schueler/elternemail', {
+  await axios.post('/api/schueler/elternemail', {
     email: parentEmail.value
   })
 
