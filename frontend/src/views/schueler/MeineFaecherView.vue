@@ -65,6 +65,36 @@
       </li>
     </ul>
   </div>
+  <!-- Popup Geburtsdatum -->
+<div v-if="showBirthdatePopup" class="modal-backdrop">
+  <div class="modal">
+    <h2>Geburtsdatum</h2>
+    <p>Bitte gib dein Geburtsdatum an.</p>
+
+    <input type="date" v-model="birthdate" />
+
+    <button @click="saveBirthdate">Speichern</button>
+  </div>
+</div>
+
+<!-- Popup Eltern -->
+<div v-if="showParentPopup" class="modal-backdrop">
+  <div class="modal">
+    <h2>Elternbenachrichtigung</h2>
+    <p>
+      Da du noch nicht 18 Jahre alt bist, benötigen wir eine Eltern-E-Mail-Adresse.
+    </p>
+
+    <input
+      type="email"
+      placeholder="Eltern-E-Mail"
+      v-model="parentEmail"
+    />
+
+    <button @click="saveParentEmail">Speichern</button>
+  </div>
+</div>
+
 </template>
 
 <script setup>
@@ -79,6 +109,13 @@ const tab = ref("alle");
 const sortByName = ref(false);
 
 const openMenuId = ref(null);
+
+const showBirthdatePopup = ref(false)
+const showParentPopup = ref(false)
+
+const birthdate = ref('')
+const parentEmail = ref('')
+
 
 async function loadSubjects() {
   const res = await axios.get("/schueler/faecher");
@@ -133,7 +170,36 @@ function goToDetail(id) {
   router.push(`/schueler/faecher/${id}`);
 }
 
-onMounted(loadSubjects);
+async function checkStatus() {
+  const res = await axios.get('/schueler/status')
+
+  showBirthdatePopup.value = res.data.needsBirthdate
+  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+}
+
+async function saveBirthdate() {
+  await axios.post('/schueler/geburtsdatum', {
+    geburtsdatum: birthdate.value
+  })
+
+  showBirthdatePopup.value = false
+  await checkStatus()
+}
+
+async function saveParentEmail() {
+  await axios.post('/schueler/elternemail', {
+    email: parentEmail.value
+  })
+
+  showParentPopup.value = false
+}
+
+
+onMounted(async () => {
+  await loadSubjects()
+  await checkStatus()
+})
+
 </script>
 
 <style scoped>
@@ -236,4 +302,22 @@ onMounted(loadSubjects);
 .context-item:hover {
   background: #efefef;
 }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 16px;
+  width: 420px;
+}
+
 </style>
