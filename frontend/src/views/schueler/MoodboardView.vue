@@ -44,7 +44,7 @@
     <div class="chart-card">
       <h2>Dein Lern-Mood Verlauf</h2>
       <div class="chart-placeholder">
-        Diagramm per Chart.js …
+        <canvas ref="chartRef"></canvas>
       </div>
     </div>
 
@@ -55,11 +55,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { Chart } from 'chart.js/auto'
 
 const mood = ref('')
 const note = ref('')
 const saved = ref(false)
+
+const chartRef = ref(null)
+let chartInstance = null
+
+const moods = ref([])
 
 const moodOptions = {
   gut: [
@@ -256,20 +262,112 @@ const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="n
 </defs>
 </svg>`
 
-/* ✅ 401 FIX: COOKIE AUTH */
+function moodToNumber(m) {
+  if (m === 'schlecht') return 1
+  if (m === 'neutral') return 2
+  return 3
+}
+
+function formatDateLabel(value) {
+  const d = new Date(value)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}.${mm}.${yyyy}`
+}
+
+function renderChart() {
+  if (!chartRef.value) return
+
+  const sorted = [...moods.value].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+  const labels = sorted.map(x => formatDateLabel(x.createdAt))
+  const data = sorted.map(x => moodToNumber(x.mood))
+
+  if (chartInstance) {
+    chartInstance.data.labels = labels
+    chartInstance.data.datasets[0].data = data
+    chartInstance.update()
+    return
+  }
+
+  chartInstance = new Chart(chartRef.value, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Mood (1=schlecht, 2=neutral, 3=gut)',
+          data,
+          tension: 0.25
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          min: 1,
+          max: 3,
+          ticks: {
+            stepSize: 1,
+            callback: (v) => (v === 1 ? 'schlecht' : v === 2 ? 'neutral' : 'gut')
+          }
+        }
+      }
+    }
+  })
+}
+
+async function fetchMoods() {
+  const token = localStorage.getItem('token')
+  if (!token) return
+
+  const res = await fetch('https://transparentgrading.onrender.com/api/mood', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  if (!res.ok) {
+    console.error('GET /api/mood failed', res.status)
+    return
+  }
+
+  moods.value = await res.json()
+  renderChart()
+}
+
+/* ✅ korrektes Speichern + note + Chart Refresh */
 async function saveMood() {
   const token = localStorage.getItem('token')
-  console.log('JWT:', token)
+  if (!token) return
+  if (!mood.value) return
 
-  await fetch('https://transparentgrading.onrender.com/api/mood', {
+  const res = await fetch('https://transparentgrading.onrender.com/api/mood', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ mood: mood.value })
+    body: JSON.stringify({
+      mood: mood.value,
+      note: note.value || null
+    })
   })
+
+  if (!res.ok) {
+    console.error('POST /api/mood failed', res.status)
+    return
+  }
+
+  saved.value = true
+  await fetchMoods()
 }
+
+onMounted(async () => {
+  await fetchMoods()
+})
 </script>
 
 <style scoped>

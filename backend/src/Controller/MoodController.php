@@ -2,73 +2,105 @@
 
 namespace App\Controller;
 
+use App\Entity\Mood;
 use App\Entity\Schueler;
-use App\Entity\SchuelerMood;
+use App\Entity\Microsoft365User;
+use App\Repository\MoodRepository;
+use App\Repository\SchuelerRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/mood')]
 class MoodController extends AbstractController
 {
-    #[Route('', name: 'api_mood_create', methods: ['POST'])]
-    public function create(
-        Request $request,
-        EntityManagerInterface $em
-    ): JsonResponse {
-        // 🔐 aktuell eingeloggter User
+    private function resolveSchueler(SchuelerRepository $schuelerRepo): ?Schueler
+    {
         $user = $this->getUser();
 
-        if (!$user instanceof Schueler) {
-            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        // Du loggst dich als Microsoft365User ein
+        if ($user instanceof Microsoft365User) {
+            // Nicht jeder MS365-User ist Schüler -> kann null sein
+            return $schuelerRepo->findOneBy(['ms365User' => $user]);
         }
 
-        $data = json_decode($request->getContent(), true);
-
-        if (!isset($data['mood'])) {
-            return $this->json(['error' => 'Mood fehlt'], 400);
+        // Fallback (falls du irgendwann Schueler als Security-User nutzt)
+        if ($user instanceof Schueler) {
+            return $user;
         }
 
-        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'], true)) {
-            return $this->json(['error' => 'Ungültiger Mood-Wert'], 400);
+        return null;
+    }
+
+    private function requireStudent(SchuelerRepository $schuelerRepo): Schueler|JsonResponse
+    {
+        if (!$this->getUser()) {
+            return $this->json(['message' => 'Unauthorized'], 401);
         }
 
-        // 💾 Mood speichern
-        $mood = new SchuelerMood();
-        $mood->setMood($data['mood']);
-        $mood->setSchueler($user);
+        $schueler = $this->resolveSchueler($schuelerRepo);
+
+        if (!$schueler) {
+            return $this->json(['message' => 'Forbidden (only students)'], 403);
+        }
+
+        return $schueler;
+    }
+
+    #[Route('/api/mood', name: 'mood_create', methods: ['POST'])]
+    public function create(
+        Request $request,
+        EntityManagerInterface $em,
+        SchuelerRepository $schuelerRepo
+    ): JsonResponse {
+        $schuelerOrResponse = $this->requireStudent($schuelerRepo);
+        if ($schuelerOrResponse instanceof JsonResponse) {
+            return $schuelerOrResponse;
+        }
+        $schueler = $schuelerOrResponse;
+
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        $moodValue = $data['mood'] ?? null;
+        $note = $data['note'] ?? null;
+
+        $allowed = ['gut', 'neutral', 'schlecht'];
+        if (!$moodValue || !in_array($moodValue, $allowed, true)) {
+            return $this->json(['message' => 'Invalid mood'], 400);
+        }
+
+        $mood = (new Mood())
+            ->setSchueler($schueler)
+            ->setMood($moodValue)
+            ->setNote($note);
 
         $em->persist($mood);
         $em->flush();
 
         return $this->json([
-            'status' => 'ok',
-            'message' => 'Mood gespeichert'
+            'message' => 'saved',
+            'id' => $mood->getId(),
+            'createdAt' => $mood->getCreatedAt()->format('Y-m-d H:i:s'),
         ], 201);
     }
 
-    #[Route('/me', name: 'api_mood_me', methods: ['GET'])]
-    public function listMyMoods(
-        EntityManagerInterface $em
+    #[Route('/api/mood', name: 'mood_list', methods: ['GET'])]
+    public function list(
+        MoodRepository $repo,
+        SerializerInterface $serializer,
+        SchuelerRepository $schuelerRepo
     ): JsonResponse {
-        $user = $this->getUser();
-
-        if (!$user instanceof Schueler) {
-            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        $schuelerOrResponse = $this->requireStudent($schuelerRepo);
+        if ($schuelerOrResponse instanceof JsonResponse) {
+            return $schuelerOrResponse;
         }
+        $schueler = $schuelerOrResponse;
 
-        $conn = $em->getConnection();
+        $items = $repo->findLatestBySchueler($schueler, 60);
 
-        $data = $conn->fetchAllAssociative(
-            'SELECT erstellt_am, mood
-             FROM Schueler_Mood
-             WHERE schueler_id = ?
-             ORDER BY erstellt_am ASC',
-            [$user->getId()]
-        );
-
-        return $this->json($data);
+        $json = $serializer->serialize($items, 'json', ['groups' => ['mood:read']]);
+        return new JsonResponse($json, 200, [], true);
     }
 }
