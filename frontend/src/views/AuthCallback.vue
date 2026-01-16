@@ -9,6 +9,10 @@
 import { useRouter } from "vue-router";
 const router = useRouter();
 
+// Popups als ref definieren
+export const showBirthdatePopup = ref(false);
+export const showParentPopup = ref(false);
+
 const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get("token");
 
@@ -25,6 +29,10 @@ if (!token) {
   // Rolle auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
   const role = payload.role;
+
+  // Popups direkt setzen
+  showBirthdatePopup.value = payload.needsBirthdate;
+  showParentPopup.value = payload.needsParentEmail;
 
   // Weiterleitung basierend auf Rolle
   if (role === "Schueler") {
