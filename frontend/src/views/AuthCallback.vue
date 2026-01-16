@@ -9,9 +9,13 @@
 import { useRouter } from "vue-router";
 const router = useRouter();
 
-// Popups als ref definieren
-export const showBirthdatePopup = ref(false);
-export const showParentPopup = ref(false);
+const showBirthdatePopup = ref(false);
+const showParentPopup = ref(false);
+
+defineExpose({
+  showBirthdatePopup,
+  showParentPopup
+});
 
 const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get("token");
