@@ -1,4 +1,5 @@
 <template>
+  <!-- AuthCallback.vue -->
   <div class="loading">
     <h2>Authentifiziere dich...</h2>
   </div>
@@ -6,7 +7,7 @@
 
 <script setup>
 import { useRouter } from "vue-router";
-
+import axios from 'axios';
 const router = useRouter();
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -18,13 +19,19 @@ if (!token) {
   // JWT speichern
   localStorage.setItem("token", token);
 
+  // Axios global konfigurieren, damit Cookies gesendet werden
+
+  axios.defaults.withCredentials = true
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // optional, falls Backend Authorization prüft
+
+
   // Cookie für Symfony setzen → wichtig für Backend!
   document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
 
   // Rolle auslesen
   const payload = JSON.parse(atob(token.split(".")[1]));
   const role = payload.role;
-  
+
   // Weiterleitung basierend auf Rolle
   if (role === "Schueler") {
     router.push("/schueler/faecher");

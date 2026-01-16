@@ -118,24 +118,22 @@ const showBirthdatePopup = ref(false)
 const showParentPopup = ref(false)
 
 async function checkStatus() {
-  console.log('checkStatus() aufgerufen') // Debug
+  console.log('checkStatus() aufgerufen')
 
   try {
-    const res = await axios.get('/api/schueler/status')
-    console.log('Backend Response:', res.data)
+    const res = await axios.get('/api/schueler/status') // ECHTE API
+    console.log('Status vom Backend:', res.data)
 
     showBirthdatePopup.value = res.data.needsBirthdate
     showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
 
-    // Test Alert
-    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup sollte erscheinen!')
-    if (!res.data.needsBirthdate && res.data.needsParentEmail) alert('Eltern-Popup!')
-    
+    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup!') // Test
   } catch (err) {
-    console.error('Fehler bei checkStatus():', err)
-    alert('Fehler bei checkStatus(): ' + err.message)
+    console.error('Fehler beim Status abrufen', err)
   }
 }
+
+
 
 
 async function loadSubjects() {
@@ -210,12 +208,12 @@ async function saveParentEmail() {
   showParentPopup.value = false
 }
 
-
 onMounted(async () => {
   console.log('MeineFaecherView mounted')
-  //  await loadSubjects()
-  await checkStatus() // <-- Jetzt sollte es laufen
+  await loadSubjects()      // wieder aktivieren
+  await checkStatus()       // Popup prüfen
 })
+
 
 
 </script>

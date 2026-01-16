@@ -32,7 +32,7 @@ class SchuelerStatusController extends AbstractController
         $needsBirthdate = $schueler->getGeburtsdatum() === null;
         $needsParentEmail = false;
 
-        if (!$needsBirthdate) {
+        if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
             $today = new \DateTime();
             $age = $today->diff($schueler->getGeburtsdatum())->y;
 
@@ -41,6 +41,7 @@ class SchuelerStatusController extends AbstractController
                 $needsParentEmail = !$einstellungen || !$einstellungen->getElternemail();
             }
         }
+
 
         return new JsonResponse([
             'needsBirthdate' => $needsBirthdate,
