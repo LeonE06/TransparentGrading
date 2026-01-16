@@ -1,5 +1,5 @@
 <?php
-namespace App\Service;
+namespace App\Controller;
 
 use App\Entity\Schueler;
 use App\Entity\Microsoft365User;
