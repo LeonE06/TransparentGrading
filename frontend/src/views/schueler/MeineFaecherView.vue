@@ -171,7 +171,7 @@ function goToDetail(id) {
 }
 
 async function checkStatus() {
-  const res = await axios.get('/schueler/status')
+  const res = await axios.get('api/schueler/status')
 
   showBirthdatePopup.value = res.data.needsBirthdate
   showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
@@ -187,7 +187,7 @@ async function saveBirthdate() {
 }
 
 async function saveParentEmail() {
-  await axios.post('/schueler/elternemail', {
+  await axios.post('api/schueler/elternemail', {
     email: parentEmail.value
   })
 
