@@ -3,7 +3,7 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     session:
-        cookie_samesite: strict
+        cookie_samesite: none
         cookie_secure: auto
         handler_id: null
 

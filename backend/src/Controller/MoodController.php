@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;   // ✅ WICHTIG: Api entfernen
+namespace App\Controller;
 
 use App\Entity\Schueler;
 use App\Entity\SchuelerMood;
@@ -18,26 +18,27 @@ class MoodController extends AbstractController
         Request $request,
         EntityManagerInterface $em
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
+        // 🔐 aktuell eingeloggter User
+        $user = $this->getUser();
 
-        if (!isset($data['schueler_id'], $data['mood'])) {
-            return $this->json(['error' => 'Ungültige Daten'], 400);
+        if (!$user instanceof Schueler) {
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
         }
 
-        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'])) {
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['mood'])) {
+            return $this->json(['error' => 'Mood fehlt'], 400);
+        }
+
+        if (!in_array($data['mood'], ['gut', 'neutral', 'schlecht'], true)) {
             return $this->json(['error' => 'Ungültiger Mood-Wert'], 400);
         }
 
-        $schueler = $em->getRepository(Schueler::class)
-            ->find($data['schueler_id']);
-
-        if (!$schueler) {
-            return $this->json(['error' => 'Schüler nicht gefunden'], 404);
-        }
-
+        // 💾 Mood speichern
         $mood = new SchuelerMood();
         $mood->setMood($data['mood']);
-        $mood->setSchueler($schueler);
+        $mood->setSchueler($user);
 
         $em->persist($mood);
         $em->flush();
@@ -48,11 +49,16 @@ class MoodController extends AbstractController
         ], 201);
     }
 
-    #[Route('/{schuelerId}', name: 'api_mood_list', methods: ['GET'])]
-    public function list(
-        int $schuelerId,
+    #[Route('/me', name: 'api_mood_me', methods: ['GET'])]
+    public function listMyMoods(
         EntityManagerInterface $em
     ): JsonResponse {
+        $user = $this->getUser();
+
+        if (!$user instanceof Schueler) {
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        }
+
         $conn = $em->getConnection();
 
         $data = $conn->fetchAllAssociative(
@@ -60,7 +66,7 @@ class MoodController extends AbstractController
              FROM Schueler_Mood
              WHERE schueler_id = ?
              ORDER BY erstellt_am ASC',
-            [$schuelerId]
+            [$user->getId()]
         );
 
         return $this->json($data);

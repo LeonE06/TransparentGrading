@@ -1,27 +1,24 @@
 security:
-    # Symfony 7: enable_authenticator_manager entfernt!
-
     providers:
-        in_memory:
-            memory: ~
+        app_user_provider:
+            entity:
+                class: App\Entity\Schueler
+                property: email
 
     firewalls:
         dev:
             pattern: ^/(_profiler|_wdt|css|images|js)
             security: false
 
+        # 🔐 Alle API-Endpunkte → JWT
         api:
-            pattern: ^/api/
+            pattern: ^/api
             stateless: true
-            provider: in_memory
+            provider: app_user_provider
             custom_authenticators:
-                - App\Security\JWTAuthenticator
-
-        main:
-            lazy: true
-            security: false
+                - App\Security\ApiJWTAuthenticator
 
     access_control:
+        - { path: ^/api/mood, roles: ROLE_SCHUELER }
         - { path: ^/api/lehrer, roles: ROLE_LEHRER }
         - { path: ^/api/schueler, roles: ROLE_SCHUELER }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

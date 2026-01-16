@@ -7,6 +7,7 @@
     <div class="toolbar">
       <div class="left-controls">
         <button class="btn" @click="loadTeachers">Alle</button>
+        <router-link to="/admin/lehrer/grading" class="btn">Leistungserfassung</router-link>
         <button class="btn" @click="sortByName">Sortiert A-Z</button>
       </div>
     </div>
