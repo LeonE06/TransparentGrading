@@ -64,7 +64,7 @@ class MicrosoftLoginController extends AbstractController
             // $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
 
             $graphUser = $this->provider->get(
-                'https://graph.microsoft.com/v1.0/me?$select=birthday,givenName,surname,mail,proxyAddresses,userPrincipalName',
+                'https://graph.microsoft.com/v1.0/me?$select=givenName,surname,mail,proxyAddresses,userPrincipalName',
                 $tokenMicrosoft
             );
 
