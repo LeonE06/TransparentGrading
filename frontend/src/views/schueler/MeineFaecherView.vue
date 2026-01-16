@@ -32,16 +32,19 @@
           <span class="menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</span>
 
           <div v-if="openMenuId === fach.kurs_id" class="context-menu">
-            <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">👁 Fach
-              ausblenden</div>
+            <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">
+              👁 Fach ausblenden
+            </div>
 
-            <div class="context-item" v-else @click="toggleVisibility(fach.kurs_id)">➕ Fach einblenden</div>
+            <div class="context-item" v-else @click="toggleVisibility(fach.kurs_id)">
+              ➕ Fach einblenden
+            </div>
           </div>
-
         </div>
       </li>
     </ul>
   </div>
+
   <!-- Popup Geburtsdatum -->
   <div v-if="showBirthdatePopup" class="modal-backdrop">
     <div class="modal">
@@ -58,16 +61,13 @@
   <div v-if="showParentPopup" class="modal-backdrop">
     <div class="modal">
       <h2>Elternbenachrichtigung</h2>
-      <p>
-        Da du noch nicht 18 Jahre alt bist, benötigen wir eine Eltern-E-Mail-Adresse.
-      </p>
+      <p>Da du noch nicht 18 Jahre alt bist, benötigen wir eine Eltern-E-Mail-Adresse.</p>
 
       <input type="email" placeholder="Eltern-E-Mail" v-model="parentEmail" />
 
       <button @click="saveParentEmail">Speichern</button>
     </div>
   </div>
-
 </template>
 
 <script setup>
@@ -83,50 +83,53 @@ const sortByName = ref(false);
 
 const openMenuId = ref(null);
 
-const birthdate = ref('')
-const parentEmail = ref('')
+const birthdate = ref("");
+const parentEmail = ref("");
 
-const showBirthdatePopup = ref(false)
-const showParentPopup = ref(false)
+const showBirthdatePopup = ref(false);
+const showParentPopup = ref(false);
 
-const token = localStorage.getItem("token"); // <-- token holen
+const token = localStorage.getItem("token");
 
+// Payload aus JWT lesen und Popups direkt setzen (SAFE, damit es nicht crasht)
+let payload = {};
+try {
+  if (token) payload = JSON.parse(atob(token.split(".")[1]));
+} catch (e) {
+  payload = {};
+}
 
-// Payload aus JWT lesen und Popups direkt setzen
-const payload = JSON.parse(atob(token.split(".")[1]));
-showBirthdatePopup.value = payload.needsBirthdate;
-showParentPopup.value = payload.needsParentEmail;
-
+showBirthdatePopup.value = !!payload.needsBirthdate;
+showParentPopup.value = !!payload.needsParentEmail;
 
 async function checkStatus() {
   try {
-    const res = await axios.get('/api/schueler/status', { withCredentials: true });
-    console.log('checkStatus() response:', res.data);
+    const res = await axios.get("/api/schueler/status", { withCredentials: true });
+    console.log("checkStatus() response:", res.data);
 
     showBirthdatePopup.value = res.data.needsBirthdate;
     showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail;
 
-    if (res.data.needsBirthdate) alert('Geburtsdatum-Popup!');
+    if (res.data.needsBirthdate) alert("Geburtsdatum-Popup!");
   } catch (err) {
-    console.error('Fehler bei checkStatus():', err.response?.status, err.response?.data);
+    console.error("Fehler bei checkStatus():", err.response?.status, err.response?.data);
   }
 }
 
 async function loadSubjects() {
-  const res = await axios.get("/schueler/faecher");
-  console.log('loadSubjects() aufgerufen', res.data)
+  const res = await axios.get("/api/schueler/faecher", { withCredentials: true });
+  subjects.value = res.data;
+  console.log("loadSubjects() aufgerufen", res.data);
 }
 
-
-
 async function toggleVisibility(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-visibility`);
+  await axios.put(`/api/schueler/faecher/${id}/toggle-visibility`, null, { withCredentials: true });
   await loadSubjects();
   openMenuId.value = null;
 }
 
 async function toggleNotif(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-notif`);
+  await axios.put(`/api/schueler/faecher/${id}/toggle-notif`, null, { withCredentials: true });
   await loadSubjects();
 }
 
@@ -137,18 +140,13 @@ function toggleSorting() {
 const visibleSubjects = computed(() => {
   let list = subjects.value;
 
-  if (tab.value === "visible") list = list.filter(s => s.sichtbar == 1);
-  if (tab.value === "hidden") list = list.filter(s => s.sichtbar == 0);
+  if (tab.value === "visible") list = list.filter((s) => s.sichtbar == 1);
+  if (tab.value === "hidden") list = list.filter((s) => s.sichtbar == 0);
 
   if (searchTerm.value)
-    list = list.filter(s =>
-      s.fach_name.toLowerCase().includes(searchTerm.value.toLowerCase())
-    );
+    list = list.filter((s) => s.fach_name.toLowerCase().includes(searchTerm.value.toLowerCase()));
 
-  if (sortByName.value)
-    list = [...list].sort((a, b) =>
-      a.fach_name.localeCompare(b.fach_name)
-    );
+  if (sortByName.value) list = [...list].sort((a, b) => a.fach_name.localeCompare(b.fach_name));
 
   return list;
 });
@@ -169,20 +167,20 @@ function goToDetail(id) {
 
 // --- Popup-Funktionen ---
 async function saveBirthdate() {
-  await axios.post('/api/schueler/geburtsdatum', { geburtsdatum: birthdate.value });
+  await axios.post("/api/schueler/geburtsdatum", { geburtsdatum: birthdate.value }, { withCredentials: true });
   showBirthdatePopup.value = false;
 }
 
 async function saveParentEmail() {
-  await axios.post('/api/schueler/elternemail', { email: parentEmail.value });
+  await axios.post("/api/schueler/elternemail", { email: parentEmail.value }, { withCredentials: true });
   showParentPopup.value = false;
 }
 
 onMounted(async () => {
-  await loadSubjects()      // wieder aktivieren
-
-})
-
+  await loadSubjects();
+  // optional: wenn du lieber Status vom Backend holst statt aus JWT:
+  // await checkStatus();
+});
 </script>
 
 <style scoped>
@@ -194,7 +192,7 @@ onMounted(async () => {
 
 .toolbar {
   display: flex;
-  gap: .7rem;
+  gap: 0.7rem;
   margin-bottom: 1.2rem;
 }
 
@@ -212,7 +210,7 @@ onMounted(async () => {
 
 .search-input {
   width: 100%;
-  padding: .8rem;
+  padding: 0.8rem;
   margin-bottom: 1rem;
   border: 1px solid #bbb;
   border-radius: 8px;
@@ -227,7 +225,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: .9rem 0;
+  padding: 0.9rem 0;
   border-bottom: 1px solid #eee;
 }
 
@@ -263,7 +261,7 @@ onMounted(async () => {
 }
 
 .off {
-  opacity: .35;
+  opacity: 0.35;
 }
 
 .context-menu {
@@ -291,7 +289,7 @@ onMounted(async () => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .45);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
