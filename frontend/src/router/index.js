@@ -38,20 +38,24 @@ const router = createRouter({
 
 // Route Guard
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem("token")
-  const role = getRoleFromToken()
+  const token = localStorage.getItem("token");
 
-  // Kein Login?
-if (!token && to.path !== "/login" && !to.path.startsWith("/auth")) {
-    return next("/login")
-}
-
-  // Kein Zugriff mit falscher Rolle?
-  if (to.meta.role && to.meta.role !== role) {
-    return next("/login")
+  if (
+    !token &&
+    to.path !== "/login" &&
+    to.path !== "/logout" &&
+    !to.path.startsWith("/auth")
+  ) {
+    return next("/login");
   }
 
-  next()
-})
+  const role = getRoleFromToken();
+
+  if (to.meta.role && to.meta.role !== role) {
+    return next("/login");
+  }
+
+  next();
+});
 
 export default router
