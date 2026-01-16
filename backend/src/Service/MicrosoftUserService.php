@@ -76,7 +76,7 @@ class MicrosoftUserService
         $schueler->setNachname($nachname);
         $schueler->setMs365User($m365User);
 
-    
+
 
         $this->em->persist($schueler);
         $this->em->flush();
@@ -102,18 +102,18 @@ class MicrosoftUserService
     }
 
     public function getSchuelerByEmail(string $email): ?Schueler
-{
-    // Zuerst den Microsoft-Benutzer finden
-    $m365User = $this->em->getRepository(Microsoft365User::class)
-        ->findOneBy(['email' => $email]);
+    {
+        // Zuerst den Microsoft-Benutzer finden
+        $m365User = $this->em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $email]);
 
-    if (!$m365User) {
-        return null;
+        if (!$m365User) {
+            return null;
+        }
+
+        // Dann den Schueler, der diesem MS-Benutzer zugeordnet ist
+        return $this->em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $m365User]);
     }
-
-    // Dann den Schueler, der diesem MS-Benutzer zugeordnet ist
-    return $this->em->getRepository(Schueler::class)
-        ->findOneBy(['ms365User' => $m365User]);
-}
 
 }
