@@ -1,5 +1,5 @@
 <template>
-    /* EinstellungenView.vue */
+    <!-- EinstellungenView.vue -->
     <div class="einstellungen-view">
 
         <h1 class="title">Einstellungen</h1>

@@ -1,5 +1,5 @@
 <template>
-  /* MeineFaecherView.vue */
+ <!-- MeineFaecherView.vue -->
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
@@ -172,11 +172,17 @@ function goToDetail(id) {
 }
 
 async function checkStatus() {
-  const res = await axios.get('/api/schueler/status')
+  try {
+    const res = await axios.get('/api/schueler/status')
+    console.log('Status Response:', res.data)
 
-  showBirthdatePopup.value = res.data.needsBirthdate
-  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+    showBirthdatePopup.value = res.data.needsBirthdate
+    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+  } catch (err) {
+    console.error('Status Check Fehler', err)
+  }
 }
+
 
 async function saveBirthdate() {
   await axios.post('/api/schueler/geburtsdatum', {
