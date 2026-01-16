@@ -7,7 +7,6 @@
 
 <script setup>
 import { useRouter } from "vue-router";
-import axios from 'axios';
 const router = useRouter();
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -19,14 +18,8 @@ if (!token) {
   // JWT speichern
   localStorage.setItem("token", token);
 
-  // Axios global konfigurieren, damit Cookies gesendet werden
-
-  axios.defaults.withCredentials = true
-  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // optional, falls Backend Authorization prüft
-
-
   // Cookie für Symfony setzen → wichtig für Backend!
-  document.cookie = `auth_token=${token}; Path=/; SameSite=Lax`; // oder SameSite=None + Secure nur in Prod
+  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
 
 
   // Rolle auslesen
