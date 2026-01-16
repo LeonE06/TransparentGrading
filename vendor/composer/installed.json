@@ -818,6 +818,6 @@
             "install-path": "../thenetworg/oauth2-azure"
         }
     ],
-    "dev": true,
+    "dev": false,
     "dev-package-names": []
 }
