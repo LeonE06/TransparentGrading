@@ -68,7 +68,7 @@ class MicrosoftLoginController extends AbstractController
                 $tokenMicrosoft
             );
 
-            
+
 
             $email = strtolower($graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '');
             $proxyAddresses = $graphUser['proxyAddresses'] ?? [];
@@ -100,12 +100,32 @@ class MicrosoftLoginController extends AbstractController
 
             $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
+            // Annahme: $this->userService kann den Schüler laden
+            $schueler = $this->userService->getSchuelerByEmail($email);
+
+            $needsBirthdate = $schueler->getGeburtsdatum() === null;
+
+            $needsParentEmail = false;
+            if (!$needsBirthdate && $schueler->getGeburtsdatum()) {
+                $today = new \DateTime();
+                $age = $today->diff($schueler->getGeburtsdatum())->y;
+
+                if ($age < 18) {
+                    $einstellungen = $schueler->getEinstellungen(); // Eltern-Email ggf. aus Einstellungen
+                    $needsParentEmail = !$einstellungen || !$einstellungen->getElternemail();
+                }
+            }
+
+
             $payload = [
                 'email' => $email,
                 'role' => $role,
-                'birthdate' => null,
+                'birthdate' => $schueler->getGeburtsdatum()?->format('Y-m-d') ?? null,
+                'needsBirthdate' => $needsBirthdate,
+                'needsParentEmail' => $needsParentEmail,
                 'exp' => time() + 3600 // 1h gültig
             ];
+
 
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 

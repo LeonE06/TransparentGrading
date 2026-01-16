@@ -1,28 +1,19 @@
 <template>
- <!-- MeineFaecherView.vue -->
+  <!-- MeineFaecherView.vue -->
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
     <div class="toolbar">
-      <button class="btn" :class="{active: tab === 'alle'}" @click="tab = 'alle'">Alle</button>
-      <button class="btn" :class="{active: tab === 'visible'}" @click="tab = 'visible'">Eingeblendete</button>
-      <button class="btn" :class="{active: tab === 'hidden'}" @click="tab = 'hidden'">Ausgeblendete</button>
+      <button class="btn" :class="{ active: tab === 'alle' }" @click="tab = 'alle'">Alle</button>
+      <button class="btn" :class="{ active: tab === 'visible' }" @click="tab = 'visible'">Eingeblendete</button>
+      <button class="btn" :class="{ active: tab === 'hidden' }" @click="tab = 'hidden'">Ausgeblendete</button>
       <button class="btn" @click="toggleSorting">Sortiert A–Z</button>
     </div>
 
-    <input
-      v-model="searchTerm"
-      type="text"
-      class="search-input"
-      placeholder="Nach Fächern suchen..."
-    />
+    <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Fächern suchen..." />
 
     <ul class="subject-list">
-      <li
-        v-for="fach in visibleSubjects"
-        :key="fach.kurs_id"
-        class="subject-item"
-      >
+      <li v-for="fach in visibleSubjects" :key="fach.kurs_id" class="subject-item">
         <div class="subject-info" @click="goToDetail(fach.kurs_id)">
           <div class="fach-image">{{ fach.fach_name.charAt(0) }}</div>
 
@@ -33,33 +24,18 @@
         </div>
 
         <div class="actions">
-          <span
-            class="bell"
-            @click.stop="toggleNotif(fach.kurs_id)">
+          <span class="bell" @click.stop="toggleNotif(fach.kurs_id)">
             <span v-if="fach.notif_enabled == 1">🔔</span>
             <span v-else>🔕</span>
           </span>
 
-          <span
-            class="menu"
-            @click.stop="toggleMenu(fach.kurs_id)"
-          >⋮</span>
+          <span class="menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</span>
 
-          <div
-            v-if="openMenuId === fach.kurs_id"
-            class="context-menu"
-          >
-            <div
-              class="context-item"
-              v-if="fach.sichtbar == 1"
-              @click="toggleVisibility(fach.kurs_id)"
-            >👁 Fach ausblenden</div>
+          <div v-if="openMenuId === fach.kurs_id" class="context-menu">
+            <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">👁 Fach
+              ausblenden</div>
 
-            <div
-              class="context-item"
-              v-else
-              @click="toggleVisibility(fach.kurs_id)"
-            >➕ Fach einblenden</div>
+            <div class="context-item" v-else @click="toggleVisibility(fach.kurs_id)">➕ Fach einblenden</div>
           </div>
 
         </div>
@@ -67,34 +43,30 @@
     </ul>
   </div>
   <!-- Popup Geburtsdatum -->
-<div v-if="showBirthdatePopup" class="modal-backdrop">
-  <div class="modal">
-    <h2>Geburtsdatum</h2>
-    <p>Bitte gib dein Geburtsdatum an.</p>
+  <div v-if="showBirthdatePopup" class="modal-backdrop">
+    <div class="modal">
+      <h2>Geburtsdatum</h2>
+      <p>Bitte gib dein Geburtsdatum an.</p>
 
-    <input type="date" v-model="birthdate" />
+      <input type="date" v-model="birthdate" />
 
-    <button @click="saveBirthdate">Speichern</button>
+      <button @click="saveBirthdate">Speichern</button>
+    </div>
   </div>
-</div>
 
-<!-- Popup Eltern -->
-<div v-if="showParentPopup" class="modal-backdrop">
-  <div class="modal">
-    <h2>Elternbenachrichtigung</h2>
-    <p>
-      Da du noch nicht 18 Jahre alt bist, benötigen wir eine Eltern-E-Mail-Adresse.
-    </p>
+  <!-- Popup Eltern -->
+  <div v-if="showParentPopup" class="modal-backdrop">
+    <div class="modal">
+      <h2>Elternbenachrichtigung</h2>
+      <p>
+        Da du noch nicht 18 Jahre alt bist, benötigen wir eine Eltern-E-Mail-Adresse.
+      </p>
 
-    <input
-      type="email"
-      placeholder="Eltern-E-Mail"
-      v-model="parentEmail"
-    />
+      <input type="email" placeholder="Eltern-E-Mail" v-model="parentEmail" />
 
-    <button @click="saveParentEmail">Speichern</button>
+      <button @click="saveParentEmail">Speichern</button>
+    </div>
   </div>
-</div>
 
 </template>
 
@@ -117,6 +89,12 @@ const parentEmail = ref('')
 const showBirthdatePopup = ref(false)
 const showParentPopup = ref(false)
 
+// Payload aus JWT lesen und Popups direkt setzen
+const payload = JSON.parse(atob(token.split(".")[1]));
+showBirthdatePopup.value = payload.needsBirthdate;
+showParentPopup.value = payload.needsParentEmail;
+
+
 async function checkStatus() {
   try {
     const res = await axios.get('/api/schueler/status', { withCredentials: true });
@@ -130,10 +108,6 @@ async function checkStatus() {
     console.error('Fehler bei checkStatus():', err.response?.status, err.response?.data);
   }
 }
-
-
-
-
 
 async function loadSubjects() {
   const res = await axios.get("/schueler/faecher");
@@ -190,31 +164,21 @@ function goToDetail(id) {
   router.push(`/schueler/faecher/${id}`);
 }
 
+// --- Popup-Funktionen ---
 async function saveBirthdate() {
-  await axios.post('/api/schueler/geburtsdatum', {
-    geburtsdatum: birthdate.value
-  })
-
-  showBirthdatePopup.value = false
-  await checkStatus()
+  await axios.post('/api/schueler/geburtsdatum', { geburtsdatum: birthdate.value });
+  showBirthdatePopup.value = false;
 }
 
 async function saveParentEmail() {
-  await axios.post('/api/schueler/elternemail', {
-    email: parentEmail.value
-  })
-
-  showParentPopup.value = false
+  await axios.post('/api/schueler/elternemail', { email: parentEmail.value });
+  showParentPopup.value = false;
 }
 
 onMounted(async () => {
-  console.log('MeineFaecherView mounted')
-  await checkStatus()       // Popup prüfen
   await loadSubjects()      // wieder aktivieren
-  
+
 })
-
-
 
 </script>
 
@@ -237,6 +201,7 @@ onMounted(async () => {
   border-radius: 20px;
   cursor: pointer;
 }
+
 .btn.active {
   background: #111;
   color: #fff;
@@ -288,7 +253,8 @@ onMounted(async () => {
   gap: 15px;
 }
 
-.bell, .menu {
+.bell,
+.menu {
   cursor: pointer;
   font-size: 22px;
 }
@@ -303,7 +269,7 @@ onMounted(async () => {
   top: 28px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
   min-width: 160px;
   z-index: 999;
@@ -322,7 +288,7 @@ onMounted(async () => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
+  background: rgba(0, 0, 0, .45);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -335,5 +301,4 @@ onMounted(async () => {
   border-radius: 16px;
   width: 420px;
 }
-
 </style>
