@@ -172,14 +172,19 @@ function goToDetail(id) {
 }
 
 async function checkStatus() {
-  const res = await axios.get('/api/schueler/status')
-
-  // Debug: prüfen, was vom Backend kommt
-  alert('Backend Response: ' + JSON.stringify(res.data))
-
-  showBirthdatePopup.value = res.data.needsBirthdate
-  showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+  console.log('checkStatus() aufgerufen')  // <-- kommt das?
+  
+  try {
+    const res = await axios.get('/api/schueler/status')
+    console.log('Backend Response:', res.data)
+    
+    showBirthdatePopup.value = res.data.needsBirthdate
+    showParentPopup.value = !res.data.needsBirthdate && res.data.needsParentEmail
+  } catch (err) {
+    console.error('Fehler beim Backend-Call:', err)
+  }
 }
+
 
 
 
@@ -202,9 +207,11 @@ async function saveParentEmail() {
 
 
 onMounted(async () => {
+  console.log('MeineFaecherView mounted')  // <-- kommt das?
   await loadSubjects()
   await checkStatus()
 })
+
 
 </script>
 
