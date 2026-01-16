@@ -91,6 +91,9 @@ const showParentPopup = ref(false);
 
 const token = localStorage.getItem("token");
 
+// ✅ Bearer Header für API (dein ApiJWTAuthenticator verlangt genau das)
+const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
 // Payload aus JWT lesen und Popups direkt setzen (SAFE, damit es nicht crasht)
 let payload = {};
 try {
@@ -104,7 +107,7 @@ showParentPopup.value = !!payload.needsParentEmail;
 
 async function checkStatus() {
   try {
-    const res = await axios.get("/api/schueler/status", { withCredentials: true });
+    const res = await axios.get("/api/schueler/status", { headers: authHeaders });
     console.log("checkStatus() response:", res.data);
 
     showBirthdatePopup.value = res.data.needsBirthdate;
@@ -117,19 +120,19 @@ async function checkStatus() {
 }
 
 async function loadSubjects() {
-  const res = await axios.get("/api/schueler/faecher", { withCredentials: true });
+  const res = await axios.get("/api/schueler/faecher", { headers: authHeaders });
   subjects.value = res.data;
   console.log("loadSubjects() aufgerufen", res.data);
 }
 
 async function toggleVisibility(id) {
-  await axios.put(`/api/schueler/faecher/${id}/toggle-visibility`, null, { withCredentials: true });
+  await axios.put(`/api/schueler/faecher/${id}/toggle-visibility`, null, { headers: authHeaders });
   await loadSubjects();
   openMenuId.value = null;
 }
 
 async function toggleNotif(id) {
-  await axios.put(`/api/schueler/faecher/${id}/toggle-notif`, null, { withCredentials: true });
+  await axios.put(`/api/schueler/faecher/${id}/toggle-notif`, null, { headers: authHeaders });
   await loadSubjects();
 }
 
@@ -167,18 +170,18 @@ function goToDetail(id) {
 
 // --- Popup-Funktionen ---
 async function saveBirthdate() {
-  await axios.post("/api/schueler/geburtsdatum", { geburtsdatum: birthdate.value }, { withCredentials: true });
+  await axios.post("/api/schueler/geburtsdatum", { geburtsdatum: birthdate.value }, { headers: authHeaders });
   showBirthdatePopup.value = false;
 }
 
 async function saveParentEmail() {
-  await axios.post("/api/schueler/elternemail", { email: parentEmail.value }, { withCredentials: true });
+  await axios.post("/api/schueler/elternemail", { email: parentEmail.value }, { headers: authHeaders });
   showParentPopup.value = false;
 }
 
 onMounted(async () => {
   await loadSubjects();
-  // optional: wenn du lieber Status vom Backend holst statt aus JWT:
+  // optional:
   // await checkStatus();
 });
 </script>
