@@ -73,7 +73,12 @@ const apiPrefix = isDev ? '' : `${apiBase}/api`
 // Neue Funktion zum Laden der Schüler-Daten
 async function loadCurrentStudent() {
   try {
-    const res = await axios.get(`${apiPrefix}/schueler/me`);
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${apiPrefix}/schueler/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     const student = res.data;
     studentName.value = `${student.vorname} ${student.nachname}`;
   } catch (error) {
