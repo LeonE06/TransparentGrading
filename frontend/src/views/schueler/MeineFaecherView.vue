@@ -2,26 +2,22 @@
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
+    <!-- Neuer Bereich für den Namen -->
+    <div v-if="studentName" class="student-name">
+      Hallo, {{ studentName }}!
+    </div>
+
     <div class="toolbar">
-      <button class="btn" :class="{active: tab === 'alle'}" @click="tab = 'alle'">Alle</button>
-      <button class="btn" :class="{active: tab === 'visible'}" @click="tab = 'visible'">Eingeblendete</button>
-      <button class="btn" :class="{active: tab === 'hidden'}" @click="tab = 'hidden'">Ausgeblendete</button>
+      <button class="btn" :class="{ active: tab === 'alle' }" @click="tab = 'alle'">Alle</button>
+      <button class="btn" :class="{ active: tab === 'visible' }" @click="tab = 'visible'">Eingeblendete</button>
+      <button class="btn" :class="{ active: tab === 'hidden' }" @click="tab = 'hidden'">Ausgeblendete</button>
       <button class="btn" @click="toggleSorting">Sortiert A–Z</button>
     </div>
 
-    <input
-      v-model="searchTerm"
-      type="text"
-      class="search-input"
-      placeholder="Nach Fächern suchen..."
-    />
+    <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Fächern suchen..." />
 
     <ul class="subject-list">
-      <li
-        v-for="fach in visibleSubjects"
-        :key="fach.kurs_id"
-        class="subject-item"
-      >
+      <li v-for="fach in visibleSubjects" :key="fach.kurs_id" class="subject-item">
         <div class="subject-info" @click="goToDetail(fach.kurs_id)">
           <div class="fach-image">{{ fach.fach_name.charAt(0) }}</div>
 
@@ -32,33 +28,18 @@
         </div>
 
         <div class="actions">
-          <span
-            class="bell"
-            @click.stop="toggleNotif(fach.kurs_id)">
+          <span class="bell" @click.stop="toggleNotif(fach.kurs_id)">
             <span v-if="fach.notif_enabled == 1">🔔</span>
             <span v-else>🔕</span>
           </span>
 
-          <span
-            class="menu"
-            @click.stop="toggleMenu(fach.kurs_id)"
-          >⋮</span>
+          <span class="menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</span>
 
-          <div
-            v-if="openMenuId === fach.kurs_id"
-            class="context-menu"
-          >
-            <div
-              class="context-item"
-              v-if="fach.sichtbar == 1"
-              @click="toggleVisibility(fach.kurs_id)"
-            >👁 Fach ausblenden</div>
+          <div v-if="openMenuId === fach.kurs_id" class="context-menu">
+            <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">👁 Fach
+              ausblenden</div>
 
-            <div
-              class="context-item"
-              v-else
-              @click="toggleVisibility(fach.kurs_id)"
-            >➕ Fach einblenden</div>
+            <div class="context-item" v-else @click="toggleVisibility(fach.kurs_id)">➕ Fach einblenden</div>
           </div>
 
         </div>
@@ -78,7 +59,20 @@ const subjects = ref([]);
 const tab = ref("alle");
 const sortByName = ref(false);
 
+const studentName = ref(""); // Neuer State für den Namen
+
 const openMenuId = ref(null);
+
+// Neue Funktion zum Laden der Schüler-Daten
+async function loadCurrentStudent() {
+  try {
+    const res = await axios.get("/api/schueler/me");
+    const student = res.data;
+    studentName.value = `${student.vorname} ${student.nachname}`;
+  } catch (error) {
+    console.error("Fehler beim Laden der Schüler-Daten:", error);
+  }
+}
 
 async function loadSubjects() {
   const res = await axios.get("/schueler/faecher");
@@ -133,7 +127,10 @@ function goToDetail(id) {
   router.push(`/schueler/faecher/${id}`);
 }
 
-onMounted(loadSubjects);
+onMounted(() => {
+  loadSubjects();
+  loadCurrentStudent(); // Schüler-Daten laden
+});
 </script>
 
 <style scoped>
@@ -155,6 +152,7 @@ onMounted(loadSubjects);
   border-radius: 20px;
   cursor: pointer;
 }
+
 .btn.active {
   background: #111;
   color: #fff;
@@ -206,7 +204,8 @@ onMounted(loadSubjects);
   gap: 15px;
 }
 
-.bell, .menu {
+.bell,
+.menu {
   cursor: pointer;
   font-size: 22px;
 }
@@ -221,7 +220,7 @@ onMounted(loadSubjects);
   top: 28px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
   min-width: 160px;
   z-index: 999;
