@@ -63,10 +63,17 @@ const studentName = ref(""); // Neuer State für den Namen
 
 const openMenuId = ref(null);
 
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+
+// Wenn Dev → direkt über Proxy `/api`
+// Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
 // Neue Funktion zum Laden der Schüler-Daten
 async function loadCurrentStudent() {
   try {
-    const res = await axios.get("/schueler/me");
+    const res = await axios.get(`${apiPrefix}/schueler/me`);
     const student = res.data;
     studentName.value = `${student.vorname} ${student.nachname}`;
   } catch (error) {
