@@ -106,7 +106,7 @@ span {
     linear-gradient(to right, var(--primary), var(--secondary)) border-box;
   border: 1.5px solid transparent;
   border-radius: 10px;
-  box-shadow: 0 0 12px rgba(0, 120, 212, 0.1);
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.1);
   font-family: "Segoe UI", sans-serif;
   display: flex;
   flex-direction: column;
