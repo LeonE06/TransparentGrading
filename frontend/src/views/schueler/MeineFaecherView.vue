@@ -140,8 +140,9 @@ function goToDetail(id) {
 }
 
 onMounted(() => {
-  loadSubjects();
   loadCurrentStudent(); // Schüler-Daten laden
+  loadSubjects();
+  
 });
 </script>
 
