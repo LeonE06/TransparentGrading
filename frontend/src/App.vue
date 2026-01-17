@@ -12,7 +12,6 @@
         <router-view />
       </main>
   
-
   </div>
 </template>
 
