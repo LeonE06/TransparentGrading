@@ -26,6 +26,7 @@ class Schueler
     private ?string $nachname = null;
 
     #[ORM\Column(type: "date", nullable: true)]
+    #[Groups(['student_read'])]
     private ?\DateTimeInterface $geburtsdatum = null;
 
     #[ORM\ManyToOne(targetEntity: Klassen::class, inversedBy: 'schueler')]
@@ -33,6 +34,7 @@ class Schueler
     private ?Klassen $klasse = null;
 
     #[ORM\OneToOne(mappedBy: 'schueler', targetEntity: Einstellungen::class)]
+    #[Groups(['student_read'])]
     private ?Einstellungen $einstellungen = null;
 
 

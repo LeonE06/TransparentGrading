@@ -18,6 +18,7 @@ class Einstellungen
     private ?string $sprache = NULL;
 
     #[ORM\Column(length: 200, nullable: true)]
+    #[Groups(['student_read'])]
     private ?string $elternemail = NULL;
 
     #[ORM\Column(type: 'boolean', nullable: true)]
