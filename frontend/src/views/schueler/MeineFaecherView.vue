@@ -5,6 +5,13 @@
     <!-- Neuer Bereich für den Namen -->
     <div v-if="studentName" class="student-name">
       Hallo, {{ studentName }}!
+      <span v-if="isOver18" class="age-badge">✓ 18+</span>
+      <span v-else-if="geburtsdatum" class="age-badge">-18</span>
+      
+      <!-- Eltern-Email anzeigen, falls vorhanden -->
+      <div v-if="elternEmail" class="eltern-email">
+        Eltern-Email: {{ elternEmail }}
+      </div>
     </div>
 
     <div class="toolbar">
@@ -60,6 +67,8 @@ const tab = ref("alle");
 const sortByName = ref(false);
 
 const studentName = ref(""); // Neuer State für den Namen
+const geburtsdatum = ref(null); // Neuer State für das Geburtsdatum
+const elternEmail = ref(null); // Neuer State für die Eltern-Email
 
 const openMenuId = ref(null);
 
@@ -69,6 +78,29 @@ const apiBase = import.meta.env.VITE_API_URL || ''
 // Wenn Dev → direkt über Proxy `/api`
 // Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
 const apiPrefix = isDev ? '' : `${apiBase}/api`
+
+// Funktion zum Berechnen des Alters
+function calculateAge(birthDate) {
+  if (!birthDate) return null;
+  
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
+// Computed Property um zu prüfen, ob der Schüler 18+ ist
+const isOver18 = computed(() => {
+  if (!geburtsdatum.value) return false;
+  const age = calculateAge(geburtsdatum.value);
+  return age >= 18;
+});
 
 // Neue Funktion zum Laden der Schüler-Daten
 async function loadCurrentStudent() {
@@ -81,6 +113,8 @@ async function loadCurrentStudent() {
     });
     const student = res.data;
     studentName.value = `${student.vorname} ${student.nachname}`;
+    geburtsdatum.value = student.geburtsdatum; // Geburtsdatum speichern
+    elternEmail.value = student.einstellungen?.elternemail || null;
   } catch (error) {
     console.error("Fehler beim Laden der Schüler-Daten:", error);
   }
