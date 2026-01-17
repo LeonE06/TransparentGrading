@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api/schueler')]
-class StudentClassController extends AbstractController
+class StudentAuthentificationController extends AbstractController
 {
     #[Route('/me', methods: ['GET'])]
     public function getCurrentStudent(

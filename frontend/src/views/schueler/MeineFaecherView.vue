@@ -66,7 +66,7 @@ const openMenuId = ref(null);
 // Neue Funktion zum Laden der Schüler-Daten
 async function loadCurrentStudent() {
   try {
-    const res = await axios.get("/api/schueler/me");
+    const res = await axios.get("/schueler/me");
     const student = res.data;
     studentName.value = `${student.vorname} ${student.nachname}`;
   } catch (error) {
