@@ -7,12 +7,16 @@
       Hallo, {{ studentName }}!
       <span v-if="isOver18" class="age-badge">✓ 18+</span>
       <span v-else-if="geburtsdatum" class="age-badge">-18</span>
-      
+
       <!-- Eltern-Email anzeigen, falls vorhanden -->
       <div v-if="elternEmail" class="eltern-email">
         Eltern-Email: {{ elternEmail }}
       </div>
     </div>
+
+    <!-- Modal anzeigen, wenn kein Geburtsdatum vorhanden ist -->
+    <AddGeburtsdatumModal v-if="showGeburtsdatumModal" @close="showGeburtsdatumModal = false"
+      @updated="handleStudentUpdated" />
 
     <div class="toolbar">
       <button class="btn" :class="{ active: tab === 'alle' }" @click="tab = 'alle'">Alle</button>
@@ -59,6 +63,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import AddGeburtsdatumModal from "@/components/AddGeburtsdatumModal.vue";
 
 const router = useRouter();
 const searchTerm = ref("");
@@ -69,6 +74,9 @@ const sortByName = ref(false);
 const studentName = ref(""); // Neuer State für den Namen
 const geburtsdatum = ref(null); // Neuer State für das Geburtsdatum
 const elternEmail = ref(null); // Neuer State für die Eltern-Email
+const showGeburtsdatumModal = ref(false); // State für Modal-Sichtbarkeit
+
+
 
 const openMenuId = ref(null);
 
@@ -82,16 +90,16 @@ const apiPrefix = isDev ? '' : `${apiBase}/api`
 // Funktion zum Berechnen des Alters
 function calculateAge(birthDate) {
   if (!birthDate) return null;
-  
+
   const today = new Date();
   const birth = new Date(birthDate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  
+
   return age;
 }
 
@@ -115,9 +123,23 @@ async function loadCurrentStudent() {
     studentName.value = `${student.vorname} ${student.nachname}`;
     geburtsdatum.value = student.geburtsdatum; // Geburtsdatum speichern
     elternEmail.value = student.einstellungen?.elternemail || null;
+
+    // Modal anzeigen, wenn kein Geburtsdatum vorhanden ist
+    if (!student.geburtsdatum) {
+      showGeburtsdatumModal.value = true;
+    } else {
+      // Modal schließen, falls Geburtsdatum vorhanden ist
+      showGeburtsdatumModal.value = false;
+    }
   } catch (error) {
     console.error("Fehler beim Laden der Schüler-Daten:", error);
   }
+}
+
+// Handler für wenn Student aktualisiert wurde
+async function handleStudentUpdated() {
+  // Schüler-Daten neu laden, um das aktualisierte Geburtsdatum zu bekommen
+  await loadCurrentStudent();
 }
 
 // Neue Funktion zum Laden der Subjects
@@ -206,7 +228,7 @@ function goToDetail(id) {
 onMounted(() => {
   loadCurrentStudent(); // Schüler-Daten laden
   loadSubjects();
-  
+
 });
 </script>
 
