@@ -2,61 +2,35 @@
     <div class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <h2>Elternbenachrichtigung</h2>
-                <h2>{{ student.vorname }} {{ student.nachname }} bearbeiten</h2>
-
+                <h2>Geburtsdatum hinzufügen</h2>
             </div>
 
             <div class="modal-body">
-                <p>Da Sie noch nicht das 18. Lebensjahr vollendet haben müssen Ihre Eltern bei einer Leistungsgefährdung
-                    benachrichtigt werden.
-                    Daher bitten wir Sie die Emailadresse ihrer Erziehungsberechtigten in dem Feld unten einzutragen.
-                </p>
-                <!-- Email -->
-                <label for="email">Email</label>
-                <input id="email" v-model="email" type="email" placeholder="example@gmail.com" required />
-
-                <p>
-                    Nach Abschluss Ihres 18. Lebensjahres können Sie jederzeit in den Einstellungen die Benachrichtigung
-                    deaktivieren.
-                </p>
-                <!-- Nachname -->
-                <label for="nachname">Nachname</label>
-                <input id="nachname" type="text" :value="student.nachname" readonly />
-
-                <!-- Email -->
-                <label for="email">Email</label>
-                <input id="email" type="email" :value="student.email" readonly />
-
-                <!-- Klasse ändern -->
-                <label for="klasse">Klasse ändern</label>
-                <select id="klasse" v-model="selectedClass">
-                    <option disabled value="">Bitte auswählen</option>
-                    <option v-for="k in classes" :key="k.id" :value="k.name">
-                        {{ k.name }}
-                    </option>
-                </select>
+                <p>Bitte geben Sie Ihr Geburtsdatum ein:</p>
+                
+                <!-- Geburtsdatum -->
+                <label for="geburtsdatum">Geburtsdatum</label>
+                <input 
+                    id="geburtsdatum" 
+                    v-model="geburtsdatum" 
+                    type="date" 
+                    required 
+                />
             </div>
 
             <div class="modal-footer">
-                <button class="cancel-btn" @click="$emit('close')">Abbrechen</button>
-                <button class="save-btn" @click="saveChanges">Änderungen speichern</button>
+                <button class="save-btn" @click="saveGeburtsdatum" :disabled="!geburtsdatum">
+                    Speichern
+                </button>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 
-// Props
-const props = defineProps({
-    student: {
-        type: Object,
-        required: true
-    }
-})
 const emit = defineEmits(['close', 'updated'])
 
 // API setup
@@ -65,34 +39,47 @@ const apiBase = import.meta.env.VITE_API_URL || ''
 const apiPrefix = isDev ? '' : `${apiBase}/api`
 
 // State
-const classes = ref([])
-const selectedClass = ref(props.student.klassenname || '')
+const geburtsdatum = ref('')
+const loading = ref(false)
 
-// 🔹 Klassen laden
-async function loadClasses() {
-    try {
-        const res = await axios.get(`${apiPrefix}/classes`)
-        classes.value = res.data
-    } catch (err) {
-        console.error('❌ Fehler beim Laden der Klassen:', err)
+// 🔹 Geburtsdatum speichern
+async function saveGeburtsdatum() {
+    if (!geburtsdatum.value) {
+        alert('Bitte geben Sie ein Geburtsdatum ein.')
+        return
     }
-}
 
-// 🔹 Änderungen speichern
-async function saveChanges() {
+    loading.value = true
     try {
-        await axios.put(`${apiPrefix}/students/${props.student.schueler_id}`, {
-            klasse: selectedClass.value
+        const token = localStorage.getItem('token')
+        
+        // Hole zuerst die aktuelle Schüler-ID
+        const studentRes = await axios.get(`${apiPrefix}/schueler/me`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         })
+        
+        const studentId = studentRes.data.id
+        
+        // Speichere das Geburtsdatum
+        await axios.put(`${apiPrefix}/students/${studentId}`, {
+            geburtsdatum: geburtsdatum.value
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        
         emit('updated') // 🔹 Meldet Erfolg an Parent-Komponente
         emit('close')   // 🔹 Schließt Modal danach
     } catch (err) {
-        console.error('❌ Fehler beim Speichern der Änderungen:', err)
-        alert('Fehler beim Speichern der Änderungen.')
+        console.error('❌ Fehler beim Speichern des Geburtsdatums:', err)
+        alert('Fehler beim Speichern des Geburtsdatums.')
+    } finally {
+        loading.value = false
     }
 }
-
-onMounted(loadClasses)
 </script>
 
 <style scoped>
@@ -114,32 +101,20 @@ onMounted(loadClasses)
 .modal {
     background-color: var(--first-background-color);
     border-radius: 12px;
-    padding: 2rem 5rem;
-    width: 800px;
-    min-height: 50vh;
+    padding: 2rem 3rem;
+    width: 500px;
     max-width: 90%;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Header */
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 1.5rem;
 }
 
 .modal-header h2 {
     font-size: 1.4rem;
     font-weight: 700;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: var(--text);
 }
 
 /* Body */
@@ -149,32 +124,27 @@ onMounted(loadClasses)
     gap: 0.6rem;
 }
 
+.modal-body p {
+    margin-bottom: 1rem;
+}
+
 label {
     font-weight: 600;
     margin-top: 0.8rem;
 }
 
-input,
-select {
+input {
     width: 100%;
     padding: 0.6rem;
     border-radius: 8px;
     background-color: #f9f9f9;
-    border: none;
+    border: 1px solid #ddd;
     outline: none;
     transition: border-color 0.2s;
 }
 
-input[readonly] {
-    color: var(--disabled-text);
-    background: var(--disabled);
-    cursor: not-allowed;
-}
-
-select {
-    color: var(--text);
-    background: var(--second-background-color);
-    cursor: pointer;
+input:focus {
+    border-color: var(--primary, #0078d4);
 }
 
 /* Footer */
@@ -185,27 +155,19 @@ select {
     margin-top: 2rem;
 }
 
-.cancel-btn {
-    border-radius: 20px;
-    padding: 0.4rem 0.8rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    padding: 16px 10px;
-    min-width: 180px;
-    background-color: var(--second-background-color);
-    color: var(--aczent-color);
-    border: none;
-}
-
 .save-btn {
     border-radius: 20px;
-    padding: 0.4rem 0.8rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
     padding: 16px 10px;
     min-width: 180px;
     background-image: linear-gradient(to right, var(--primary), var(--secondary));
     color: var(--white);
     border: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>

@@ -26,7 +26,7 @@ class StudentController extends AbstractController
             return new JsonResponse([], 204);
         }
 
-        $page  = max(1, (int) $request->query->get('page', 1));
+        $page = max(1, (int) $request->query->get('page', 1));
         $limit = max(1, (int) $request->query->get('limit', 20));
         $offset = ($page - 1) * $limit;
 
@@ -39,8 +39,8 @@ class StudentController extends AbstractController
         $total = $connection->fetchOne('SELECT COUNT(*) FROM view_schueler_uebersicht');
 
         return $this->json([
-            'data'  => $students,
-            'page'  => $page,
+            'data' => $students,
+            'page' => $page,
             'limit' => $limit,
             'total' => (int) $total,
             'pages' => (int) ceil($total / $limit),
@@ -64,7 +64,7 @@ class StudentController extends AbstractController
 
         if ($search !== '') {
             $qb->where('LOWER(s.vorname) LIKE :term OR LOWER(s.nachname) LIKE :term')
-               ->setParameter('term', '%' . $search . '%');
+                ->setParameter('term', '%' . $search . '%');
         }
 
         $students = $qb
@@ -102,59 +102,76 @@ class StudentController extends AbstractController
 
         return new JsonResponse($json, 200, [], true);
     }
-/**
+    /**
      * 🔹 DELETE /api/students/{id}
      * -> deleted einen einzelnen schüler
      */
     #[Route('/{id<\d+>}', name: 'delete', methods: ['DELETE'])]
-public function deleteStudent(int $id, EntityManagerInterface $em): JsonResponse
-{
-    $student = $em->getRepository(Schueler::class)->find($id);
+    public function deleteStudent(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $student = $em->getRepository(Schueler::class)->find($id);
 
-    if (!$student) {
-        return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+        if (!$student) {
+            return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+        }
+
+        $em->remove($student);
+        $em->flush();
+
+        return new JsonResponse(['message' => 'Schüler*in gelöscht.'], 200);
     }
 
-    $em->remove($student);
-    $em->flush();
-
-    return new JsonResponse(['message' => 'Schüler*in gelöscht.'], 200);
-}
-
-/**
+    /**
      * 🔹 PUT /api/students/{id}
      * -> updadet einen einzelnen Schüler
      */
 
-#[Route('/{id<\d+>}', name: 'update_student', methods: ['PUT'])]
-public function updateStudent(
-    int $id,
-    Request $request,
-    EntityManagerInterface $em
-): JsonResponse {
-    $student = $em->getRepository(Schueler::class)->find($id);
+    #[Route('/{id<\d+>}', name: 'update_student', methods: ['PUT'])]
+    public function updateStudent(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        $student = $em->getRepository(Schueler::class)->find($id);
 
-    if (!$student) {
-        return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+        if (!$student) {
+            return new JsonResponse(['error' => 'Schüler*in nicht gefunden.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+
+        // Geburtsdatum aktualisieren (falls vorhanden)
+        if (isset($data['geburtsdatum'])) {
+            try {
+                $geburtsdatum = new \DateTime($data['geburtsdatum']);
+                $student->setGeburtsdatum($geburtsdatum);
+            } catch (\Exception $e) {
+                return new JsonResponse(['error' => 'Ungültiges Geburtsdatum.'], 400);
+            }
+        }
+
+
+        if (!isset($data['klasse'])) {
+            return new JsonResponse(['error' => 'Klasse nicht angegeben.'], 400);
+        }
+
+        // Neue Klasse finden (Name oder ID)
+        // Klasse aktualisieren (falls vorhanden)
+        if (isset($data['klasse'])) {
+            $klasse = $em->getRepository(\App\Entity\Klassen::class)->findOneBy(['name' => $data['klasse']]);
+            if (!$klasse) {
+                return new JsonResponse(['error' => 'Klasse nicht gefunden.'], 404);
+            }
+
+            // Klasse aktualisieren
+            $student->setKlasse($klasse);
+        }
+        
+        $em->flush();
+
+        return new JsonResponse(['message' => 'Schüler*in erfolgreich aktualisiert.']);
     }
-
-    $data = json_decode($request->getContent(), true);
-    if (!isset($data['klasse'])) {
-        return new JsonResponse(['error' => 'Klasse nicht angegeben.'], 400);
-    }
-
-    // Neue Klasse finden (Name oder ID)
-    $klasse = $em->getRepository(\App\Entity\Klassen::class)->findOneBy(['name' => $data['klasse']]);
-    if (!$klasse) {
-        return new JsonResponse(['error' => 'Klasse nicht gefunden.'], 404);
-    }
-
-    // Klasse aktualisieren
-    $student->setKlasse($klasse);
-    $em->flush();
-
-    return new JsonResponse(['message' => 'Schüler*in erfolgreich aktualisiert.']);
-}
 
 
 }
