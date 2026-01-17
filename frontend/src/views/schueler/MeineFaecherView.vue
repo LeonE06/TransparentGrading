@@ -86,20 +86,50 @@ async function loadCurrentStudent() {
   }
 }
 
+// Neue Funktion zum Laden der Subjects
 async function loadSubjects() {
-  const res = await axios.get("/schueler/faecher");
-  subjects.value = res.data;
+  try {
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${apiPrefix}/schueler/faecher`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    subjects.value = res.data;
+  } catch (error) {
+    console.error("Fehler beim Laden der Fächer:", error);
+  }
 }
 
+// Neue Funktion für das Toggle der Sichtbarkeit
 async function toggleVisibility(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-visibility`);
-  await loadSubjects();
-  openMenuId.value = null;
+  try {
+    const token = localStorage.getItem('token')
+    await axios.put(`${apiPrefix}/schueler/faecher/${id}/toggle-visibility`, {}, { // ← leeres Objekt {} als Body
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    await loadSubjects();
+    openMenuId.value = null;
+  } catch (error) {
+    console.error("Fehler beim Toggle der Sichtbarkeit:", error);
+  }
 }
 
+// Neue Funktion für das Toggle der Benachrichtigungen
 async function toggleNotif(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-notif`);
-  await loadSubjects();
+  try {
+    const token = localStorage.getItem('token')
+    await axios.put(`${apiPrefix}/schueler/faecher/${id}/toggle-notif`, {}, { // ← leeres Objekt {} als Body
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    await loadSubjects();
+  } catch (error) {
+    console.error("Fehler beim Toggle der Benachrichtigungen:", error);
+  }
 }
 
 function toggleSorting() {
