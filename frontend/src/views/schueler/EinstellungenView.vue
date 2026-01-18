@@ -3,13 +3,6 @@
 
         <h1 class="title">Einstellungen</h1>
 
-        <!-- Modal anzeigen, wenn kein Geburtsdatum vorhanden ist -->
-        <AddGeburtsdatumModal v-if="showGeburtsdatumModal" @close="showGeburtsdatumModal = false"
-            @updated="handleStudentUpdated" />
-
-        <AddElternEmailModal v-if="showElternEmailModal" @close="showElternEmailModal = false"
-            @updated="handleStudentUpdated" />
-
         <div class="container">
 
             <div class="container-header">
@@ -139,8 +132,6 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useTheme } from '@/composables/useTheme.js'
-import AddGeburtsdatumModal from '@/components/AddGeburtsdatumModal.vue'
-import AddElternEmailModal from '@/components/AddElternEmailModal.vue'
 
 const { isDark, toggleTheme } = useTheme()
 
@@ -152,11 +143,6 @@ const loading = ref(false)
 const elternEmail = ref('')
 const elternEmailSenden = ref(false)
 const isUeber18 = ref(false)
-
-// Modal States
-const showGeburtsdatumModal = ref(false)
-const showElternEmailModal = ref(false)
-const geburtsdatum = ref(null)
 
 // API-Konfiguration
 const isDev = import.meta.env.DEV
@@ -179,7 +165,7 @@ function calculateAge(birthDate) {
     return age
 }
 
-// Funktion zum Laden der Schüler-Daten
+// Funktion zum Laden der Schüler-Daten (nur für isUeber18 und elternEmail)
 async function loadCurrentStudent() {
     try {
         const token = localStorage.getItem('token')
@@ -189,50 +175,33 @@ async function loadCurrentStudent() {
             }
         })
         const student = res.data
-        geburtsdatum.value = student.geburtsdatum
+        const geburtsdatum = student.geburtsdatum
 
         // Eltern-Email speichern (robust prüfen)
         const emailValue = student.einstellungen?.elternemail
         elternEmail.value = (emailValue && emailValue.trim() !== '') ? emailValue : null
 
-        // Modal anzeigen, wenn kein Geburtsdatum vorhanden ist
-        if (!student.geburtsdatum) {
-            showGeburtsdatumModal.value = true
-            showElternEmailModal.value = false
-            return // Früh beenden, wenn kein Geburtsdatum
-        }
-
-        // Geburtsdatum vorhanden → Geburtsdatum-Modal schließen
-        showGeburtsdatumModal.value = false
-
-        // Prüfen ob unter 18 und keine Eltern-Email vorhanden
-        const age = calculateAge(student.geburtsdatum)
-        const hasEmail = elternEmail.value && elternEmail.value.trim() !== ''
-        isUeber18.value = age >= 18
-
-        // Modal nur anzeigen, wenn unter 18 UND keine Email vorhanden
-        if (age < 18 && !hasEmail) {
-            showElternEmailModal.value = true
+        // Prüfen ob über 18
+        if (geburtsdatum) {
+            const age = calculateAge(geburtsdatum)
+            isUeber18.value = age >= 18
         } else {
-            showElternEmailModal.value = false // Modal schließen
+            isUeber18.value = false
         }
     } catch (error) {
         console.error('Fehler beim Laden der Schüler-Daten:', error)
     }
 }
 
-// Handler für wenn Student aktualisiert wurde
-async function handleStudentUpdated() {
-    // Schüler-Daten neu laden, um die aktualisierten Daten zu bekommen
-    await loadCurrentStudent()
-    // Einstellungen auch neu laden, um sicherzustellen, dass alles synchron ist
-    await loadSettings()
-}
-
 // Einstellungen vom Server laden
 async function loadSettings() {
     try {
-        const res = await axios.get('/settings')
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`${apiPrefix}/settings`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
         // Eltern-Email und Aktivierung werden jetzt aus loadCurrentStudent geladen
         // aber wir aktualisieren sie hier auch, falls sie sich geändert haben
@@ -254,7 +223,12 @@ async function saveBenachrichtigungen(value) {
     saveTimer = setTimeout(async () => {
         loading.value = true
         try {
-            await axios.put('/settings', { benachrichtigungen: !!value })
+            const token = localStorage.getItem('token')
+            await axios.put(`${apiPrefix}/settings`, { benachrichtigungen: !!value }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
         } catch (err) {
             console.warn('Benachrichtigungen: Speichern fehlgeschlagen', err)
         } finally {
@@ -272,8 +246,13 @@ async function saveElternEmail() {
     emailSaveTimer = setTimeout(async () => {
         loading.value = true
         try {
-            await axios.put('/settings', {
+            const token = localStorage.getItem('token')
+            await axios.put(`${apiPrefix}/settings`, {
                 elternemail: elternEmail.value || null
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
             })
         } catch (err) {
             console.warn('Eltern-Email: Speichern fehlgeschlagen', err)
@@ -292,8 +271,13 @@ async function sendElternEmail(value) {
 
     loading.value = true
     try {
-        await axios.put('/settings', {
+        const token = localStorage.getItem('token')
+        await axios.put(`${apiPrefix}/settings`, {
             elternaktivierung: !!value
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         })
     } catch (err) {
         console.warn('Eltern-Aktivierung: Speichern fehlgeschlagen', err)
