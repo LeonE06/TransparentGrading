@@ -45,10 +45,17 @@ const apiPrefix = isDev ? '' : `${apiBase}/api`
 const email = ref('')
 const loading = ref(false)
 
-// 🔹 Geburtsdatum speichern
+// 🔹 Elternemail speichern
 async function saveEmail() {
     if (!email.value) {
         alert('Bitte geben Sie eine Emailadresse ein.')
+        return
+    }
+
+    // Email-Validierung
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.value)) {
+        alert('Bitte geben Sie eine gültige Emailadresse ein.')
         return
     }
 
@@ -56,21 +63,13 @@ async function saveEmail() {
     try {
         const token = localStorage.getItem('token')
 
-        // Hole zuerst die aktuelle Schüler-ID
-        const studentRes = await axios.get(`${apiPrefix}/schueler/me`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-
-        const studentId = studentRes.data.id
-
-        // Speichere die Email
-        await axios.put(`${apiPrefix}/students/${studentId}`, {
-            email: email.value
+        // Verwende den Settings-Endpoint, der bereits die richtige Logik hat
+        await axios.put(`${apiPrefix}/settings`, {
+            elternemail: email.value
         }, {
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         })
 
@@ -78,7 +77,8 @@ async function saveEmail() {
         emit('close')   // 🔹 Schließt Modal danach
     } catch (err) {
         console.error('❌ Fehler beim Speichern der Elternemail:', err)
-        alert('Fehler beim Speichern der Elternemail.', err)
+        const errorMsg = err.response?.data?.error || err.message || 'Unbekannter Fehler'
+        alert('Fehler beim Speichern der Elternemail: ' + errorMsg)
     } finally {
         loading.value = false
     }
