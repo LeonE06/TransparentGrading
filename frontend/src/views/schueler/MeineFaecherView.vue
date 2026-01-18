@@ -155,10 +155,7 @@ async function handleStudentUpdated(eventData) {
   // Schüler-Daten neu laden, um das aktualisierte Geburtsdatum zu bekommen
   await loadCurrentStudent();
   
-  // Wenn unter 18 und keine Eltern-Email vorhanden, Modal anzeigen
-  if (eventData?.isUnder18 && !elternEmail.value) {
-    showElternEmailModal.value = true;
-  }
+  
 }
 
 // Neue Funktion zum Laden der Subjects
