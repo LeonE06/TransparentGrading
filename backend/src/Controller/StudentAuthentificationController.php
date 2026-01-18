@@ -29,6 +29,14 @@ class StudentAuthentificationController extends AbstractController
             return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
         }
 
+        // Einstellungen explizit laden, falls vorhanden
+        $einstellungen = $em->getRepository(\App\Entity\Einstellungen::class)
+            ->find($schueler->getId());
+
+        if ($einstellungen) {
+            $schueler->setEinstellungen($einstellungen);
+        }
+
         $json = $serializer->serialize($schueler, 'json', [
             'groups' => ['student_read'],
         ]);
