@@ -37,6 +37,14 @@ class StudentAuthentificationController extends AbstractController
             $schueler->setEinstellungen($einstellungen);
         }
 
+        // Debug: Prüfen ob Einstellungen geladen wurden
+        // Entferne das später wieder!
+        $debugEinstellungen = $schueler->getEinstellungen();
+        error_log("DEBUG: Einstellungen vorhanden: " . ($debugEinstellungen ? "JA" : "NEIN"));
+        if ($debugEinstellungen) {
+            error_log("DEBUG: Elternemail: " . ($debugEinstellungen->getElternemail() ?? "NULL"));
+        }
+
         $json = $serializer->serialize($schueler, 'json', [
             'groups' => ['student_read'],
         ]);
