@@ -126,7 +126,7 @@ async function loadCurrentStudent() {
     });
     const student = res.data;
     studentName.value = `${student.vorname} ${student.nachname}`;
-    geburtsdatum.value = student.geburtsdatum; // Geburtsdatum speichern
+    geburtsdatum.value = student.geburtsdatum;
     elternEmail.value = student.einstellungen?.elternemail || null;
 
     // Modal anzeigen, wenn kein Geburtsdatum vorhanden ist
@@ -136,13 +136,13 @@ async function loadCurrentStudent() {
     } else {
       // Modal schließen, falls Geburtsdatum vorhanden ist
       showGeburtsdatumModal.value = false;
-      
+
       // Prüfen ob unter 18 und keine Eltern-Email vorhanden
       const age = calculateAge(student.geburtsdatum);
       if (age < 18 && !student.einstellungen?.elternemail) {
         showElternEmailModal.value = true;
       } else {
-        showElternEmailModal.value = false;
+        showElternEmailModal.value = false; // ← WICHTIG: Modal schließen, wenn Email vorhanden ist
       }
     }
   } catch (error) {
@@ -151,11 +151,10 @@ async function loadCurrentStudent() {
 }
 
 // Handler für wenn Student aktualisiert wurde
-async function handleStudentUpdated(eventData) {
-  // Schüler-Daten neu laden, um das aktualisierte Geburtsdatum zu bekommen
+async function handleStudentUpdated() {
+  // Schüler-Daten neu laden, um die aktualisierten Daten zu bekommen
   await loadCurrentStudent();
-  
-  
+  // Das Modal wird automatisch geschlossen, wenn die Email vorhanden ist (siehe loadCurrentStudent)
 }
 
 // Neue Funktion zum Laden der Subjects
