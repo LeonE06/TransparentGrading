@@ -91,4 +91,35 @@ class MoodController extends AbstractController
 
         return $this->json($out);
     }
+
+
+    #[Route('/stats', name: 'api_mood_stats', methods: ['GET'])]
+    public function stats(EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        }
+
+        $ms365User = $em->getRepository(\App\Entity\Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+        $schueler = $em->getRepository(\App\Entity\Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+
+        if (!$schueler) {
+            return $this->json(['error' => 'Schüler nicht gefunden'], 404);
+        }
+
+        $conn = $em->getConnection();
+
+        $rows = $conn->fetchAllAssociative(
+            "SELECT day, avg_score, entries
+         FROM mood_daily
+         WHERE schueler_id = ?
+         ORDER BY day ASC",
+            [$schueler->getId()]
+        );
+
+        return $this->json($rows);
+    }
 }
