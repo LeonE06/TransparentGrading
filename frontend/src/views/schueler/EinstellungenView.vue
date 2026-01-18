@@ -213,9 +213,9 @@ async function loadSettings() {
         // Wenn unter 18: Standardmäßig auf true setzen, falls nicht bereits gesetzt
         if (!isUeber18.value) {
             // Wenn unter 18 und elternaktivierung nicht explizit auf false gesetzt wurde
-            if (res.data?.elternaktivierung === undefined || res.data?.elternaktivierung === null) {
+            if (res.data?.elternaktivierung === undefined || res.data?.elternaktivierung === null || res.data?.elternaktivierung === false) {
                 elternEmailSenden.value = true
-                // Optional: Auch im Backend speichern
+                // Automatisch im Backend speichern
                 await sendElternEmail(true)
             } else {
                 elternEmailSenden.value = res.data.elternaktivierung
@@ -228,6 +228,15 @@ async function loadSettings() {
         }
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
+        // Bei Fehler: Wenn unter 18, trotzdem auf true setzen und speichern
+        if (!isUeber18.value) {
+            elternEmailSenden.value = true
+            try {
+                await sendElternEmail(true)
+            } catch (saveErr) {
+                console.warn('Automatisches Speichern der Eltern-Aktivierung fehlgeschlagen', saveErr)
+            }
+        }
     }
 }
 
@@ -299,6 +308,8 @@ async function sendElternEmail(value) {
                 Authorization: `Bearer ${token}`
             }
         })
+        // Erfolgreich gespeichert
+        elternEmailSenden.value = !!value
     } catch (err) {
         console.warn('Eltern-Aktivierung: Speichern fehlgeschlagen', err)
         // Wenn unter 18 und Fehler, trotzdem auf true bleiben
@@ -314,9 +325,11 @@ async function sendElternEmail(value) {
 
 
 // Beim Laden der Komponente Einstellungen laden
-onMounted(() => {
-    loadCurrentStudent()
-    loadSettings()
+onMounted(async () => {
+    // Zuerst Schüler-Daten laden (für isUeber18)
+    await loadCurrentStudent()
+    // Dann Einstellungen laden (kann jetzt isUeber18 verwenden)
+    await loadSettings()
 })
 </script>
 
