@@ -203,13 +203,28 @@ async function loadSettings() {
             }
         })
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
+
         // Eltern-Email und Aktivierung werden jetzt aus loadCurrentStudent geladen
         // aber wir aktualisieren sie hier auch, falls sie sich geändert haben
         if (res.data?.elternemail) {
             elternEmail.value = res.data.elternemail
         }
-        if (res.data?.elternaktivierung !== undefined) {
-            elternEmailSenden.value = res.data.elternaktivierung
+
+        // Wenn unter 18: Standardmäßig auf true setzen, falls nicht bereits gesetzt
+        if (!isUeber18.value) {
+            // Wenn unter 18 und elternaktivierung nicht explizit auf false gesetzt wurde
+            if (res.data?.elternaktivierung === undefined || res.data?.elternaktivierung === null) {
+                elternEmailSenden.value = true
+                // Optional: Auch im Backend speichern
+                await sendElternEmail(true)
+            } else {
+                elternEmailSenden.value = res.data.elternaktivierung
+            }
+        } else {
+            // Wenn über 18: Normal aus dem Server laden
+            if (res.data?.elternaktivierung !== undefined) {
+                elternEmailSenden.value = res.data.elternaktivierung
+            }
         }
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
@@ -264,9 +279,14 @@ async function saveElternEmail() {
 
 // Eltern-Email Aktivierung speichern
 async function sendElternEmail(value) {
+    // Wenn unter 18, erlaube das Ändern nicht (sollte immer true sein)
     if (!isUeber18.value) {
-        elternEmailSenden.value = false
-        return
+        // Wenn versucht wird, es auf false zu setzen, verhindern wir das
+        if (!value) {
+            elternEmailSenden.value = true
+            return
+        }
+        // Wenn es auf true gesetzt werden soll, erlauben wir das (für Initialisierung)
     }
 
     loading.value = true
@@ -281,7 +301,12 @@ async function sendElternEmail(value) {
         })
     } catch (err) {
         console.warn('Eltern-Aktivierung: Speichern fehlgeschlagen', err)
-        elternEmailSenden.value = !value // Rollback bei Fehler
+        // Wenn unter 18 und Fehler, trotzdem auf true bleiben
+        if (!isUeber18.value) {
+            elternEmailSenden.value = true
+        } else {
+            elternEmailSenden.value = !value // Rollback bei Fehler
+        }
     } finally {
         loading.value = false
     }
