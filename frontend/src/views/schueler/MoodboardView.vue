@@ -36,66 +36,60 @@
         </option>
       </select>
 
-      <button class="save-btn" @click="saveMood">
-        Speichern
-      </button>
+      <button class="save-btn" @click="saveMood">Speichern</button>
     </div>
 
     <div class="chart-card">
       <h2>Dein Lern-Mood Verlauf</h2>
       <div class="chart-placeholder">
-        Diagramm per Chart.js …
+        <canvas ref="chartRef"></canvas>
       </div>
     </div>
 
-    <p v-if="saved" class="saved-message">
-      Deine Stimmung wurde gespeichert!
-    </p>
+    <p v-if="saved" class="saved-message">Deine Stimmung wurde gespeichert!</p>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount   } from "vue";
+import Chart from "chart.js/auto";
 
-const mood = ref('')
-const note = ref('')
-const saved = ref(false)
+
+const mood = ref("");
+const note = ref("");
+const saved = ref(false);
 
 const moodOptions = {
   gut: [
-    'Super motiviert! 💪',
-    'Voller Energie 🚀',
-    'Heute läuft’s richtig gut 😄'
+    "Super motiviert! 💪",
+    "Voller Energie 🚀",
+    "Heute läuft’s richtig gut 😄",
   ],
-  neutral: [
-    'Geht so… 😐',
-    'Könnte besser sein 🤷‍♂️',
-    'Weder gut noch schlecht'
-  ],
+  neutral: ["Geht so… 😐", "Könnte besser sein 🤷‍♂️", "Weder gut noch schlecht"],
   schlecht: [
-    'Müde / unmotiviert 😴',
-    'Konzentration fällt schwer 😞',
-    'Heute ist kein guter Lerntag 😔'
-  ]
-}
+    "Müde / unmotiviert 😴",
+    "Konzentration fällt schwer 😞",
+    "Heute ist kein guter Lerntag 😔",
+  ],
+};
 
 function setMood(m) {
-  mood.value = m
-  note.value = ''
-  saved.value = false
+  mood.value = m;
+  note.value = "";
+  saved.value = false;
 }
 
 /* 🔥 SVG-LOGIK */
 function getSvg(type) {
-  const active = mood.value === type
+  const active = mood.value === type;
 
-  if (type === 'gut') {
-    return active ? svgGutAktiv : svgGut
+  if (type === "gut") {
+    return active ? svgGutAktiv : svgGut;
   }
-  if (type === 'neutral') {
-    return active ? svgNeutralAktiv : svgNeutral
+  if (type === "neutral") {
+    return active ? svgNeutralAktiv : svgNeutral;
   }
-  return active ? svgSchlechtAktiv : svgSchlecht
+  return active ? svgSchlechtAktiv : svgSchlecht;
 }
 
 /* 🖼️ SVGs – HIER kannst du später 1:1 Laras finale SVGs reinkopieren */
@@ -109,7 +103,7 @@ const svgNeutral = `
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <line x1="28" y1="76.5" x2="83" y2="76.5" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
-`
+`;
 
 const svgNeutralAktiv = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -151,7 +145,7 @@ const svgNeutralAktiv = `
 </linearGradient>
 </defs>
 </svg>
-`
+`;
 
 const svgSchlecht = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
@@ -161,7 +155,7 @@ const svgSchlecht = `<svg width="108" height="108" viewBox="0 0 108 108" fill="n
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="#B6B6B6" stroke-width="3"/>
-</svg>`
+</svg>`;
 const svgSchlechtAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8753)" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8753)" stroke-width="3"/>
@@ -200,7 +194,7 @@ const svgSchlechtAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fi
 <stop offset="1" stop-color="#73A0F1"/>
 </linearGradient>
 </defs>
-</svg>`
+</svg>`;
 const svgGut = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
@@ -210,7 +204,7 @@ const svgGut = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" 
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M27.5 68.5H82.5" stroke="#B6B6B6" stroke-width="3"/>
-</svg>`
+</svg>`;
 const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8769)" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8769)" stroke-width="3"/>
@@ -254,48 +248,97 @@ const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="n
 <stop offset="1" stop-color="#73A0F1"/>
 </linearGradient>
 </defs>
-</svg>`
+</svg>`;
 
 /* ✅ 401 FIX: COOKIE AUTH */
 async function saveMood() {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem("token");
 
   if (!token) {
-    alert('Du bist nicht eingeloggt (Token fehlt).')
-    return
+    alert("Du bist nicht eingeloggt (Token fehlt).");
+    return;
   }
 
   if (!mood.value) {
-    alert('Bitte wähle zuerst eine Stimmung aus.')
-    return
+    alert("Bitte wähle zuerst eine Stimmung aus.");
+    return;
   }
 
   try {
-    const res = await fetch('https://transparentgrading.onrender.com/api/mood', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+    const res = await fetch(
+      "https://transparentgrading.onrender.com/api/mood",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mood: mood.value,
+          note: note.value, // ✅ passt zu deiner DB-Spalte "note"
+        }),
       },
-      body: JSON.stringify({
-        mood: mood.value,
-        note: note.value // ✅ passt zu deiner DB-Spalte "note"
-      })
-    })
+    );
 
     if (!res.ok) {
-      const txt = await res.text()
-      console.error('❌ Mood speichern fehlgeschlagen:', res.status, txt)
-      alert('Fehler beim Speichern der Stimmung.')
-      return
+      const txt = await res.text();
+      console.error("❌ Mood speichern fehlgeschlagen:", res.status, txt);
+      alert("Fehler beim Speichern der Stimmung.");
+      return;
     }
 
-    saved.value = true
+    saved.value = true;
+    await loadChart();
   } catch (err) {
-    console.error('❌ Netzwerk/Fetch Fehler:', err)
-    alert('Netzwerkfehler beim Speichern der Stimmung.')
+    console.error("❌ Netzwerk/Fetch Fehler:", err);
+    alert("Netzwerkfehler beim Speichern der Stimmung.");
   }
 }
+
+
+
+
+const chartRef = ref(null);
+let chartInstance = null;
+
+async function loadChart() {
+  const token = localStorage.getItem("token");
+  if (!token || !chartRef.value) return;
+
+  const res = await fetch("https://transparentgrading.onrender.com/api/mood/stats", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    console.error("Mood stats error", res.status, await res.text());
+    return;
+  }
+
+  const rows = await res.json();
+  const labels = rows.map((r) => r.day);
+  const values = rows.map((r) => Number(r.avg_score));
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(chartRef.value, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{ label: "Mood Ø pro Tag", data: values }],
+    },
+    options: {
+      scales: {
+        y: { min: 1, max: 3, ticks: { stepSize: 1 } },
+      },
+    },
+  });
+}
+
+onMounted(loadChart);
+
+onBeforeUnmount(() => {
+  if (chartInstance) chartInstance.destroy();
+});
 </script>
 
 <style scoped>
