@@ -151,6 +151,17 @@ class StudentController extends AbstractController
             }
         }
 
+        // Elternemail aktualisieren (falls vorhanden)
+        if (isset($data['email'])) {
+            try {
+                $email = $data['email'];
+                $student->getEinstellungen()->setElternemail($email);
+            } catch (\Exception $e) {
+                return new JsonResponse(['error' => 'Ungültige Emailadresse.'], 400);
+            }
+        }
+        
+
         // Klasse aktualisieren (falls vorhanden) - OPTIONAL
         if (isset($data['klasse'])) {
             $klasse = $em->getRepository(\App\Entity\Klassen::class)->findOneBy(['name' => $data['klasse']]);

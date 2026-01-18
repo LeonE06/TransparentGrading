@@ -2,19 +2,27 @@
     <div class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <h2>Geburtsdatum hinzufügen</h2>
+                <h2>Elternbenachrichtigung</h2>
             </div>
 
             <div class="modal-body">
-                <p>Bitte geben Sie Ihr Geburtsdatum ein:</p>
+                <p>Da Sie noch nicht das 18. Lebensjahr vollendet haben müssen Ihre Eltern bei einer Leistungsgefährdung
+                    benachrichtigt werden.
+                    Daher bitten wir Sie die Emailadresse ihrer Erziehungsberechtigten in dem Feld unten einzutragen.
+                </p>
 
-                <!-- Geburtsdatum -->
-                <label for="geburtsdatum">Geburtsdatum</label>
-                <input id="geburtsdatum" v-model="geburtsdatum" type="date" required />
+                <!-- Elternemail -->
+                <label for="email">Email</label>
+                <input id="email" v-model="email" type="email" placeholder="example@gmail.com" required />
+
+                <p>
+                    Nach Abschluss Ihres 18. Lebensjahres können Sie jederzeit in den Einstellungen die Benachrichtigung
+                    deaktivieren.
+                </p>
             </div>
 
             <div class="modal-footer">
-                <button class="save-btn" @click="saveGeburtsdatum" :disabled="!geburtsdatum">
+                <button class="save-btn" @click="saveEmail" :disabled="!email">
                     Speichern
                 </button>
             </div>
@@ -34,13 +42,13 @@ const apiBase = import.meta.env.VITE_API_URL || ''
 const apiPrefix = isDev ? '' : `${apiBase}/api`
 
 // State
-const geburtsdatum = ref('')
+const email = ref('')
 const loading = ref(false)
 
 // 🔹 Geburtsdatum speichern
-async function saveGeburtsdatum() {
-    if (!geburtsdatum.value) {
-        alert('Bitte geben Sie ein Geburtsdatum ein.')
+async function saveEmail() {
+    if (!email.value) {
+        alert('Bitte geben Sie eine Emailadresse ein.')
         return
     }
 
@@ -57,32 +65,20 @@ async function saveGeburtsdatum() {
 
         const studentId = studentRes.data.id
 
-        // Speichere das Geburtsdatum
+        // Speichere die Email
         await axios.put(`${apiPrefix}/students/${studentId}`, {
-            geburtsdatum: geburtsdatum.value
+            email: email.value
         }, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
         })
-        // Prüfe ob unter 18
-        const today = new Date()
-        const birth = new Date(geburtsdatum.value)
-        let age = today.getFullYear() - birth.getFullYear()
-        const monthDiff = today.getMonth() - birth.getMonth()
 
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-            age--
-        }
-
-        const isUnder18 = age < 18
-
-        // Emit event mit Information ob unter 18
-        emit('updated', { isUnder18 }) // 🔹 Meldet Erfolg + Altersinfo
+        emit('updated') // 🔹 Meldet Erfolg an Parent-Komponente
         emit('close')   // 🔹 Schließt Modal danach
     } catch (err) {
-        console.error('❌ Fehler beim Speichern des Geburtsdatums:', err)
-        alert('Fehler beim Speichern des Geburtsdatums.')
+        console.error('❌ Fehler beim Speichern der Elternemail:', err)
+        alert('Fehler beim Speichern der Elternemail.', err)
     } finally {
         loading.value = false
     }
