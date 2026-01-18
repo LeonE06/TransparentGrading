@@ -136,28 +136,22 @@ async function loadCurrentStudent() {
     if (!student.geburtsdatum) {
       showGeburtsdatumModal.value = true;
       showElternEmailModal.value = false;
-    } else {
-      showGeburtsdatumModal.value = false;
-
-      // Prüfen ob unter 18 und keine Eltern-Email vorhanden
-      const age = calculateAge(student.geburtsdatum);
-      const hasEmail = emailValue && emailValue.trim() !== '';
-
-      if (age < 18 && !hasEmail) {
-        showElternEmailModal.value = true;
-      } else {
-        showElternEmailModal.value = false; // Modal schließen
-      }
+      return; // Früh beenden, wenn kein Geburtsdatum
     }
 
-    // Debug-Log um zu sehen, was zurückkommt
-    console.log('Student-Daten:', {
-      geburtsdatum: student.geburtsdatum,
-      age: calculateAge(student.geburtsdatum),
-      elternemail: emailValue,
-      hasEmail: emailValue && emailValue.trim() !== '',
-      showElternEmailModal: showElternEmailModal.value
-    });
+    // Geburtsdatum vorhanden → Geburtsdatum-Modal schließen
+    showGeburtsdatumModal.value = false;
+
+    // Prüfen ob unter 18 und keine Eltern-Email vorhanden
+    const age = calculateAge(student.geburtsdatum);
+    const hasEmail = elternEmail.value && elternEmail.value.trim() !== '';
+
+    // Modal nur anzeigen, wenn unter 18 UND keine Email vorhanden
+    if (age < 18 && !hasEmail) {
+      showElternEmailModal.value = true;
+    } else {
+      showElternEmailModal.value = false; // Modal schließen
+    }
   } catch (error) {
     console.error("Fehler beim Laden der Schüler-Daten:", error);
   }

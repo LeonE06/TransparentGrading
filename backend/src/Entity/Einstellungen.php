@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\EinstellungenRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups; // ← FEHLT!
 
 #[ORM\Entity(repositoryClass: EinstellungenRepository::class)]
 #[ORM\Table(name: "Einstellungen")]

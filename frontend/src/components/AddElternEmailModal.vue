@@ -73,8 +73,9 @@ async function saveEmail() {
             }
         })
 
-        emit('updated') // 🔹 Meldet Erfolg an Parent-Komponente
-        emit('close')   // 🔹 Schließt Modal danach
+        // Erst close, dann updated - damit das Modal sofort geschlossen wird
+        emit('close')   // 🔹 Schließt Modal sofort
+        emit('updated') // 🔹 Meldet Erfolg an Parent-Komponente (lädt Daten neu)
     } catch (err) {
         console.error('❌ Fehler beim Speichern der Elternemail:', err)
         const errorMsg = err.response?.data?.error || err.message || 'Unbekannter Fehler'
