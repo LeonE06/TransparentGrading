@@ -87,11 +87,11 @@ class SettingsController extends AbstractController
         $repo = $doctrine->getRepository(Einstellungen::class);
         $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
 
-        $settings = $repo->findOneBy(['schueler' => $schueler]);
+        $settings = $repo->find($schueler->getId()); // ← Direkt über die ID finden, da die ID = Schueler-ID ist
 
         if (!$settings) {
             $settings = new Einstellungen();
-            $settings->setSchueler($schueler);
+            $settings->setSchueler($schueler); // Das setzt automatisch die ID
             $em->persist($settings);
         }
 
@@ -114,19 +114,16 @@ class SettingsController extends AbstractController
             $settings->setBenachrichtigungen($globalValue);
 
             // Alle KursEinstellungen für diesen Schüler aktualisieren
-            // 1. Alle Kurse des Schülers finden (über KursSchueler)
             $kursSchueler = $schueler->getKursSchueler();
 
             foreach ($kursSchueler as $ks) {
                 $kurs = $ks->getKurs();
 
-                // 2. Prüfen ob bereits eine KursEinstellung existiert
                 $kursEinstellung = $kursEinstellungenRepo->findOneBy([
                     'schueler' => $schueler,
                     'kurs' => $kurs
                 ]);
 
-                // 3. Falls nicht vorhanden, neue erstellen
                 if (!$kursEinstellung) {
                     $kursEinstellung = new KursEinstellungen();
                     $kursEinstellung->setSchueler($schueler);
@@ -134,7 +131,6 @@ class SettingsController extends AbstractController
                     $em->persist($kursEinstellung);
                 }
 
-                // 4. Benachrichtigung auf den globalen Wert setzen
                 $kursEinstellung->setBenachrichtigung($globalValue);
             }
         }
@@ -142,7 +138,6 @@ class SettingsController extends AbstractController
         // Eltern-Email und Aktivierung (auch wenn unter 18 - für die erste Eingabe)
         if (array_key_exists('elternemail', $data)) {
             $email = $data['elternemail'];
-            // Email-Validierung: null oder leer = erlaubt, sonst muss es eine gültige Email sein
             if ($email === null || $email === '') {
                 $settings->setElternemail(null);
             } elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -157,7 +152,14 @@ class SettingsController extends AbstractController
             $settings->setElternaktivierung($data['elternaktivierung']);
         }
 
-        $em->flush();
+        try {
+            $em->flush();
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Fehler beim Speichern',
+                'details' => $e->getMessage()
+            ], 500);
+        }
 
         return new JsonResponse([
             'light_darkmode' => $settings->getLightDarkmode(),
