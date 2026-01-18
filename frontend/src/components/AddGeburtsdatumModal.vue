@@ -75,7 +75,7 @@ async function saveGeburtsdatum() {
         emit('close')   // 🔹 Schließt Modal danach
     } catch (err) {
         console.error('❌ Fehler beim Speichern des Geburtsdatums:', err)
-        alert('Fehler beim Speichern des Geburtsdatums.')
+        alert('Fehler beim Speichern des Geburtsdatums.', err)
     } finally {
         loading.value = false
     }

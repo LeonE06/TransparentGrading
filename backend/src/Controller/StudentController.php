@@ -151,23 +151,15 @@ class StudentController extends AbstractController
             }
         }
 
-
-        if (!isset($data['klasse'])) {
-            return new JsonResponse(['error' => 'Klasse nicht angegeben.'], 400);
-        }
-
-        // Neue Klasse finden (Name oder ID)
-        // Klasse aktualisieren (falls vorhanden)
+        // Klasse aktualisieren (falls vorhanden) - OPTIONAL
         if (isset($data['klasse'])) {
             $klasse = $em->getRepository(\App\Entity\Klassen::class)->findOneBy(['name' => $data['klasse']]);
             if (!$klasse) {
                 return new JsonResponse(['error' => 'Klasse nicht gefunden.'], 404);
             }
-
-            // Klasse aktualisieren
             $student->setKlasse($klasse);
         }
-        
+
         $em->flush();
 
         return new JsonResponse(['message' => 'Schüler*in erfolgreich aktualisiert.']);
