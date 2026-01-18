@@ -259,16 +259,42 @@ const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="n
 /* ✅ 401 FIX: COOKIE AUTH */
 async function saveMood() {
   const token = localStorage.getItem('token')
-  console.log('JWT:', token)
 
-  await fetch('https://transparentgrading.onrender.com/api/mood', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ mood: mood.value })
-  })
+  if (!token) {
+    alert('Du bist nicht eingeloggt (Token fehlt).')
+    return
+  }
+
+  if (!mood.value) {
+    alert('Bitte wähle zuerst eine Stimmung aus.')
+    return
+  }
+
+  try {
+    const res = await fetch('https://transparentgrading.onrender.com/api/mood', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        mood: mood.value,
+        note: note.value // ✅ passt zu deiner DB-Spalte "note"
+      })
+    })
+
+    if (!res.ok) {
+      const txt = await res.text()
+      console.error('❌ Mood speichern fehlgeschlagen:', res.status, txt)
+      alert('Fehler beim Speichern der Stimmung.')
+      return
+    }
+
+    saved.value = true
+  } catch (err) {
+    console.error('❌ Netzwerk/Fetch Fehler:', err)
+    alert('Netzwerkfehler beim Speichern der Stimmung.')
+  }
 }
 </script>
 
