@@ -2,6 +2,14 @@
     <div class="einstellungen-view">
 
         <h1 class="title">Einstellungen</h1>
+
+        <!-- Modal anzeigen, wenn kein Geburtsdatum vorhanden ist -->
+        <AddGeburtsdatumModal v-if="showGeburtsdatumModal" @close="showGeburtsdatumModal = false"
+            @updated="handleStudentUpdated" />
+
+        <AddElternEmailModal v-if="showElternEmailModal" @close="showElternEmailModal = false"
+            @updated="handleStudentUpdated" />
+
         <div class="container">
 
             <div class="container-header">
@@ -131,6 +139,9 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useTheme } from '@/composables/useTheme.js'
+import AddGeburtsdatumModal from '@/components/AddGeburtsdatumModal.vue'
+import AddElternEmailModal from '@/components/AddElternEmailModal.vue'
+
 const { isDark, toggleTheme } = useTheme()
 
 // Benachrichtigungen State
@@ -142,14 +153,95 @@ const elternEmail = ref('')
 const elternEmailSenden = ref(false)
 const isUeber18 = ref(false)
 
+// Modal States
+const showGeburtsdatumModal = ref(false)
+const showElternEmailModal = ref(false)
+const geburtsdatum = ref(null)
+
+// API-Konfiguration
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
+// Funktion zum Berechnen des Alters
+function calculateAge(birthDate) {
+    if (!birthDate) return null
+
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--
+    }
+
+    return age
+}
+
+// Funktion zum Laden der Schüler-Daten
+async function loadCurrentStudent() {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`${apiPrefix}/schueler/me`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        const student = res.data
+        geburtsdatum.value = student.geburtsdatum
+
+        // Eltern-Email speichern (robust prüfen)
+        const emailValue = student.einstellungen?.elternemail
+        elternEmail.value = (emailValue && emailValue.trim() !== '') ? emailValue : null
+
+        // Modal anzeigen, wenn kein Geburtsdatum vorhanden ist
+        if (!student.geburtsdatum) {
+            showGeburtsdatumModal.value = true
+            showElternEmailModal.value = false
+            return // Früh beenden, wenn kein Geburtsdatum
+        }
+
+        // Geburtsdatum vorhanden → Geburtsdatum-Modal schließen
+        showGeburtsdatumModal.value = false
+
+        // Prüfen ob unter 18 und keine Eltern-Email vorhanden
+        const age = calculateAge(student.geburtsdatum)
+        const hasEmail = elternEmail.value && elternEmail.value.trim() !== ''
+        isUeber18.value = age >= 18
+
+        // Modal nur anzeigen, wenn unter 18 UND keine Email vorhanden
+        if (age < 18 && !hasEmail) {
+            showElternEmailModal.value = true
+        } else {
+            showElternEmailModal.value = false // Modal schließen
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Schüler-Daten:', error)
+    }
+}
+
+// Handler für wenn Student aktualisiert wurde
+async function handleStudentUpdated() {
+    // Schüler-Daten neu laden, um die aktualisierten Daten zu bekommen
+    await loadCurrentStudent()
+    // Einstellungen auch neu laden, um sicherzustellen, dass alles synchron ist
+    await loadSettings()
+}
+
 // Einstellungen vom Server laden
 async function loadSettings() {
     try {
         const res = await axios.get('/settings')
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
-        elternEmail.value = res.data?.elternemail ?? ''
-        elternEmailSenden.value = res.data?.elternaktivierung ?? false
-        isUeber18.value = res.data?.isUeber18 ?? false
+        // Eltern-Email und Aktivierung werden jetzt aus loadCurrentStudent geladen
+        // aber wir aktualisieren sie hier auch, falls sie sich geändert haben
+        if (res.data?.elternemail) {
+            elternEmail.value = res.data.elternemail
+        }
+        if (res.data?.elternaktivierung !== undefined) {
+            elternEmailSenden.value = res.data.elternaktivierung
+        }
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
     }
@@ -214,6 +306,7 @@ async function sendElternEmail(value) {
 
 // Beim Laden der Komponente Einstellungen laden
 onMounted(() => {
+    loadCurrentStudent()
     loadSettings()
 })
 </script>
@@ -365,9 +458,10 @@ input:checked+.slider:before {
     width: 100%;
 }
 
-.toggle > div:first-child {
+.toggle>div:first-child {
     flex: 1;
-    min-width: 0; /* Wichtig für Text-Overflow */
+    min-width: 0;
+    /* Wichtig für Text-Overflow */
 }
 
 input,
