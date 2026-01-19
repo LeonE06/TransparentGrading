@@ -337,4 +337,3 @@ html:not(.dark) .select {
   margin-left: 0.5rem;
 }
 </style>
-
