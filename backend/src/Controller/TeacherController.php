@@ -50,7 +50,7 @@ class TeacherController extends AbstractController
             'id' => $teacher->getId(),
             'vorname' => $teacher->getVorname(),
             'nachname' => $teacher->getNachname(),
-            'email' => $teacher->getMs365usr()?->getEmail(),
+            'email' => $teacher->getMs365User()?->getEmail(),
         ]);
     }
 
@@ -79,4 +79,5 @@ class TeacherController extends AbstractController
 
         return new JsonResponse(['message' => 'Lehrer*in erfolgreich gelöscht']);
     }
+
 }
