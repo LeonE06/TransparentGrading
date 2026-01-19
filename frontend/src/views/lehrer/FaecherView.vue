@@ -207,6 +207,7 @@ function openDetail(id) {
 }
 
 .kebab {
+}
 .schema-badge {
   margin-top: 0.5rem;
   font-size: 0.85rem;
