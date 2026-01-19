@@ -27,7 +27,7 @@ class TeacherSettingsController extends AbstractController
             return null;
         }
 
-        return $em->getRepository(Lehrer::class)->findOneBy(['ms365usr' => $m365]);
+        return $em->getRepository(Lehrer::class)->findOneBy(['ms365User' => $m365]);
     }
 
     #[Route('/einstellungen', name: 'get', methods: ['GET'])]
