@@ -139,7 +139,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 
-const kursId = computed(() => route.params.kursId)
+const kursId = computed(() => Number(route.params.id))
 
 const loading = ref(false)
 const error = ref('')
@@ -225,8 +225,14 @@ async function loadAll() {
   }
 }
 
-onMounted(loadAll)
-watch(kursId, loadAll)
+onMounted(() => {
+  if (!kursId.value) return
+  loadAll()
+})
+watch(kursId, (v) => {
+  if (!v) return
+  loadAll()
+})
 
 const chartEl = ref(null)
 let chart = null
