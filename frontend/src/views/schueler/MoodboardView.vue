@@ -36,7 +36,9 @@
         </option>
       </select>
 
-      <button class="save-btn" @click="saveMood">Speichern</button>
+      <button class="save-btn" @click="saveMood" :disabled="hasMoodToday">
+  {{ hasMoodToday ? "Heute schon gespeichert" : "Speichern" }}
+</button>
       <button class="delete-btn" @click="deleteMoodData">Mood-Daten löschen</button>
     </div>
 
@@ -59,6 +61,7 @@ import Chart from "chart.js/auto";
 const mood = ref("");
 const note = ref("");
 const saved = ref(false);
+const hasMoodToday = ref(false)
 
 const moodOptions = {
   gut: [
@@ -289,6 +292,7 @@ async function saveMood() {
     }
 
     saved.value = true;
+    hasMoodToday.value = true;
     await loadChart();
   } catch (err) {
     console.error("❌ Netzwerk/Fetch Fehler:", err);
@@ -377,7 +381,25 @@ async function loadChart() {
   });
 }
 
-onMounted(loadChart);
+async function loadHasMoodToday() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  const res = await fetch("https://transparentgrading.onrender.com/api/mood/today", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    hasMoodToday.value = data.hasMoodToday;
+  }
+}
+
+
+onMounted(async () => {
+  await loadHasMoodToday();
+  await loadChart();
+});
 
 onBeforeUnmount(() => {
   if (chartInstance) chartInstance.destroy();
