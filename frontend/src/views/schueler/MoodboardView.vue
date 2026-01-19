@@ -37,6 +37,7 @@
       </select>
 
       <button class="save-btn" @click="saveMood">Speichern</button>
+      <button class="delete-btn" @click="deleteMoodData">Mood-Daten löschen</button>
     </div>
 
     <div class="chart-card">
@@ -296,6 +297,48 @@ async function saveMood() {
 }
 
 
+async function deleteMoodData() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Du bist nicht eingeloggt.");
+    return;
+  }
+
+  const ok = confirm(
+    "Willst du wirklich ALLE deine Mood-Daten löschen?"
+  );
+  if (!ok) return;
+
+  try {
+    const res = await fetch(
+      "https://transparentgrading.onrender.com/api/mood",
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      console.error("❌ Löschen fehlgeschlagen:", res.status);
+      alert("Fehler beim Löschen der Mood-Daten.");
+      return;
+    }
+
+    alert("Mood-Daten wurden gelöscht ✅");
+
+    saved.value = false;
+    mood.value = "";
+    note.value = "";
+
+    // Chart neu laden (jetzt leer)
+    await loadChart();
+  } catch (err) {
+    console.error("❌ Netzwerkfehler:", err);
+    alert("Netzwerkfehler beim Löschen.");
+  }
+}
 
 
 const chartRef = ref(null);
@@ -419,4 +462,22 @@ select {
   font-weight: 600;
   text-align: center;
 }
+
+.delete-btn {
+  width: 100%;
+  padding: 0.9rem;
+  margin-top: 0.7rem;
+  border: 1px solid #d33;
+  border-radius: 12px;
+  font-weight: 600;
+  background: #fff;
+  color: #d33;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #d33;
+  color: white;
+}
+
 </style>
