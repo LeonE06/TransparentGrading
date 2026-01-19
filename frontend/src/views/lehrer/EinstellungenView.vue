@@ -1,121 +1,87 @@
 <template>
-  <div class="lehrer-view">
-    <h1 class="title">Bewertungseinstellungen</h1>
-    <p>Stellen Sie hier ein, wie Ihre Bewertungen berechnet werden sollen. Verwalten Sie mehrere Notenschemata und wählen Sie ein aktives Schema.</p>
+  <section class="page">
+    <h1 class="title">Einstellungen</h1>
 
-    <div class="scheme-panel">
-      <aside class="scheme-list card">
-        <div class="header">
-          <h3>Schemata</h3>
-          <div>
-            <button class="btn primary" @click="createNew">Neues Schema</button>
-          </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">🌐</div>
+        <div>
+          <div class="card-title">Sprache</div>
+          <div class="card-sub">Sprache der Webapp auswählen</div>
         </div>
-        <ul>
-          <li v-for="s in schemes" :key="s.id" :class="{ active: s.id === activeSchemeId }">
-            <label>
-              <input type="radio" name="activeScheme" :value="s.id" v-model="activeSchemeId" @change="setActive(s.id)" />
-              <strong>{{ s.name }}</strong>
-            </label>
-            <div class="actions-inline">
-              <button class="btn" @click="selectScheme(s.id)">Bearbeiten</button>
-              <button class="btn danger" @click="removeScheme(s.id)" v-if="s.id !== 'default'">Löschen</button>
-            </div>
-          </li>
-        </ul>
-      </aside>
-
-      <section class="scheme-editor">
-        <h2>Schema bearbeiten</h2>
-        <div v-if="selectedScheme">
-          <div class="form-row">
-            <label>Name</label>
-            <input v-model="selectedName" type="text" class="form-control" />
-          </div>
-
-          <!-- reuse existing settings form bound to localScheme -->
-          <div class="card">
-            <h3>Gewichtungsmodus</h3>
-            <div class="form-group">
-              <label>
-                <input type="radio" v-model="localScheme.mode" value="per-item" />
-                <strong>Individuelle Gewichtung pro Leistung</strong>
-              </label>
-            </div>
-            <div class="form-group">
-              <label>
-                <input type="radio" v-model="localScheme.mode" value="group" />
-                <strong>Gruppen-Gewichtung nach Kategorien</strong>
-              </label>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>Bewertungstyp</h3>
-            <div class="form-group">
-              <label>
-                <input type="radio" v-model="localScheme.scoreType" value="grades" />
-                <strong>Noten (1-5)</strong>
-              </label>
-            </div>
-            <div class="form-group">
-              <label>
-                <input type="radio" v-model="localScheme.scoreType" value="points" />
-                <strong>Punkte (0-max)</strong>
-                <p class="help-text">Definieren Sie die maximale Punktzahl:</p>
-                <input 
-                  v-if="localScheme.scoreType === 'points'"
-                  type="number" 
-                  v-model.number="localScheme.maxPoints" 
-                  min="1" 
-                  class="form-control"
-                  placeholder="z.B. 100"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div v-if="localScheme.mode === 'group'" class="card">
-            <h3>Kategorien definieren</h3>
-            <div class="categories-list">
-              <div v-for="(cat, idx) in localScheme.categories" :key="cat.key" class="category-item">
-                <div class="form-group">
-                  <label>Kategoriename</label>
-                  <input v-model="cat.name" type="text" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label>Prozentanteil</label>
-                  <input v-model.number="cat.percent" type="number" min="0" max="100" class="form-control" />
-                </div>
-                <button @click="removeCategory(idx)" class="btn danger">Entfernen</button>
-              </div>
-            </div>
-            <div>
-              <strong>Aktuelle Summe: {{ categoryPercentSum }}%</strong>
-              <span v-if="categoryPercentSum !== 100" style="color: red;">(sollte 100% sein)</span>
-            </div>
-            <button @click="addCategory" class="btn primary" style="margin-top: 1rem;">Kategorie hinzufügen</button>
-          </div>
-
-          <div class="card">
-            <h3>Aktuelle Konfiguration</h3>
-            <pre>{{ JSON.stringify(localScheme, null, 2) }}</pre>
-          </div>
-
-          <div style="display:flex;gap:0.5rem;">
-            <button class="btn primary" @click="saveSchemeChanges">Speichern</button>
-            <button class="btn" @click="revertChanges">Zurücksetzen</button>
-          </div>
-        </div>
-        <div v-else>
-          <p>Kein Schema ausgewählt.</p>
-        </div>
-      </section>
+      </div>
+      <div class="card-body">
+        <select class="select" v-model="language" @change="saveLanguage">
+          <option value="Deutsch">Deutsch</option>
+        </select>
+      </div>
     </div>
-  </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">☾</div>
+        <div>
+          <div class="card-title">Light- / Darkmode</div>
+          <div class="card-sub">Design der Webapp wählen</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="toggle">
+          <button class="toggle-btn" :class="{ active: !isDark }" type="button" @click="setTheme(false)">Light</button>
+          <button class="toggle-btn" :class="{ active: isDark }" type="button" @click="setTheme(true)">Dark</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="loading" class="hint">Lade …</div>
+    <div v-else-if="error" class="hint">Fehler: {{ error }}</div>
+  </section>
 </template>
 
 <script setup>
+import { onMounted, ref } from 'vue'
+import { useTheme } from '@/composables/useTheme'
+import { getTeacherSettings, updateTeacherSettings } from '@/services/teacherData'
+
+const { isDark, loadFromServer } = useTheme()
+const language = ref('Deutsch')
+const loading = ref(false)
+const error = ref('')
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    await loadFromServer()
+    const s = await getTeacherSettings()
+    if (s?.sprache) language.value = s.sprache
+  } catch (e) {
+    error.value = e?.message || 'Unbekannter Fehler'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+
+async function saveLanguage() {
+  try {
+    await updateTeacherSettings({ sprache: language.value })
+  } catch (e) {
+    alert('Konnte Sprache nicht speichern.')
+    console.warn(e)
+  }
+}
+
+async function setTheme(value) {
+  try {
+    await updateTeacherSettings({ light_darkmode: !!value })
+    document.documentElement.classList.toggle('dark', !!value)
+    isDark.value = !!value
+  } catch (e) {
+    alert('Konnte Theme nicht speichern.')
+    console.warn(e)
+  }
 import { ref, computed, onMounted } from 'vue'
 import grading from '@/services/grading'
 
@@ -230,107 +196,98 @@ function removeCategory(idx) {
 </script>
 
 <style scoped>
-.lehrer-view {
-  padding: 1rem 2rem;
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
 }
 
 .title {
   font-size: 2rem;
-  margin-bottom: 2rem;
-  text-align: left;
   font-weight: 650;
-}
-
-.settings-container {
-  max-width: 800px;
+  margin: 0.5rem 0 1.25rem;
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--aczent-color);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 6px var(--shadow);
-}
-
-.form-group {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.2rem 1.25rem;
   margin-bottom: 1rem;
 }
 
-.form-group label {
+.card-head {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  cursor: pointer;
-  margin-bottom: 0.5rem;
+  gap: 0.9rem;
+  align-items: center;
 }
 
-.form-group input[type="radio"],
-.form-group input[type="checkbox"] {
-  margin-top: 0.25rem;
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--aczent-color);
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.help-text {
-  font-size: 0.875rem;
-  color: var(--aczent-color);
-  margin: 0.25rem 0 0 0;
-}
-
-.categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.category-item {
-  border: 1px solid var(--aczent-color);
-  padding: 1rem;
-  border-radius: 4px;
+.icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 0.5rem;
-  align-items: flex-end;
+  place-items: center;
 }
 
-.btn {
-  background-color: var(--first-background-color);
-  border: 1px solid var(--aczent-color);
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.card-title {
+  font-weight: 650;
 }
 
-.btn:hover {
-  background-color: var(--second-background-color);
+.card-sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
 }
 
-.btn.primary {
-  background-color: var(--first-background-color);
+.card-body {
+  margin-top: 0.75rem;
+}
+
+.select {
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
+  outline: none;
+  width: 220px;
 }
 
-.btn.danger {
-  background-color: #ffcccb;
-  color: #c00;
+html:not(.dark) .select {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-pre {
-  background: var(--first-background-color);
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 0.875rem;
+.toggle {
+  width: 240px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.toggle-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.toggle-btn.active {
+  background: rgba(144, 125, 255, 0.95);
+  color: #fff;
+}
+
+.hint {
+  color: var(--muted);
+  margin-top: 0.5rem;
 }
 
 .scheme-panel {
@@ -380,3 +337,4 @@ pre {
   margin-left: 0.5rem;
 }
 </style>
+
