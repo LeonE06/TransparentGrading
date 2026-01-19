@@ -1,11 +1,18 @@
 import axios from 'axios'
 
 function resolveBaseURL() {
-  return (
+  let base =
     import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? '/api' : 'https://transparentgrading.onrender.com/api')
-  )
+    (import.meta.env.DEV ? '/api' : 'https://transparentgrading.onrender.com')
+
+  
+  if (!import.meta.env.DEV) {
+    base = base.replace(/\/$/, '')
+    if (!base.endsWith('/api')) base += '/api'
+  }
+
+  return base
 }
 
 export const apiClient = axios.create({
@@ -22,3 +29,4 @@ apiClient.interceptors.request.use((config) => {
   return config
 
 })
+
