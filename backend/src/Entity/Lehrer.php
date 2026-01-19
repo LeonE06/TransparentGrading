@@ -26,7 +26,7 @@ class Lehrer
 
     #[ORM\ManyToOne(targetEntity: Microsoft365User::class)]
     #[ORM\JoinColumn(name: "ms365usr_id", referencedColumnName: "id", nullable: false)]
-    private ?Microsoft365User $ms365usr = NULL;
+    private ?Microsoft365User $ms365User = NULL;
 
     #[ORM\OneToMany(mappedBy: 'lehrer', targetEntity: Kurse::class)]
     private Collection $kurse;
@@ -76,14 +76,14 @@ class Lehrer
         return $this;
     }
 
-    public function getMs365usr(): ?Microsoft365User
+    public function getMs365User(): ?Microsoft365User
     {
-        return $this->ms365usr;
+        return $this->ms365User;
     }
 
-    public function setMs365usr(?Microsoft365User $ms365usr): self
+    public function setMs365User(?Microsoft365User $ms365User): self
     {
-        $this->ms365usr = $ms365usr;
+        $this->ms365User = $ms365User;
         return $this;
     }
 

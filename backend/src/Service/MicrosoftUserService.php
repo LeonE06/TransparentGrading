@@ -92,30 +92,19 @@ class MicrosoftUserService
     /**
      * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
      */
-    private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
-    {
-        $lehrer = $this->em->getRepository(Lehrer::class)
-            ->findOneBy(['ms365usr_id' => $m365User->getId()]);
+private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
+{
+    $lehrer = $this->em->getRepository(Lehrer::class)
+        ->findOneBy(['ms365User' => $m365User]);
 
-        if ($lehrer) {
-            return;
-        }
+    if ($lehrer) return;
 
-        $lehrer = new Lehrer();
-        if (method_exists($lehrer, 'setVorname')) {
-            $lehrer->setVorname($vorname);
-        }
-        if (method_exists($lehrer, 'setNachname')) {
-            $lehrer->setNachname($nachname);
-        }
+    $lehrer = new Lehrer();
+    $lehrer->setVorname($vorname);
+    $lehrer->setNachname($nachname);
+    $lehrer->setMs365User($m365User);
 
-        if (method_exists($lehrer, 'setMicrosoftUser')) {
-            $lehrer->setMicrosoftUser($m365User);
-        } elseif (method_exists($lehrer, 'setMs365usr')) {
-            $lehrer->setMs365usr($m365User);
-        }
-
-        $this->em->persist($lehrer);
-        $this->em->flush();
-    }
+    $this->em->persist($lehrer);
+    $this->em->flush();
+}
 }
