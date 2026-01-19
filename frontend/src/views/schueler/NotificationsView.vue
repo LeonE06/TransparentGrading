@@ -46,12 +46,18 @@ const messages = ref([])
 async function loadData() {
   try {
     const token = localStorage.getItem("token");
-    console.log("token:", token);
+
+    if (!token) {
+      console.warn("Kein Token vorhanden");
+      return;
+    }
 
     const res = await axios.get(
       "https://transparentgrading.onrender.com/api/schueler/nachrichten",
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
     );
 
