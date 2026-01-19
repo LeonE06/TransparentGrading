@@ -21,7 +21,7 @@ const router = createRouter({
    // LEHRER
     { path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
     { path: '/lehrer/fach/:id', component: () => import('../views/lehrer/FachDetailView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-    { path: '/lehrer/hilfe', component: () => import('../views/lehrer/HilfeView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+    { path: '/lehrer/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
     { path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
 
 
