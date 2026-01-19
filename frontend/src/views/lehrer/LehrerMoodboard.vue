@@ -209,9 +209,6 @@ function renderChart() {
   })
 }
 
-watch([selectedKlasseId, selectedRange], async () => {
-  if (selectedKlasseId.value) await loadMood()
-})
 
 onMounted(async () => {
   await loadKlassen()
