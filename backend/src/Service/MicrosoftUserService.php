@@ -52,16 +52,14 @@ class MicrosoftUserService
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
-       if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    // ⚠️ TESTMODE: Schüler-Mail => Lehrer behandeln
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
-}
-
-       if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    // ⚠️ TESTMODE: Lehrer-Mail => Schüler behandeln
+if (preg_match('/^[0-9]{4}$/', $localPart)) {
     $this->ensureSchueler($existingUser, $vorname, $nachname);
     return 'Schueler';
+}
+
+if (preg_match('/^[a-z]{3}$/', $localPart)) {
+    $this->ensureLehrer($existingUser, $vorname, $nachname);
+    return 'Lehrer';
 }
 
         return 'Unbekannt';
