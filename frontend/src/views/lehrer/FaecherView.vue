@@ -16,7 +16,9 @@
           <option value="name">Sortiert A - Z</option>
           <option value="klasse">Sortiert nach Klasse</option>
         </select>
-        <button class="btn primary" disabled title="Noch nicht implementiert (DB-Feld fehlt)">Neues Fach erstellen</button>
+        <button class="btn primary" disabled title="Noch nicht implementiert (DB-Feld fehlt)">
+          Neues Fach erstellen
+        </button>
       </div>
     </div>
 
@@ -27,16 +29,18 @@
     <div v-else class="grid">
       <article v-for="c in sortedCourses" :key="c.id" class="course" @click="openDetail(c.id)">
         <div class="thumb" aria-hidden="true"></div>
+
         <div class="meta">
           <div class="jahr">{{ c.jahrgang || '—' }}</div>
-          <div class="name">{{ c.fach }}</div>
-          <div class="klasse">{{ c.klasse }}</div>
+          <div class="name">{{ c.fach || c.title || '—' }}</div>
+          <div class="klasse">{{ c.klasse || '—' }}</div>
+
+          <div class="schema-badge">
+            Aktives Schema: <strong>{{ activeSchemeName }}</strong>
+          </div>
         </div>
+
         <button class="kebab" type="button" title="Optionen" @click.stop>⋮</button>
-        <h3>{{ subject.title }}</h3>
-        <p>{{ subject.short }}</p>
-        <div class="schema-badge">Aktives Schema: <strong>{{ activeSchemeName }}</strong></div>
-        <button class="icon-btn" title="Optionen">⋯</button>
       </article>
     </div>
   </section>
@@ -45,9 +49,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMyCourses } from '@/services/teacherData'
-import { getSubjects } from '@/services/teacherData'
-import SubjectCreateModal from '@/components/SubjectCreateModal.vue'
 import grading from '@/services/grading'
 
 const router = useRouter()
@@ -55,33 +56,61 @@ const router = useRouter()
 const courses = ref([])
 const loading = ref(false)
 const error = ref('')
+
 const filterMode = ref('all')
 const sortMode = ref('name')
 
+const API_BASE = 'https://transparentgrading.onrender.com/api'
+
+async function getMyCoursesHardcoded() {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
+
+  const res = await fetch(`${API_BASE}/lehrer/faecher`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
+  }
+
+  const data = await res.json()
+  return data || []
+}
+
 onMounted(async () => {
   loading.value = true
+  error.value = ''
   try {
-    courses.value = await getMyCourses()
+    courses.value = await getMyCoursesHardcoded()
   } catch (e) {
+    console.error(e)
     error.value = e?.message || 'Unbekannter Fehler'
+    courses.value = []
   } finally {
     loading.value = false
   }
 })
 
 const filteredCourses = computed(() => {
-  // visibility ist aktuell nicht in der DB für Lehrer definiert → UI-State bleibt, filtert nicht.
+  // visibility ist aktuell nicht in DB → filtert (noch) nicht, UI bleibt aber.
   return courses.value || []
 })
 
 const sortedCourses = computed(() => {
   const list = [...filteredCourses.value]
-  if (sortMode.value === 'klasse') list.sort((a, b) => String(a.klasse || '').localeCompare(String(b.klasse || '')))
-  else list.sort((a, b) => String(a.fach || '').localeCompare(String(b.fach || '')))
+  if (sortMode.value === 'klasse') {
+    list.sort((a, b) => String(a.klasse || '').localeCompare(String(b.klasse || '')))
+  } else {
+    list.sort((a, b) => String(a.fach || a.title || '').localeCompare(String(b.fach || b.title || '')))
+  }
   return list
 })
 
-const activeSchemeName = computed(() => grading.getActiveScheme()?.name || 'Standard')
+const activeSchemeName = computed(() => grading.getActiveScheme?.()?.name || 'Standard')
 
 function openDetail(id) {
   router.push(`/lehrer/faecher/${id}`)
