@@ -122,4 +122,35 @@ class MoodController extends AbstractController
 
         return $this->json($rows);
     }
+        #[Route('', name: 'api_mood_delete', methods: ['DELETE'])]
+    public function deleteMyMoods(EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+        }
+
+        $ms365User = $em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+
+        $schueler = $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+
+        if (!$schueler) {
+            return $this->json(['error' => 'Schüler nicht gefunden'], 404);
+        }
+
+        // ✅ Nur die Mood-Daten vom eingeloggten Schüler löschen
+        $conn = $em->getConnection();
+        $deleted = $conn->executeStatement(
+            'DELETE FROM mood WHERE schueler_id = ?',
+            [$schueler->getId()]
+        );
+
+        return $this->json([
+            'status' => 'ok',
+            'deleted' => $deleted
+        ], 200);
+    }
+
 }
