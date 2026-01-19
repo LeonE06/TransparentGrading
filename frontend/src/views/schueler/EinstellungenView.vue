@@ -76,11 +76,36 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <!-- ✅ NEU: Mood-Erinnerung -->
+        <div class="container">
+            <div class="container-header">
+                <i class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                            stroke="var(--icon-color)" stroke-width="1.5" stroke-miterlimit="10" />
+                        <path d="M12 7V12L15 14" stroke="var(--icon-color)" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </i>
 
-
-
-
+                <div class="toggle">
+                    <div>
+                        <h3>Mood-Erinnerung</h3>
+                        <p>Du kannst selbst entscheiden, ob du erinnert werden möchtest.</p>
+                    </div>
+                    <div>
+                        {{ moodBenachrichtigung ? 'Ein' : 'Aus' }}
+                        <label class="switch">
+                            <input type="checkbox" v-model="moodBenachrichtigung"
+                                @change="saveMoodBenachrichtigung(moodBenachrichtigung)" :disabled="loading">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="container">
@@ -138,6 +163,9 @@ const { isDark, toggleTheme } = useTheme()
 // Benachrichtigungen State
 const benachrichtigungen = ref(false)
 const loading = ref(false)
+
+// ✅ NEU: Mood-Erinnerung State
+const moodBenachrichtigung = ref(true)
 
 // Eltern-Email State
 const elternEmail = ref('')
@@ -240,6 +268,21 @@ async function loadSettings() {
     }
 }
 
+// ✅ NEU: Mood-Einstellungen laden
+async function loadMoodSettings() {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`${apiPrefix}/moodboard/settings`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        moodBenachrichtigung.value = res.data?.mood_benachrichtigung ?? true
+    } catch (err) {
+        console.warn('Mood-Erinnerung: Laden fehlgeschlagen', err)
+    }
+}
+
 // Benachrichtigungen zum Server speichern
 let saveTimer = null
 async function saveBenachrichtigungen(value) {
@@ -259,6 +302,32 @@ async function saveBenachrichtigungen(value) {
             loading.value = false
         }
     }, 300) // Debounce: 300ms warten
+}
+
+// ✅ NEU: Mood-Erinnerung speichern (mit Rollback bei Fehler)
+let moodSaveTimer = null
+async function saveMoodBenachrichtigung(value) {
+    if (moodSaveTimer) clearTimeout(moodSaveTimer)
+
+    const previous = !value ? true : false // wird unten korrekt gesetzt (optimistic)
+
+    moodSaveTimer = setTimeout(async () => {
+        loading.value = true
+        try {
+            const token = localStorage.getItem('token')
+            await axios.put(`${apiPrefix}/moodboard/settings`, { mood_benachrichtigung: !!value }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+        } catch (err) {
+            console.warn('Mood-Erinnerung: Speichern fehlgeschlagen', err)
+            // Rollback
+            moodBenachrichtigung.value = !value
+        } finally {
+            loading.value = false
+        }
+    }, 300)
 }
 
 // Eltern-Email speichern
@@ -330,6 +399,8 @@ onMounted(async () => {
     await loadCurrentStudent()
     // Dann Einstellungen laden (kann jetzt isUeber18 verwenden)
     await loadSettings()
+    // ✅ NEU: Mood-Einstellungen laden
+    await loadMoodSettings()
 })
 </script>
 
