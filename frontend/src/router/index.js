@@ -18,6 +18,13 @@ const router = createRouter({
     { path: '/admin/einstellungen', component: () => import('../views/admin/EinstellungenView.vue'), meta: { navbar: 'admin', role: 'Admin' }},
     { path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin', role: 'Admin' }},
 
+   // LEHRER
+{ path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+{ path: '/lehrer/fach/:id', component: () => import('../views/lehrer/FachDetailView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+{ path: '/lehrer/leistungen', component: () => import('../views/lehrer/LeistungserfassungView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+{ path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+
+
     // SCHÜLER
     { path: '/schueler/faecher', component: () => import('../views/schueler/MeineFaecherView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
     { path: '/schueler/benachrichtigungen', component: () => import('../views/schueler/NotificationsView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
@@ -35,20 +42,19 @@ const router = createRouter({
   ]
 })
 
-// Route Guard
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token")
   const role = getRoleFromToken()
 
-  // Kein Login?
-if (!token && to.path !== "/login" && !to.path.startsWith("/auth")) {
+  // Nicht eingeloggt?
+  if (!token && to.path !== "/login" && !to.path.startsWith("/auth")) {
     return next("/login")
-}
+  }
 
-  // Kein Zugriff mit falscher Rolle?
-if (to.meta.role && role !== 'Schueler' && to.meta.role !== role) {
-  return next("/login")
-}
+  // Falsche Rolle?
+  if (to.meta.role && to.meta.role !== role) {
+    return next("/login")
+  }
 
   next()
 })

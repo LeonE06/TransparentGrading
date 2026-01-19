@@ -22,17 +22,18 @@ if (!token) {
   document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
 
   // Rolle auslesen
-  const payload = JSON.parse(atob(token.split(".")[1]));
-  const role = payload.role;
+  const payload = JSON.parse(atob(token.split(".")[1]))
+const role = payload.role
 
-  // Weiterleitung basierend auf Rolle
-  if (role === "Schueler") {
-    router.push("/schueler/faecher");
-  } else if (role === "Lehrer") {
-    router.push("/admin/klassen"); // Lehrerbereich richtig definieren!
-  } else {
-    router.push("/login");
-  }
+if (role === 'Lehrer') {
+  router.push('/lehrer/faecher')
+} else if (role === 'Schueler') {
+  router.push('/schueler/faecher')
+} else if (role === 'Admin') {
+  router.push('/admin/klassen')
+} else {
+  router.push('/login')
+}
 }
 </script>
 
