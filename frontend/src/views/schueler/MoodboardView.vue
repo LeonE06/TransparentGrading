@@ -36,7 +36,11 @@
         </option>
       </select>
 
-      <button class="save-btn" @click="saveMood" :disabled="hasMoodToday">
+      <button
+  class="save-btn"
+  @click="saveMood"
+  :disabled="hasMoodToday"
+>
   {{ hasMoodToday ? "Heute schon gespeichert" : "Speichern" }}
 </button>
       <button class="delete-btn" @click="deleteMoodData">Mood-Daten löschen</button>
