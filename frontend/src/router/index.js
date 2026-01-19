@@ -58,7 +58,7 @@ const router = createRouter({
     { path: '/lehrer/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
     { path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
     { path: '/lehrer/leistungsfeststellungen/:id', component: () => import('../views/lehrer/LeistungsfeststellungDetailView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-
+    { path: '/lehrer/moodboard', name: 'LehrerMoodboard', component: () => import('@/views/lehrer/MoodboardView.vue')},
 
     // SCHÜLER
     { path: '/schueler/faecher', component: () => import('../views/schueler/MeineFaecherView.vue'), meta: { navbar: 'student', role: 'Schueler' }},
