@@ -153,4 +153,27 @@ class MoodController extends AbstractController
         ], 200);
     }
 
+    #[Route('/today', name: 'api_mood_today', methods: ['GET'])]
+    public function hasMoodToday(EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user)
+            return $this->json(['error' => 'Nicht authentifiziert'], 401);
+
+        $ms365User = $em->getRepository(\App\Entity\Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+        $schueler = $em->getRepository(\App\Entity\Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+
+        if (!$schueler)
+            return $this->json(['error' => 'Schüler nicht gefunden'], 404);
+
+        $conn = $em->getConnection();
+        $exists = $conn->fetchOne(
+            "SELECT 1 FROM mood WHERE schueler_id = ? AND DATE(created_at) = CURDATE() LIMIT 1",
+            [$schueler->getId()]
+        );
+
+        return $this->json(['hasMoodToday' => (bool) $exists]);
+    }
 }
