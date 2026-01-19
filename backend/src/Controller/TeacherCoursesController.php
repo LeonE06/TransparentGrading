@@ -28,7 +28,7 @@ class TeacherCoursesController extends AbstractController
             return null;
         }
 
-        return $em->getRepository(Lehrer::class)->findOneBy(['ms365usr' => $m365]);
+        return $em->getRepository(Lehrer::class)->findOneBy(['ms365User' => $m365]);
     }
 
     #[Route('/faecher', name: 'my_courses', methods: ['GET'])]
