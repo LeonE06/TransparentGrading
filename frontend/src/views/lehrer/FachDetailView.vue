@@ -1,5 +1,4 @@
 <template>
-  <p style="padding:20px">DEBUG: route id = {{ $route.params.id }}</p>
   <section class="page" v-if="subject">
     <header class="page__header">
       <div class="title-stack">
