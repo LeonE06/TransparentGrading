@@ -219,25 +219,39 @@
       </div>
     </div>
   </section>
+
   <p v-else>Lade Fach ...</p>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import grading from '@/services/grading'
-import { getSubjectById, getAssessmentsForSubject, getStudentsByClass, addAssessment, getTrendForSubject, updateAssessment } from '@/services/teacherData'
+import {
+  getSubjectById,
+  getAssessmentsForSubject,
+  getStudentsByClass,
+  addAssessment,
+  getTrendForSubject,
+  updateAssessment
+} from '@/services/teacherData'
 
 const route = useRoute()
+
+// ✅ EINMAL normalisieren (Route-Params sind Strings!)
+const subjectId = computed(() => Number(route.params.id))
+
 const scheme = { mode: 'per-item', scoreType: 'points', maxPoints: 24, gradeBands: grading.loadScheme().gradeBands }
 
-const subject = computed(() => getSubjectById(route.params.id))
-const assessments = ref(getAssessmentsForSubject(route.params.id))
+const subject = computed(() => getSubjectById(subjectId.value))
+const assessments = ref(getAssessmentsForSubject(subjectId.value))
+
 const selectedAssessmentId = ref(assessments.value[0]?.id)
 const activeTab = ref('overview')
 const search = ref('')
 const searchStudent = ref('')
 const showModal = ref(false)
+
 const form = ref({
   title: '',
   typ: 'PLF',
@@ -245,6 +259,7 @@ const form = ref({
   maxPoints: 24,
   gewichtung: 1
 })
+
 const studentResult = ref({
   studentId: '',
   points: '',
@@ -252,15 +267,19 @@ const studentResult = ref({
 })
 
 const selectedAssessment = computed(() => assessments.value.find(a => a.id === selectedAssessmentId.value))
+
 const filteredAssessments = computed(() => {
   if (!search.value) return assessments.value
   return assessments.value.filter(a => a.title.toLowerCase().includes(search.value.toLowerCase()))
 })
+
 const activeAssessment = computed(() => selectedAssessment.value || filteredAssessments.value[0])
+
 const students = computed(() => {
   const list = getStudentsByClass(subject.value?.klasse)
   return list && list.length ? list : getStudentsByClass(null)
 })
+
 const months = ['SEP', 'OKT', 'NOV', 'DEZ', 'JAN', 'FEB', 'MRZ', 'APR', 'MAI', 'JUN', 'JUL']
 
 const resultRows = computed(() => {
@@ -284,7 +303,11 @@ const studentRows = computed(() => {
   return list.map(student => {
     const relevantAss = assessments.value.filter(a => a.results?.some(r => r.studentId === student.id))
     const last = relevantAss.find(a => true)?.results?.find(r => r.studentId === student.id)
-    const allPoints = relevantAss.flatMap(a => a.results.filter(r => r.studentId === student.id).map(r => ({ pts: r.points, max: a.maxPoints })))
+    const allPoints = relevantAss.flatMap(a =>
+      a.results
+        .filter(r => r.studentId === student.id)
+        .map(r => ({ pts: r.points, max: a.maxPoints }))
+    )
     const avg = allPoints.length ? (allPoints.reduce((s, p) => s + p.pts, 0) / allPoints.length).toFixed(1) : '—'
     const lastGrade = last ? grading.pointsToGrade(last.points, relevantAss[0]?.maxPoints || scheme.maxPoints) : '—'
     return {
@@ -319,26 +342,6 @@ const courseResult = computed(() => {
   return grading.computeFinalGrade(items, scheme)
 })
 
-const averageNote = computed(() => {
-  const notes = assessments.value
-    .map(ass => {
-      if (!ass.results?.length) return null
-      const avgPct = ass.results.reduce((s, r) => s + (r.points / ass.maxPoints) * 100, 0) / ass.results.length
-      return grading.percentageToGrade(avgPct, scheme.gradeBands)
-    })
-    .filter(Boolean)
-  if (!notes.length) return '—'
-  const avg = notes.reduce((s, n) => s + n, 0) / notes.length
-  return avg.toFixed(2)
-})
-
-const averagePoints = computed(() => {
-  const ass = activeAssessment.value
-  if (!ass || !ass.results?.length) return '—'
-  const avg = ass.results.reduce((s, r) => s + r.points, 0) / ass.results.length
-  return avg.toFixed(1)
-})
-
 const participationRate = computed(() => {
   const totalSlots = students.value.length * (assessments.value.length || 1)
   const actual = assessments.value.reduce((sum, a) => sum + (a.results?.length || 0), 0)
@@ -363,11 +366,10 @@ const chartPoints = computed(() => {
   const vals = monthlyGrades.value
   const hasData = vals.some(v => v !== null && !isNaN(v))
   if (!hasData) {
-    const fallback = getTrendForSubject(route.params.id)
+    const fallback = getTrendForSubject(subjectId.value)
     if (fallback && fallback.length) return fallback.slice(0, months.length)
     return [2.3, 2.1, 2.8, 3.2, 2.5, 2.9, 2.7, 2.4, 2.6, 2.3, 2.5]
   }
-  // fill gaps with previous value for smoother line
   let last = vals.find(v => v != null) || 3
   return vals.map(v => {
     if (v == null) return last
@@ -383,11 +385,13 @@ const chartPath = computed(() => {
   const min = Math.min(...pts, 1)
   const spread = max - min || 1
   const stepX = 100 / (pts.length - 1 || 1)
-  return pts.map((v, i) => {
-    const x = i * stepX
-    const y = 35 - ((v - min) / spread) * 30
-    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
-  }).join(' ')
+  return pts
+    .map((v, i) => {
+      const x = i * stepX
+      const y = 35 - ((v - min) / spread) * 30
+      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
+    })
+    .join(' ')
 })
 
 const chartArea = computed(() => {
@@ -421,15 +425,17 @@ const chartDots = computed(() => {
 
 function seedIfEmpty() {
   if (assessments.value.length) return
-  const trend = getTrendForSubject(route.params.id) || [2.4, 2.6, 2.8, 2.5]
+  const trend = getTrendForSubject(subjectId.value) || [2.4, 2.6, 2.8, 2.5]
   const studentsList = students.value
   const maxPoints = 24
+
   trend.slice(0, 6).forEach((grade, idx) => {
-    const pts = Math.max(0, Math.round((5 - grade) / 4 * maxPoints))
+    const pts = Math.max(0, Math.round(((5 - grade) / 4) * maxPoints))
     const results = studentsList.map(s => ({ studentId: s.id, points: pts, comment: '' }))
     const month = idx + 9 // Sep=9
     const date = new Date(2025, month % 12, 10).toISOString().slice(0, 10)
-    addAssessment(route.params.id, {
+
+    addAssessment(subjectId.value, {
       title: `Auto-Assessment ${idx + 1}`,
       typ: 'Test',
       datum: date,
@@ -438,11 +444,18 @@ function seedIfEmpty() {
       results
     })
   })
+
   refreshAssessments()
 }
 
 onMounted(() => {
   seedIfEmpty()
+})
+
+// ✅ Falls du innerhalb derselben View von /fach/101 auf /fach/102 wechselst:
+watch(subjectId, () => {
+  refreshAssessments()
+  selectedAssessmentId.value = assessments.value[0]?.id
 })
 
 function formatDate(dateStr) {
@@ -474,7 +487,7 @@ function resetForm() {
 }
 
 function refreshAssessments() {
-  assessments.value = getAssessmentsForSubject(route.params.id)
+  assessments.value = getAssessmentsForSubject(subjectId.value)
 }
 
 function createAssessment() {
@@ -482,6 +495,7 @@ function createAssessment() {
     alert('Bitte einen Titel eingeben.')
     return
   }
+
   const payload = {
     title: form.value.title,
     typ: form.value.typ,
@@ -490,7 +504,8 @@ function createAssessment() {
     gewichtung: Number(form.value.gewichtung),
     results: []
   }
-  const newAss = addAssessment(route.params.id, payload)
+
+  const newAss = addAssessment(subjectId.value, payload)
   refreshAssessments()
   selectedAssessmentId.value = newAss.id
   showModal.value = false
@@ -506,12 +521,14 @@ function addStudentResult() {
     alert('Bitte Schüler*in wählen.')
     return
   }
+
   const pts = Number(studentResult.value.points)
   if (Number.isNaN(pts)) {
     alert('Bitte Punkte eintragen.')
     return
   }
-  const updated = updateAssessment(route.params.id, activeAssessment.value.id, a => {
+
+  const updated = updateAssessment(subjectId.value, activeAssessment.value.id, a => {
     const results = Array.isArray(a.results) ? [...a.results] : []
     const idx = results.findIndex(r => r.studentId === studentResult.value.studentId)
     const entry = { studentId: studentResult.value.studentId, points: pts, comment: studentResult.value.comment || '' }
@@ -519,6 +536,7 @@ function addStudentResult() {
     else results.push(entry)
     return { ...a, results }
   })
+
   if (updated) {
     refreshAssessments()
     studentResult.value = { studentId: '', points: '', comment: '' }
@@ -527,6 +545,7 @@ function addStudentResult() {
 </script>
 
 <style scoped>
+/* DEIN CSS bleibt 1:1 gleich */
 .page {
   display: flex;
   flex-direction: column;
