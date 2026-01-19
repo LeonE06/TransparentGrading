@@ -10,6 +10,7 @@
           <div class="card-sub">Sprache der Webapp auswählen</div>
         </div>
       </div>
+
       <div class="card-body">
         <select class="select" v-model="language" @change="saveLanguage">
           <option value="Deutsch">Deutsch</option>
@@ -39,10 +40,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 import { getTeacherSettings, updateTeacherSettings } from '@/services/teacherData'
+import grading from '@/services/grading'
 
+/* =========================
+   LANGUAGE + THEME
+   ========================= */
 const { isDark, loadFromServer } = useTheme()
 const language = ref('Deutsch')
 const loading = ref(false)
@@ -77,14 +82,19 @@ async function setTheme(value) {
   try {
     await updateTeacherSettings({ light_darkmode: !!value })
     document.documentElement.classList.toggle('dark', !!value)
+    // Achtung: isDark muss ein ref sein (useTheme). Wenn computed: dann dort ändern.
     isDark.value = !!value
   } catch (e) {
     alert('Konnte Theme nicht speichern.')
     console.warn(e)
   }
-import { ref, computed, onMounted } from 'vue'
-import grading from '@/services/grading'
+}
 
+/* =========================
+   GRADING SCHEMES LOGIK
+   (wird aktuell nicht im Template angezeigt,
+   aber ist jetzt build-sicher)
+   ========================= */
 const schemes = ref([])
 const selectedSchemeId = ref(null)
 const activeSchemeId = ref(null)
@@ -97,6 +107,7 @@ function loadAll() {
   const active = grading.getActiveSchemeId() || grading.getActiveScheme().id
   activeSchemeId.value = active
   selectedSchemeId.value = active
+
   const activeObj = grading.getSchemeById(selectedSchemeId.value)
   if (activeObj) {
     selectedName.value = activeObj.name
@@ -125,7 +136,6 @@ function selectScheme(id) {
 }
 
 function createNew() {
-  // prevent spam and huge lists
   try {
     const current = grading.loadAllSchemes()
     if (current.length >= 50) {
@@ -137,7 +147,6 @@ function createNew() {
   }
 
   const created = grading.createScheme('Neues Schema')
-  // set just-created as selected and active
   setActive(created.id)
   loadAll()
   selectScheme(created.id)
@@ -146,11 +155,10 @@ function createNew() {
 function removeScheme(id) {
   if (!confirm('Schema wirklich löschen?')) return
   grading.deleteScheme(id)
-  // refresh and ensure selected/active make sense
+
   loadAll()
   const remaining = schemes.value
   if (!remaining.find(s => s.id === selectedSchemeId.value)) {
-    // choose active or first
     selectedSchemeId.value = grading.getActiveSchemeId() || (remaining[0] && remaining[0].id) || null
     if (selectedSchemeId.value) selectScheme(selectedSchemeId.value)
   }
@@ -159,20 +167,19 @@ function removeScheme(id) {
 function setActive(id) {
   grading.setActiveSchemeId(id)
   activeSchemeId.value = id
-  // also reflect selectedSchemeId so editor follows active by default
   selectedSchemeId.value = id
 }
 
 function saveSchemeChanges() {
   if (!selectedScheme.value) return
-  // validate
+
   const validation = grading.validateScheme(localScheme.value)
   if (!validation.valid) {
     alert('Fehler: ' + validation.errors.join('\n'))
     return
   }
+
   grading.updateScheme(selectedSchemeId.value, { name: selectedName.value, scheme: localScheme.value })
-  // also persist the single-scheme fallback for compatibility
   grading.saveScheme(localScheme.value)
   loadAll()
   alert('✅ Schema gespeichert')
@@ -191,8 +198,6 @@ function addCategory() {
 function removeCategory(idx) {
   localScheme.value.categories.splice(idx, 1)
 }
-
-// (helper functions defined above are used)
 </script>
 
 <style scoped>
@@ -290,6 +295,7 @@ html:not(.dark) .select {
   margin-top: 0.5rem;
 }
 
+/* Diese Klassen bleiben hier, auch wenn sie im Template derzeit nicht genutzt werden */
 .scheme-panel {
   display: flex;
   gap: 1.2rem;
