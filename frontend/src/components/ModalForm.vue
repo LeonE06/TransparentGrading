@@ -85,3 +85,4 @@ html:not(.dark) .modal {
   padding: 0 1.25rem 1.25rem;
 }
 </style>
+

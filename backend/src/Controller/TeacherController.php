@@ -50,7 +50,7 @@ class TeacherController extends AbstractController
             'id' => $teacher->getId(),
             'vorname' => $teacher->getVorname(),
             'nachname' => $teacher->getNachname(),
-            'email' => $teacher->getMicrosoft365User()?->getEmail(),
+            'email' => $teacher->getMs365usr()?->getEmail(),
         ]);
     }
 

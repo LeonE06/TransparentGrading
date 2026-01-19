@@ -1,236 +1,183 @@
 <template>
-  <div class="lehrer-view">
-    <h1 class="title">Bewertungseinstellungen</h1>
-    <p>Stellen Sie hier ein, wie Ihre Bewertungen berechnet werden sollen.</p>
+  <section class="page">
+    <h1 class="title">Einstellungen</h1>
 
-    <div class="settings-container">
-      <!-- Modus Auswahl -->
-      <div class="card">
-        <h3>Gewichtungsmodus</h3>
-        <div class="form-group">
-          <label>
-            <input type="radio" v-model="localScheme.mode" value="per-item" @change="saveChanges" />
-            <strong>Individuelle Gewichtung pro Leistung</strong>
-            <p class="help-text">Jede Leistung hat ihre eigene Gewichtung (z.B. ein Test zählt doppelt).</p>
-          </label>
-        </div>
-        <div class="form-group">
-          <label>
-            <input type="radio" v-model="localScheme.mode" value="group" @change="saveChanges" />
-            <strong>Gruppen-Gewichtung nach Kategorien</strong>
-            <p class="help-text">Leistungen werden in Kategorien eingeteilt (Tests, Schularbeiten, etc.) mit prozentualem Anteil.</p>
-          </label>
-        </div>
-      </div>
-
-      <!-- Score Type Auswahl -->
-      <div class="card">
-        <h3>Bewertungstyp</h3>
-        <div class="form-group">
-          <label>
-            <input type="radio" v-model="localScheme.scoreType" value="grades" @change="saveChanges" />
-            <strong>Noten (1-5)</strong>
-            <p class="help-text">Verwenden Sie die österreichische Notenskala 1-5.</p>
-          </label>
-        </div>
-        <div class="form-group">
-          <label>
-            <input type="radio" v-model="localScheme.scoreType" value="points" @change="saveChanges" />
-            <strong>Punkte (0-max)</strong>
-            <p class="help-text">Verwenden Sie ein Punkte-System. Definieren Sie die maximale Punktzahl:</p>
-            <input 
-              v-if="localScheme.scoreType === 'points'"
-              type="number" 
-              v-model.number="localScheme.maxPoints" 
-              min="10" 
-              @change="saveChanges"
-              class="form-control"
-              placeholder="z.B. 100"
-            />
-          </label>
-        </div>
-      </div>
-
-      <!-- Kategorien (für group-mode) -->
-      <div v-if="localScheme.mode === 'group'" class="card">
-        <h3>Kategorien definieren</h3>
-        <p>Definieren Sie Ihre Kategorien und deren prozentuale Gewichtung. Die Summe muss 100% ergeben.</p>
-
-        <div class="categories-list">
-          <div v-for="(cat, idx) in localScheme.categories" :key="idx" class="category-item">
-            <div class="form-group">
-              <label>Kategoriename</label>
-              <input v-model="cat.name" type="text" class="form-control" @change="saveChanges" />
-            </div>
-            <div class="form-group">
-              <label>Prozentanteil</label>
-              <input v-model.number="cat.percent" type="number" min="0" max="100" class="form-control" @change="saveChanges" />
-            </div>
-            <button @click="removeCategory(idx)" class="btn danger">Entfernen</button>
-          </div>
-        </div>
-
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">🌐</div>
         <div>
-          <strong>Aktuelle Summe: {{ categoryPercentSum }}%</strong>
-          <span v-if="categoryPercentSum !== 100" style="color: red;">(sollte 100% sein)</span>
+          <div class="card-title">Sprache</div>
+          <div class="card-sub">Sprache der Webapp auswählen</div>
         </div>
-
-        <button @click="addCategory" class="btn primary" style="margin-top: 1rem;">Kategorie hinzufügen</button>
       </div>
-
-      <!-- Vorschau -->
-      <div class="card">
-        <h3>Aktuelle Konfiguration</h3>
-        <pre>{{ JSON.stringify(localScheme, null, 2) }}</pre>
+      <div class="card-body">
+        <select class="select" v-model="language" @change="saveLanguage">
+          <option value="Deutsch">Deutsch</option>
+        </select>
       </div>
     </div>
-  </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">☾</div>
+        <div>
+          <div class="card-title">Light- / Darkmode</div>
+          <div class="card-sub">Design der Webapp wählen</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="toggle">
+          <button class="toggle-btn" :class="{ active: !isDark }" type="button" @click="setTheme(false)">Light</button>
+          <button class="toggle-btn" :class="{ active: isDark }" type="button" @click="setTheme(true)">Dark</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="loading" class="hint">Lade …</div>
+    <div v-else-if="error" class="hint">Fehler: {{ error }}</div>
+  </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import grading from '@/services/grading'
+import { onMounted, ref } from 'vue'
+import { useTheme } from '@/composables/useTheme'
+import { getTeacherSettings, updateTeacherSettings } from '@/services/teacherData'
 
-const localScheme = ref({ mode: 'per-item', scoreType: 'grades', maxPoints: 100, categories: [] })
+const { isDark, loadFromServer } = useTheme()
+const language = ref('Deutsch')
+const loading = ref(false)
+const error = ref('')
 
-onMounted(() => {
-  localScheme.value = { ...grading.loadScheme() }
-})
-
-const categoryPercentSum = computed(() => {
-  if (!localScheme.value.categories) return 0
-  return localScheme.value.categories.reduce((sum, cat) => sum + (Number(cat.percent) || 0), 0)
-})
-
-function saveChanges() {
-  // Validiere Schema
-  const validation = grading.validateScheme(localScheme.value)
-  if (!validation.valid) {
-    console.warn('Schema-Validierungsfehler:', validation.errors)
-    alert('Fehler in der Konfiguration:\n' + validation.errors.join('\n'))
-    return
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    await loadFromServer()
+    const s = await getTeacherSettings()
+    if (s?.sprache) language.value = s.sprache
+  } catch (e) {
+    error.value = e?.message || 'Unbekannter Fehler'
+  } finally {
+    loading.value = false
   }
-  // Speichere
-  grading.saveScheme(localScheme.value)
-  alert('✅ Einstellungen gespeichert!')
 }
 
-function addCategory() {
-  if (!localScheme.value.categories) localScheme.value.categories = []
-  localScheme.value.categories.push({
-    key: `cat_${Date.now()}`,
-    name: 'Neue Kategorie',
-    percent: 0
-  })
+onMounted(load)
+
+async function saveLanguage() {
+  try {
+    await updateTeacherSettings({ sprache: language.value })
+  } catch (e) {
+    alert('Konnte Sprache nicht speichern.')
+    console.warn(e)
+  }
 }
 
-function removeCategory(idx) {
-  localScheme.value.categories.splice(idx, 1)
-  saveChanges()
+async function setTheme(value) {
+  try {
+    await updateTeacherSettings({ light_darkmode: !!value })
+    document.documentElement.classList.toggle('dark', !!value)
+    isDark.value = !!value
+  } catch (e) {
+    alert('Konnte Theme nicht speichern.')
+    console.warn(e)
+  }
 }
 </script>
 
 <style scoped>
-.lehrer-view {
-  padding: 1rem 2rem;
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
 }
 
 .title {
   font-size: 2rem;
-  margin-bottom: 2rem;
-  text-align: left;
   font-weight: 650;
-}
-
-.settings-container {
-  max-width: 800px;
+  margin: 0.5rem 0 1.25rem;
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--aczent-color);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 6px var(--shadow);
-}
-
-.form-group {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.2rem 1.25rem;
   margin-bottom: 1rem;
 }
 
-.form-group label {
+.card-head {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  cursor: pointer;
-  margin-bottom: 0.5rem;
+  gap: 0.9rem;
+  align-items: center;
 }
 
-.form-group input[type="radio"],
-.form-group input[type="checkbox"] {
-  margin-top: 0.25rem;
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--aczent-color);
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.help-text {
-  font-size: 0.875rem;
-  color: var(--aczent-color);
-  margin: 0.25rem 0 0 0;
-}
-
-.categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.category-item {
-  border: 1px solid var(--aczent-color);
-  padding: 1rem;
-  border-radius: 4px;
+.icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 0.5rem;
-  align-items: flex-end;
+  place-items: center;
 }
 
-.btn {
-  background-color: var(--first-background-color);
-  border: 1px solid var(--aczent-color);
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.card-title {
+  font-weight: 650;
 }
 
-.btn:hover {
-  background-color: var(--second-background-color);
+.card-sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
 }
 
-.btn.primary {
-  background-color: var(--first-background-color);
+.card-body {
+  margin-top: 0.75rem;
+}
+
+.select {
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
+  outline: none;
+  width: 220px;
 }
 
-.btn.danger {
-  background-color: #ffcccb;
-  color: #c00;
+html:not(.dark) .select {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-pre {
-  background: var(--first-background-color);
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 0.875rem;
+.toggle {
+  width: 240px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.toggle-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.toggle-btn.active {
+  background: rgba(144, 125, 255, 0.95);
+  color: #fff;
+}
+
+.hint {
+  color: var(--muted);
+  margin-top: 0.5rem;
 }
 </style>
+
