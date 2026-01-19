@@ -12,7 +12,7 @@
         </label>
 
         <label>Klasse auswählen
-          <select v-model="form.klasse">
+          <select v-model="form.klasse" :disabled="loading">
             <option value="">Klasse wählen (optional)</option>
             <option v-for="k in classes" :key="k" :value="k">{{ k }}</option>
           </select>
@@ -26,19 +26,23 @@
           <input type="checkbox" v-model="form.locked" />
           Bitte wählen Sie eine Klasse oder fügen Sie einzelne Schüler*innen hinzu.
         </label>
+
+        <p v-if="loadError" class="error">
+          {{ loadError }}
+        </p>
       </div>
 
       <footer class="modal-actions">
         <button class="btn ghost" @click="close">Abbrechen</button>
-        <button class="btn primary" @click="create">Fach erstellen</button>
+        <button class="btn primary" @click="create" :disabled="loading">Fach erstellen</button>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { getSubjects, getStudentsByClass } from '@/services/teacherData'
+import { computed, ref, watch } from 'vue'
+import { getMyCourses } from '@/services/teacherData'
 
 const emit = defineEmits(['close', 'created'])
 const props = defineProps({
@@ -53,11 +57,42 @@ const form = ref({
 })
 const studentSearch = ref('')
 
+const courses = ref([])
+const loading = ref(false)
+const loadError = ref('')
+
 const classes = computed(() => {
-  const subs = getSubjects()
-  const ks = subs.map(s => s.klasse).filter(Boolean)
+  const ks = (courses.value || [])
+    .map(c => c?.klasse)
+    .filter(Boolean)
   return Array.from(new Set(ks))
 })
+
+async function loadCourses() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    courses.value = await getMyCourses()
+  } catch (e) {
+    courses.value = []
+    loadError.value = 'Kurse konnten nicht geladen werden.'
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Wenn Modal aufgeht: Kurse laden + defaultClass setzen
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      form.value.klasse = props.defaultClass || form.value.klasse || ''
+      loadCourses()
+    }
+  },
+  { immediate: true }
+)
 
 function close() {
   emit('close')
@@ -163,5 +198,10 @@ input, select {
   cursor: pointer;
   font-size: 1.1rem;
   color: var(--text);
+}
+
+.error {
+  margin: 0;
+  font-weight: 600;
 }
 </style>
