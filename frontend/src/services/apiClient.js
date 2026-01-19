@@ -4,7 +4,7 @@ function resolveBaseURL() {
   return (
     import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? '/api' : 'https://transparentgrading.onrender.com')
+    (import.meta.env.DEV ? '/api' : 'https://transparentgrading.onrender.com/api')
   )
 }
 
@@ -20,4 +20,5 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
+
 })
