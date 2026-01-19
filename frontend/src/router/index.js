@@ -1,11 +1,40 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 function getRoleFromToken() {
-  const token = localStorage.getItem("token")
-  if (!token) return null
+  const token = localStorage.getItem("token");
+  if (!token) return null;
 
-  const payload = JSON.parse(atob(token.split(".")[1]))
-  return payload.role
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+
+    // base64url -> base64
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+
+    const payload = JSON.parse(jsonPayload);
+
+    // 1) wenn du role direkt hast
+    if (payload.role) return payload.role;
+
+    // 2) wenn du roles Array hast (Symfony/JWT üblich)
+    const roles = payload.roles || payload.roleS || payload.authorities;
+    if (Array.isArray(roles)) {
+      if (roles.includes("ROLE_ADMIN")) return "Admin";
+      if (roles.includes("ROLE_LEHRER")) return "Lehrer";
+      if (roles.includes("ROLE_SCHUELER")) return "Schueler";
+    }
+
+    return null;
+  } catch (e) {
+    console.warn("Token konnte nicht gelesen werden:", e);
+    return null;
+  }
 }
 
 const router = createRouter({
@@ -43,20 +72,28 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem("token")
-  const role = getRoleFromToken()
+  const token = localStorage.getItem("token");
+  const role = getRoleFromToken();
+
+  // Token vorhanden aber kaputt/ungültig
+  if (token && !role && to.path !== "/login" && !to.path.startsWith("/auth")) {
+    localStorage.removeItem("token");
+    return next("/login");
+  }
 
   // Nicht eingeloggt?
   if (!token && to.path !== "/login" && !to.path.startsWith("/auth")) {
-    return next("/login")
+    return next("/login");
   }
 
   // Falsche Rolle?
   if (to.meta.role && to.meta.role !== role) {
-    return next("/login")
+    return next("/login");
   }
 
-  next()
-})
+  next();
+});
+
 
 export default router
+
