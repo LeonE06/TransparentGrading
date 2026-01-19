@@ -83,7 +83,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import apiClient from '@/services/apiClient' // ✅ bei dir vorhanden
+import { apiClient } from '@/services/apiClient'
+
 
 const klassen = ref([])
 const selectedKlasseId = ref('')
