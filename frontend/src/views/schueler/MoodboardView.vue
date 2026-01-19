@@ -335,6 +335,7 @@ async function deleteMoodData() {
     saved.value = false;
     mood.value = "";
     note.value = "";
+    await loadHasMoodToday();
 
     // Chart neu laden (jetzt leer)
     await loadChart();
