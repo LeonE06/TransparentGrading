@@ -83,7 +83,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import api from '@/services/apiClient' // ✅ bei dir vorhanden
+import { apiClient } from '@/services/apiClient'
+
 
 const klassen = ref([])
 const selectedKlasseId = ref('')
@@ -105,7 +106,7 @@ const klasseName = computed(() => {
 })
 
 async function loadKlassen() {
-  const res = await api.get('/lehrer/klassen')
+  const res = await apiClient.get('/lehrer/klassen')
   klassen.value = res.data || []
 
   // Auto-select erste Klasse (wenn vorhanden)
@@ -121,7 +122,7 @@ async function loadMood() {
   error.value = ''
 
   try {
-    const res = await api.get('/lehrer/mood', {
+    const res = await apiClient.get('/lehrer/mood', {
       params: {
         klasseId: selectedKlasseId.value,
         range: selectedRange.value
