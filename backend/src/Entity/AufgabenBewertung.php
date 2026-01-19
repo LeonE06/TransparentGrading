@@ -30,7 +30,10 @@ class AufgabenBewertung
     private string $note;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $kommentar = NULL;
+    private ?string $kommentar = null;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $datum = null;
 
     public function getId(): ?int
     {
@@ -72,12 +75,23 @@ class AufgabenBewertung
 
     public function getNote(): float
     {
-        return $this->note;
+        return (float) $this->note;
     }
 
     public function setNote(float $note): self
     {
-        $this->note = $note;
+        $this->note = (string) $note;
+        return $this;
+    }
+
+    public function getDatum(): ?\DateTimeInterface
+    {
+        return $this->datum;
+    }
+
+    public function setDatum(?\DateTimeInterface $datum): self
+    {
+        $this->datum = $datum;
         return $this;
     }
 
@@ -92,3 +106,4 @@ class AufgabenBewertung
         return $this;
     }
 }
+
