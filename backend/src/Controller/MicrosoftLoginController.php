@@ -84,26 +84,16 @@ if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) 
             $vorname  = $graphUser['givenName'] ?? '';
 $nachname = $graphUser['surname'] ?? '';
 
-    // Rolle aus Service (bei dir: "Lehrer" oder "Schueler")
-$role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+    $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-// Symfony-Role mappen
-$roles = match (strtolower($role)) {
-    'lehrer'  => ['ROLE_LEHRER'],
-    'schueler' => ['ROLE_SCHUELER'],
-    default   => ['ROLE_USER'],
-};
+            // JWT bauen
+            $payload = [
+                'email' => $email,
+                'role'  => $role,
+                'exp'   => time() + 3600, // 1 Stunde gültig
+            ];
 
-// JWT bauen (✅ Symfony kompatibel)
-$payload = [
-    'email' => $email,
-    'sub'   => $email,     // optional aber hilfreich
-    'role'  => $role,      // behalten für dein bestehendes Frontend (optional)
-    'roles' => $roles,     // 🔥 wichtig für Symfony
-    'exp'   => time() + 3600,
-];
-
-$jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
+            $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 
             // Redirect ins Frontend
             $frontendUrl = $_ENV['FRONTEND_URL'];
