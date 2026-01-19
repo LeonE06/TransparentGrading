@@ -1,6 +1,4 @@
 <template>
-  <p style="color:red">DEBUG: notifications view rendered</p>
-<p>messages: {{ messages.length }}</p>
   <div class="notifications">
     <h1 class="title">Meine Benachrichtigungen</h1>
 
@@ -45,38 +43,25 @@ import MessageCard from './components/MessageCard.vue'
 
 const messages = ref([])
 
-console.log("🔔 Notifications component loaded");
-
 async function loadData() {
-  console.log("➡️ loadData() called");
-
-  const token = localStorage.getItem("token");
-  console.log("🔑 token exists?", !!token);
-
   try {
+    const token = localStorage.getItem("token")
+
     const res = await axios.get(
       "https://transparentgrading.onrender.com/api/schueler/nachrichten",
       { headers: { Authorization: `Bearer ${token}` } }
-    );
+    )
 
-    console.log("✅ API OK, items:", res.data?.length);
-    console.log("📦 data:", res.data);
-
-    messages.value = res.data;
+    messages.value = res.data
   } catch (err) {
-    console.error("❌ API ERROR:", err);
-    console.error("status:", err?.response?.status);
-    console.error("data:", err?.response?.data);
+    console.error("Fehler beim Laden der Nachrichten", err)
   }
 }
 
 const unread = computed(() => messages.value.filter(m => m.gelesen == 0))
 const read = computed(() => messages.value.filter(m => m.gelesen == 1))
 
-onMounted(() => {
-  console.log("✅ Notifications mounted");
-  loadData();
-});
+onMounted(loadData)
 </script>
 
 <style scoped>
