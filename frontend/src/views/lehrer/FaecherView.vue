@@ -64,6 +64,7 @@
         </div>
         <h3>{{ subject.title }}</h3>
         <p>{{ subject.short }}</p>
+        <div class="schema-badge">Aktives Schema: <strong>{{ activeSchemeName }}</strong></div>
         <button class="icon-btn" title="Optionen">⋯</button>
       </article>
     </div>
@@ -77,6 +78,7 @@ import { computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSubjects } from '@/services/teacherData'
 import SubjectCreateModal from '@/components/SubjectCreateModal.vue'
+import grading from '@/services/grading'
 
 const router = useRouter()
 const filters = reactive({ year: 'all', orga: 'all', field: 'all', sort: 'name' })
@@ -91,6 +93,8 @@ const sortedSubjects = computed(() => {
   else list.sort((a, b) => a.title.localeCompare(b.title))
   return list
 })
+
+const activeSchemeName = computed(() => grading.getActiveScheme()?.name || 'Standard')
 
 function openDetail(id) {
   router.push(`/lehrer/fach/${id}`)
@@ -238,6 +242,12 @@ h1 {
 
 .subject-card p {
   margin: 0.15rem 0 0.4rem;
+  color: var(--muted);
+}
+
+.schema-badge {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
