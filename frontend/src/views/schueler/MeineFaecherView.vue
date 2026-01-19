@@ -2,26 +2,36 @@
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
+    <!-- Neuer Bereich für den Namen -->
+    <div v-if="studentName" class="student-name">
+      Hallo, {{ studentName }}!
+      <span v-if="isOver18" class="age-badge">✓ 18+</span>
+      <span v-else-if="geburtsdatum" class="age-badge">-18</span>
+
+      <!-- Eltern-Email anzeigen, falls vorhanden -->
+      <div v-if="elternEmail" class="eltern-email">
+        Eltern-Email: {{ elternEmail }}
+      </div>
+    </div>
+
+    <!-- Modal anzeigen, wenn kein Geburtsdatum vorhanden ist -->
+    <AddGeburtsdatumModal v-if="showGeburtsdatumModal" @close="showGeburtsdatumModal = false"
+      @updated="handleStudentUpdated" />
+
+    <AddElternEmailModal v-if="showElternEmailModal" @close="showElternEmailModal = false"
+      @updated="handleStudentUpdated" />
+
     <div class="toolbar">
-      <button class="btn" :class="{active: tab === 'alle'}" @click="tab = 'alle'">Alle</button>
-      <button class="btn" :class="{active: tab === 'visible'}" @click="tab = 'visible'">Eingeblendete</button>
-      <button class="btn" :class="{active: tab === 'hidden'}" @click="tab = 'hidden'">Ausgeblendete</button>
+      <button class="btn" :class="{ active: tab === 'alle' }" @click="tab = 'alle'">Alle</button>
+      <button class="btn" :class="{ active: tab === 'visible' }" @click="tab = 'visible'">Eingeblendete</button>
+      <button class="btn" :class="{ active: tab === 'hidden' }" @click="tab = 'hidden'">Ausgeblendete</button>
       <button class="btn" @click="toggleSorting">Sortiert A–Z</button>
     </div>
 
-    <input
-      v-model="searchTerm"
-      type="text"
-      class="search-input"
-      placeholder="Nach Fächern suchen..."
-    />
+    <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Fächern suchen..." />
 
     <ul class="subject-list">
-      <li
-        v-for="fach in visibleSubjects"
-        :key="fach.kurs_id"
-        class="subject-item"
-      >
+      <li v-for="fach in visibleSubjects" :key="fach.kurs_id" class="subject-item">
         <div class="subject-info" @click="goToDetail(fach.kurs_id)">
           <div class="fach-image">{{ fach.fach_name.charAt(0) }}</div>
 
@@ -32,33 +42,18 @@
         </div>
 
         <div class="actions">
-          <span
-            class="bell"
-            @click.stop="toggleNotif(fach.kurs_id)">
+          <span class="bell" @click.stop="toggleNotif(fach.kurs_id)">
             <span v-if="fach.notif_enabled == 1">🔔</span>
             <span v-else>🔕</span>
           </span>
 
-          <span
-            class="menu"
-            @click.stop="toggleMenu(fach.kurs_id)"
-          >⋮</span>
+          <span class="menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</span>
 
-          <div
-            v-if="openMenuId === fach.kurs_id"
-            class="context-menu"
-          >
-            <div
-              class="context-item"
-              v-if="fach.sichtbar == 1"
-              @click="toggleVisibility(fach.kurs_id)"
-            >👁 Fach ausblenden</div>
+          <div v-if="openMenuId === fach.kurs_id" class="context-menu">
+            <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">👁 Fach
+              ausblenden</div>
 
-            <div
-              class="context-item"
-              v-else
-              @click="toggleVisibility(fach.kurs_id)"
-            >➕ Fach einblenden</div>
+            <div class="context-item" v-else @click="toggleVisibility(fach.kurs_id)">➕ Fach einblenden</div>
           </div>
 
         </div>
@@ -71,6 +66,8 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import AddGeburtsdatumModal from "@/components/AddGeburtsdatumModal.vue";
+import AddElternEmailModal from "@/components/AddElternEmailModal.vue";
 
 const router = useRouter();
 const searchTerm = ref("");
@@ -78,22 +75,139 @@ const subjects = ref([]);
 const tab = ref("alle");
 const sortByName = ref(false);
 
+const studentName = ref(""); // Neuer State für den Namen
+const geburtsdatum = ref(null); // Neuer State für das Geburtsdatum
+const elternEmail = ref(null); // Neuer State für die Eltern-Email
+const showGeburtsdatumModal = ref(false); // State für Modal-Sichtbarkeit
+const showElternEmailModal = ref(false); // State für Modal-Sichtbarkeit
+
+
+
 const openMenuId = ref(null);
 
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+
+// Wenn Dev → direkt über Proxy `/api`
+// Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
+// Funktion zum Berechnen des Alters
+function calculateAge(birthDate) {
+  if (!birthDate) return null;
+
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
+// Computed Property um zu prüfen, ob der Schüler 18+ ist
+const isOver18 = computed(() => {
+  if (!geburtsdatum.value) return false;
+  const age = calculateAge(geburtsdatum.value);
+  return age >= 18;
+});
+
+// Neue Funktion zum Laden der Schüler-Daten
+async function loadCurrentStudent() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${apiPrefix}/schueler/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const student = res.data;
+    studentName.value = `${student.vorname} ${student.nachname}`;
+    geburtsdatum.value = student.geburtsdatum;
+
+    // Eltern-Email speichern (robust prüfen)
+    const emailValue = student.einstellungen?.elternemail;
+    elternEmail.value = (emailValue && emailValue.trim() !== '') ? emailValue : null;
+
+    // Modal anzeigen, wenn kein Geburtsdatum vorhanden ist
+    if (!student.geburtsdatum) {
+      showGeburtsdatumModal.value = true;
+      showElternEmailModal.value = false;
+      return; // Früh beenden, wenn kein Geburtsdatum
+    }
+
+    // Geburtsdatum vorhanden → Geburtsdatum-Modal schließen
+    showGeburtsdatumModal.value = false;
+
+    // Prüfen ob unter 18 und keine Eltern-Email vorhanden
+    const age = calculateAge(student.geburtsdatum);
+    const hasEmail = elternEmail.value && elternEmail.value.trim() !== '';
+
+    // Modal nur anzeigen, wenn unter 18 UND keine Email vorhanden
+    if (age < 18 && !hasEmail) {
+      showElternEmailModal.value = true;
+    } else {
+      showElternEmailModal.value = false; // Modal schließen
+    }
+  } catch (error) {
+    console.error("Fehler beim Laden der Schüler-Daten:", error);
+  }
+}
+
+// Handler für wenn Student aktualisiert wurde
+async function handleStudentUpdated() {
+  // Schüler-Daten neu laden, um die aktualisierten Daten zu bekommen
+  await loadCurrentStudent();
+  // Das Modal wird automatisch geschlossen, wenn die Email vorhanden ist (siehe loadCurrentStudent)
+}
+
+// Neue Funktion zum Laden der Subjects
 async function loadSubjects() {
-  const res = await axios.get("/schueler/faecher");
-  subjects.value = res.data;
+  try {
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${apiPrefix}/schueler/faecher`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    subjects.value = res.data;
+  } catch (error) {
+    console.error("Fehler beim Laden der Fächer:", error);
+  }
 }
 
+// Neue Funktion für das Toggle der Sichtbarkeit
 async function toggleVisibility(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-visibility`);
-  await loadSubjects();
-  openMenuId.value = null;
+  try {
+    const token = localStorage.getItem('token')
+    await axios.put(`${apiPrefix}/schueler/faecher/${id}/toggle-visibility`, {}, { // ← leeres Objekt {} als Body
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    await loadSubjects();
+    openMenuId.value = null;
+  } catch (error) {
+    console.error("Fehler beim Toggle der Sichtbarkeit:", error);
+  }
 }
 
+// Neue Funktion für das Toggle der Benachrichtigungen
 async function toggleNotif(id) {
-  await axios.put(`/schueler/faecher/${id}/toggle-notif`);
-  await loadSubjects();
+  try {
+    const token = localStorage.getItem('token')
+    await axios.put(`${apiPrefix}/schueler/faecher/${id}/toggle-notif`, {}, { // ← leeres Objekt {} als Body
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    await loadSubjects();
+  } catch (error) {
+    console.error("Fehler beim Toggle der Benachrichtigungen:", error);
+  }
 }
 
 function toggleSorting() {
@@ -133,7 +247,11 @@ function goToDetail(id) {
   router.push(`/schueler/faecher/${id}`);
 }
 
-onMounted(loadSubjects);
+onMounted(() => {
+  loadCurrentStudent(); // Schüler-Daten laden
+  loadSubjects();
+
+});
 </script>
 
 <style scoped>
@@ -155,6 +273,7 @@ onMounted(loadSubjects);
   border-radius: 20px;
   cursor: pointer;
 }
+
 .btn.active {
   background: #111;
   color: #fff;
@@ -206,7 +325,8 @@ onMounted(loadSubjects);
   gap: 15px;
 }
 
-.bell, .menu {
+.bell,
+.menu {
   cursor: pointer;
   font-size: 22px;
 }
@@ -221,7 +341,7 @@ onMounted(loadSubjects);
   top: 28px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
   min-width: 160px;
   z-index: 999;

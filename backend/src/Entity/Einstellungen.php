@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\EinstellungenRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups; // ← FEHLT!
 
 #[ORM\Entity(repositoryClass: EinstellungenRepository::class)]
 #[ORM\Table(name: "Einstellungen")]
@@ -18,6 +19,7 @@ class Einstellungen
     private ?string $sprache = NULL;
 
     #[ORM\Column(length: 200, nullable: true)]
+    #[Groups(['student_read'])]
     private ?string $elternemail = NULL;
 
     #[ORM\Column(type: 'boolean', nullable: true)]

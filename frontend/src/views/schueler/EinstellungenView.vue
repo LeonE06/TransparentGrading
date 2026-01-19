@@ -2,6 +2,7 @@
     <div class="einstellungen-view">
 
         <h1 class="title">Einstellungen</h1>
+
         <div class="container">
 
             <div class="container-header">
@@ -131,6 +132,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useTheme } from '@/composables/useTheme.js'
+
 const { isDark, toggleTheme } = useTheme()
 
 // Benachrichtigungen State
@@ -142,16 +144,99 @@ const elternEmail = ref('')
 const elternEmailSenden = ref(false)
 const isUeber18 = ref(false)
 
+// API-Konfiguration
+const isDev = import.meta.env.DEV
+const apiBase = import.meta.env.VITE_API_URL || ''
+const apiPrefix = isDev ? '' : `${apiBase}/api`
+
+// Funktion zum Berechnen des Alters
+function calculateAge(birthDate) {
+    if (!birthDate) return null
+
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--
+    }
+
+    return age
+}
+
+// Funktion zum Laden der Schüler-Daten (nur für isUeber18 und elternEmail)
+async function loadCurrentStudent() {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`${apiPrefix}/schueler/me`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        const student = res.data
+        const geburtsdatum = student.geburtsdatum
+
+        // Eltern-Email speichern (robust prüfen)
+        const emailValue = student.einstellungen?.elternemail
+        elternEmail.value = (emailValue && emailValue.trim() !== '') ? emailValue : null
+
+        // Prüfen ob über 18
+        if (geburtsdatum) {
+            const age = calculateAge(geburtsdatum)
+            isUeber18.value = age >= 18
+        } else {
+            isUeber18.value = false
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Schüler-Daten:', error)
+    }
+}
+
 // Einstellungen vom Server laden
 async function loadSettings() {
     try {
-        const res = await axios.get('/settings')
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`${apiPrefix}/settings`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
         benachrichtigungen.value = res.data?.benachrichtigungen ?? false
-        elternEmail.value = res.data?.elternemail ?? ''
-        elternEmailSenden.value = res.data?.elternaktivierung ?? false
-        isUeber18.value = res.data?.isUeber18 ?? false
+
+        // Eltern-Email und Aktivierung werden jetzt aus loadCurrentStudent geladen
+        // aber wir aktualisieren sie hier auch, falls sie sich geändert haben
+        if (res.data?.elternemail) {
+            elternEmail.value = res.data.elternemail
+        }
+
+        // Wenn unter 18: Standardmäßig auf true setzen, falls nicht bereits gesetzt
+        if (!isUeber18.value) {
+            // Wenn unter 18 und elternaktivierung nicht explizit auf false gesetzt wurde
+            if (res.data?.elternaktivierung === undefined || res.data?.elternaktivierung === null || res.data?.elternaktivierung === false) {
+                elternEmailSenden.value = true
+                // Automatisch im Backend speichern
+                await sendElternEmail(true)
+            } else {
+                elternEmailSenden.value = res.data.elternaktivierung
+            }
+        } else {
+            // Wenn über 18: Normal aus dem Server laden
+            if (res.data?.elternaktivierung !== undefined) {
+                elternEmailSenden.value = res.data.elternaktivierung
+            }
+        }
     } catch (err) {
         console.warn('Benachrichtigungen: Laden fehlgeschlagen', err)
+        // Bei Fehler: Wenn unter 18, trotzdem auf true setzen und speichern
+        if (!isUeber18.value) {
+            elternEmailSenden.value = true
+            try {
+                await sendElternEmail(true)
+            } catch (saveErr) {
+                console.warn('Automatisches Speichern der Eltern-Aktivierung fehlgeschlagen', saveErr)
+            }
+        }
     }
 }
 
@@ -162,7 +247,12 @@ async function saveBenachrichtigungen(value) {
     saveTimer = setTimeout(async () => {
         loading.value = true
         try {
-            await axios.put('/settings', { benachrichtigungen: !!value })
+            const token = localStorage.getItem('token')
+            await axios.put(`${apiPrefix}/settings`, { benachrichtigungen: !!value }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
         } catch (err) {
             console.warn('Benachrichtigungen: Speichern fehlgeschlagen', err)
         } finally {
@@ -180,8 +270,13 @@ async function saveElternEmail() {
     emailSaveTimer = setTimeout(async () => {
         loading.value = true
         try {
-            await axios.put('/settings', {
+            const token = localStorage.getItem('token')
+            await axios.put(`${apiPrefix}/settings`, {
                 elternemail: elternEmail.value || null
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
             })
         } catch (err) {
             console.warn('Eltern-Email: Speichern fehlgeschlagen', err)
@@ -193,19 +288,36 @@ async function saveElternEmail() {
 
 // Eltern-Email Aktivierung speichern
 async function sendElternEmail(value) {
+    // Wenn unter 18, erlaube das Ändern nicht (sollte immer true sein)
     if (!isUeber18.value) {
-        elternEmailSenden.value = false
-        return
+        // Wenn versucht wird, es auf false zu setzen, verhindern wir das
+        if (!value) {
+            elternEmailSenden.value = true
+            return
+        }
+        // Wenn es auf true gesetzt werden soll, erlauben wir das (für Initialisierung)
     }
 
     loading.value = true
     try {
-        await axios.put('/settings', {
+        const token = localStorage.getItem('token')
+        await axios.put(`${apiPrefix}/settings`, {
             elternaktivierung: !!value
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         })
+        // Erfolgreich gespeichert
+        elternEmailSenden.value = !!value
     } catch (err) {
         console.warn('Eltern-Aktivierung: Speichern fehlgeschlagen', err)
-        elternEmailSenden.value = !value // Rollback bei Fehler
+        // Wenn unter 18 und Fehler, trotzdem auf true bleiben
+        if (!isUeber18.value) {
+            elternEmailSenden.value = true
+        } else {
+            elternEmailSenden.value = !value // Rollback bei Fehler
+        }
     } finally {
         loading.value = false
     }
@@ -213,8 +325,11 @@ async function sendElternEmail(value) {
 
 
 // Beim Laden der Komponente Einstellungen laden
-onMounted(() => {
-    loadSettings()
+onMounted(async () => {
+    // Zuerst Schüler-Daten laden (für isUeber18)
+    await loadCurrentStudent()
+    // Dann Einstellungen laden (kann jetzt isUeber18 verwenden)
+    await loadSettings()
 })
 </script>
 
@@ -365,9 +480,10 @@ input:checked+.slider:before {
     width: 100%;
 }
 
-.toggle > div:first-child {
+.toggle>div:first-child {
     flex: 1;
-    min-width: 0; /* Wichtig für Text-Overflow */
+    min-width: 0;
+    /* Wichtig für Text-Overflow */
 }
 
 input,
