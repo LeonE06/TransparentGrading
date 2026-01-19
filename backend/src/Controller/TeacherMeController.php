@@ -30,7 +30,7 @@ class TeacherMeController extends AbstractController
             return new JsonResponse(['error' => 'Lehrer nicht gefunden'], 404);
         }
 
-        $lehrer = $em->getRepository(Lehrer::class)->findOneBy(['ms365usr' => $m365]);
+        $lehrer = $em->getRepository(Lehrer::class)->findOneBy(['ms365User' => $m365]);
         if (!$lehrer) {
             return new JsonResponse(['error' => 'Lehrer nicht gefunden'], 404);
         }
