@@ -19,10 +19,10 @@ const router = createRouter({
     { path: '/admin/hilfe', component: () => import('../views/HilfeView.vue'), meta: { navbar: 'admin', role: 'Admin' }},
 
    // LEHRER
-{ path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-{ path: '/lehrer/fach/:id', component: () => import('../views/lehrer/FachDetailView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-{ path: '/lehrer/leistungen', component: () => import('../views/lehrer/LeistungserfassungView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
-{ path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+    { path: '/lehrer/faecher', component: () => import('../views/lehrer/FaecherView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+    { path: '/lehrer/fach/:id', component: () => import('../views/lehrer/FachDetailView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+    { path: '/lehrer/hilfe', component: () => import('../views/lehrer/LeistungserfassungView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
+    { path: '/lehrer/einstellungen', component: () => import('../views/lehrer/EinstellungenView.vue'), meta: { navbar: 'teacher', role: 'Lehrer' }},
 
 
     // SCHÜLER
