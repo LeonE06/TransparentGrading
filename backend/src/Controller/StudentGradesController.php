@@ -40,7 +40,7 @@ class StudentGradesController extends AbstractController
             }
 
             $schueler = $em->getRepository(\App\Entity\Schueler::class)
-                           ->findOneBy(['ms365usr' => $user->getId()]);
+                           ->findOneBy(['ms365User' => $user->getId()]);
 
             if (!$schueler) {
                 return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);

@@ -14,20 +14,24 @@ class Aufgaben
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = NULL;
+    private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'aufgaben')]
     #[ORM\JoinColumn(name: 'kurs_id', referencedColumnName: 'id', nullable: false)]
-    private ?Kurse $kurs = NULL;
+    private ?Kurse $kurs = null;
 
     #[ORM\Column(length: 200)]
     private string $titel;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $beschreibung = NULL;
+    private ?string $beschreibung = null;
+
+    // ✅ NEU (nur wenn du die DB-Spalte kommentar angelegt hast)
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $kommentar = null;
 
     #[ORM\Column(type: 'date', nullable: true)]
-    private ?\DateTimeInterface $faelligkeit = NULL;
+    private ?\DateTimeInterface $faelligkeit = null;
 
     #[ORM\OneToMany(mappedBy: 'aufgabe', targetEntity: AufgabenBewertung::class)]
     private Collection $bewertungen;
@@ -72,6 +76,17 @@ class Aufgaben
     public function setBeschreibung(?string $beschreibung): self
     {
         $this->beschreibung = $beschreibung;
+        return $this;
+    }
+
+    public function getKommentar(): ?string
+    {
+        return $this->kommentar;
+    }
+
+    public function setKommentar(?string $kommentar): self
+    {
+        $this->kommentar = $kommentar;
         return $this;
     }
 
