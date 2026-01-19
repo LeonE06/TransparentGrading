@@ -33,6 +33,10 @@
           <div class="klasse">{{ c.klasse }}</div>
         </div>
         <button class="kebab" type="button" title="Optionen" @click.stop>⋮</button>
+        <h3>{{ subject.title }}</h3>
+        <p>{{ subject.short }}</p>
+        <div class="schema-badge">Aktives Schema: <strong>{{ activeSchemeName }}</strong></div>
+        <button class="icon-btn" title="Optionen">⋯</button>
       </article>
     </div>
   </section>
@@ -42,6 +46,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMyCourses } from '@/services/teacherData'
+import { getSubjects } from '@/services/teacherData'
+import SubjectCreateModal from '@/components/SubjectCreateModal.vue'
+import grading from '@/services/grading'
 
 const router = useRouter()
 
@@ -73,6 +80,8 @@ const sortedCourses = computed(() => {
   else list.sort((a, b) => String(a.fach || '').localeCompare(String(b.fach || '')))
   return list
 })
+
+const activeSchemeName = computed(() => grading.getActiveScheme()?.name || 'Standard')
 
 function openDetail(id) {
   router.push(`/lehrer/faecher/${id}`)
@@ -198,6 +207,13 @@ function openDetail(id) {
 }
 
 .kebab {
+.schema-badge {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.icon-btn {
   position: absolute;
   right: 10px;
   bottom: 10px;
