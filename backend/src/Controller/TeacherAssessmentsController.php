@@ -31,7 +31,7 @@ class TeacherAssessmentsController extends AbstractController
             return null;
         }
 
-        return $em->getRepository(Lehrer::class)->findOneBy(['ms365Userr' => $m365]);
+        return $em->getRepository(Lehrer::class)->findOneBy(['ms365User' => $m365]);
     }
 
     #[Route('/faecher/{kursId<\\d+>}/leistungsfeststellungen', name: 'list', methods: ['GET'])]
