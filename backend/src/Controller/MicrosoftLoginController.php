@@ -82,10 +82,19 @@ if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) 
     }
 }
             $vorname  = $graphUser['givenName'] ?? '';
-            $nachname = $graphUser['surname'] ?? '';
+$nachname = $graphUser['surname'] ?? '';
 
-            // Benutzer in DB anlegen/finden + Rolle bestimmen
-            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+$local = explode('@', strtolower($email))[0];
+
+// ⚠️ TESTMODE: Schüler (4 Ziffern) -> Lehrer
+if (preg_match('/^[0-9]{4}$/', $local)) {
+    $role = 'Lehrer';
+    // optional: trotzdem in DB anlegen/finden (wenn dein Service nötig ist)
+    // $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+} else {
+    // normaler Flow
+    $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+}
 
             // JWT bauen
             $payload = [
