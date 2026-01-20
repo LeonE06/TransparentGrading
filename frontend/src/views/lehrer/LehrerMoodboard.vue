@@ -6,7 +6,9 @@
     <section class="page">
       <header class="head">
         <h1 class="title">Moodboard</h1>
-        <p class="subtitle">Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.</p>
+        <p class="subtitle">
+          Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.
+        </p>
       </header>
 
       <div class="toolbar">
@@ -31,7 +33,12 @@
 
         <div class="spacer"></div>
 
-        <button class="btn" type="button" @click="loadMood" :disabled="!selectedKlasseId || loading">
+        <button
+          class="btn"
+          type="button"
+          @click="loadMood"
+          :disabled="!selectedKlasseId || loading"
+        >
           Aktualisieren
         </button>
       </div>
@@ -63,12 +70,8 @@
               Lern-Mood: <span class="muted">{{ klasseName }}</span>
             </div>
 
-            <div class="avg" v-if="overallAvg !== null">
-              Ø {{ overallAvg }}
-            </div>
-            <div class="avg muted" v-else>
-              Keine Daten
-            </div>
+            <div class="avg" v-if="overallAvg !== null">Ø {{ overallAvg }}</div>
+            <div class="avg muted" v-else>Keine Daten</div>
           </div>
 
           <div class="chart-wrap">
@@ -85,36 +88,38 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
-import { apiClient } from '@/services/apiClient'
-import TeacherNavbar from '@/components/TeacherNavbar.vue'
+import { computed, onBeforeUnmount, onMounted, ref, nextTick } from "vue";
+import Chart from "chart.js/auto";
+import { apiClient } from "@/services/apiClient";
+import TeacherNavbar from "@/components/TeacherNavbar.vue";
 
-const klassen = ref([])
-const selectedKlasseId = ref('')
-const selectedRange = ref('weekly')
+const klassen = ref([]);
+const selectedKlasseId = ref("");
+const selectedRange = ref("weekly");
 
-const labels = ref([])
-const values = ref([])
-const overallAvg = ref(null)
+const labels = ref([]);
+const values = ref([]);
+const overallAvg = ref(null);
 
-const loading = ref(false)
-const error = ref('')
+const loading = ref(false);
+const error = ref("");
 
-const moodChartEl = ref(null)
-let chart = null
+const moodChartEl = ref(null);
+let chart = null;
 
 const klasseName = computed(() => {
-  const k = klassen.value.find(x => String(x.id) === String(selectedKlasseId.value))
-  return k?.name ?? '—'
-})
+  const k = klassen.value.find(
+    (x) => String(x.id) === String(selectedKlasseId.value),
+  );
+  return k?.name ?? "—";
+});
 
 async function loadKlassen() {
-  const res = await apiClient.get('/lehrer/klassen')
-  klassen.value = res.data || []
+  const res = await apiClient.get("/lehrer/klassen");
+  klassen.value = res.data || [];
 
   if (!selectedKlasseId.value && klassen.value.length > 0) {
-    selectedKlasseId.value = String(klassen.value[0].id)
+    selectedKlasseId.value = String(klassen.value[0].id);
   }
 }
 
@@ -129,7 +134,7 @@ const svgNeutral = `
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <line x1="28" y1="76.5" x2="83" y2="76.5" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
-`
+`;
 
 const svgSchlecht = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -138,7 +143,7 @@ const svgSchlecht = `
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
-`
+`;
 
 const svgGut = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -148,120 +153,125 @@ const svgGut = `
 <path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M27.5 68.5H82.5" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
-`
+`;
 
 function getLegendSvg(type) {
-  if (type === 'gut') return svgGut
-  if (type === 'neutral') return svgNeutral
-  return svgSchlecht
+  if (type === "gut") return svgGut;
+  if (type === "neutral") return svgNeutral;
+  return svgSchlecht;
 }
 
 function svgToImg(svgString) {
-  const img = new Image()
+  const img = new Image();
   const encoded = encodeURIComponent(svgString)
-    .replace(/'/g, '%27')
-    .replace(/"/g, '%22')
-  img.src = `data:image/svg+xml;charset=utf-8,${encoded}`
-  return img
+    .replace(/'/g, "%27")
+    .replace(/"/g, "%22");
+  img.src = `data:image/svg+xml;charset=utf-8,${encoded}`;
+  return img;
 }
 
-const yIconGut = svgToImg(svgGut)
-const yIconNeutral = svgToImg(svgNeutral)
-const yIconSchlecht = svgToImg(svgSchlecht)
+const yIconGut = svgToImg(svgGut);
+const yIconNeutral = svgToImg(svgNeutral);
+const yIconSchlecht = svgToImg(svgSchlecht);
 
 const yAxisIconsPlugin = {
-  id: 'yAxisIconsPlugin',
+  id: "yAxisIconsPlugin",
   afterDraw(chart) {
-    const yScale = chart.scales?.y
-    if (!yScale) return
+    const yScale = chart.scales?.y;
+    if (!yScale) return;
 
-    const ctx = chart.ctx
-    const size = 16
-    const x = yScale.left - size - 10
+    const ctx = chart.ctx;
+    const size = 16;
+    const x = yScale.left - size - 10;
 
     const drawAt = (value, img) => {
-      const y = yScale.getPixelForValue(value) - size / 2
-      if (img?.complete) ctx.drawImage(img, x, y, size, size)
-    }
+      const y = yScale.getPixelForValue(value) - size / 2;
+      if (img?.complete) ctx.drawImage(img, x, y, size, size);
+    };
 
-    drawAt(3, yIconGut)
-    drawAt(2, yIconNeutral)
-    drawAt(1, yIconSchlecht)
-  }
-}
+    drawAt(3, yIconGut);
+    drawAt(2, yIconNeutral);
+    drawAt(1, yIconSchlecht);
+  },
+};
 
 async function loadMood() {
-  if (!selectedKlasseId.value) return
+  if (!selectedKlasseId.value) return;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
-    const res = await apiClient.get('/lehrer/mood', {
-      params: { klasseId: selectedKlasseId.value, range: selectedRange.value }
-    })
+    const res = await apiClient.get("/lehrer/mood", {
+      params: { klasseId: selectedKlasseId.value, range: selectedRange.value },
+    });
 
-    labels.value = res.data?.labels ?? []
-    values.value = res.data?.values ?? []
-    overallAvg.value = res.data?.overall_avg ?? null
+    labels.value = res.data?.labels ?? [];
+    values.value = res.data?.values ?? [];
+    overallAvg.value = res.data?.overall_avg ?? null;
   } catch (e) {
-    error.value = e?.response?.data?.error || e?.message || 'Unbekannter Fehler'
-    labels.value = []
-    values.value = []
-    overallAvg.value = null
-    destroyChart()
+    error.value =
+      e?.response?.data?.error || e?.message || "Unbekannter Fehler";
+    labels.value = [];
+    values.value = [];
+    overallAvg.value = null;
+    destroyChart();
   } finally {
-    loading.value = false
-    await nextTick()
+    loading.value = false;
+    await nextTick();
 
     if (!error.value && labels.value.length > 0) {
-      renderChart()
+      renderChart();
     } else {
-      destroyChart()
+      destroyChart();
     }
   }
 }
 
 function destroyChart() {
   if (chart) {
-    chart.destroy()
-    chart = null
+    chart.destroy();
+    chart = null;
   }
 }
 
 function renderChart() {
-  const canvas = moodChartEl.value
-  if (!canvas) return
+  const canvas = moodChartEl.value;
+  if (!canvas) return;
 
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  destroyChart()
+  destroyChart();
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 260)
-  gradient.addColorStop(0, 'rgba(106,22,204,0.0)')
-  gradient.addColorStop(1, 'rgba(106,22,204,0.25)')
+  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, "rgba(106,22,204,0.0)");
+  gradient.addColorStop(1, "rgba(106,22,204,0.25)");
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
       labels: labels.value,
-      datasets: [{
-        label: 'Mood (Ø)',
-        data: values.value,
-        borderColor: '#6a16cc',
-        backgroundColor: gradient,
-        tension: 0.35,
-        fill: { target: 'start' },
-        pointBackgroundColor: '#6a16cc',
-        pointRadius: 4
-      }]
+      datasets: [
+        {
+          label: "Mood (Ø)",
+          data: values.value,
+          borderColor: "#6a16cc",
+          backgroundColor: "transparent",
+          tension: 0.35,
+          fill: false, // ❗ ganz wichtig
+          pointBackgroundColor: "#6a16cc",
+          pointBorderColor: "#6a16cc",
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
       },
       scales: {
         y: {
@@ -269,31 +279,37 @@ function renderChart() {
           max: 3,
           ticks: {
             stepSize: 1,
-            callback: () => '' // ✅ keine Emoji-Text-Ticks mehr
-          }
+            callback: () => "",
+          },
+          grid: {
+            color: "rgba(0,0,0,0.04)", // sehr dezent
+          },
         },
         x: {
-          ticks: { maxRotation: 0 }
-        }
-      }
+          grid: {
+            color: "rgba(0,0,0,0.04)",
+          },
+          ticks: { maxRotation: 0 },
+        },
+      },
     },
-    plugins: [yAxisIconsPlugin]
-  })
+    plugins: [yAxisIconsPlugin],
+  });
 
   // falls Icons erst nach dem ersten Draw laden → nochmal updaten
-  yIconGut.onload = () => chart?.update()
-  yIconNeutral.onload = () => chart?.update()
-  yIconSchlecht.onload = () => chart?.update()
+  yIconGut.onload = () => chart?.update();
+  yIconNeutral.onload = () => chart?.update();
+  yIconSchlecht.onload = () => chart?.update();
 }
 
 onMounted(async () => {
-  await loadKlassen()
-  if (selectedKlasseId.value) await loadMood()
-})
+  await loadKlassen();
+  if (selectedKlasseId.value) await loadMood();
+});
 
 onBeforeUnmount(() => {
-  destroyChart()
-})
+  destroyChart();
+});
 </script>
 
 <style scoped>
@@ -390,35 +406,33 @@ onBeforeUnmount(() => {
 .mood-scale {
   background: #f7f7fb;
   border-radius: 16px;
-  padding: 1rem 0.75rem;
+  padding: 2rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  justify-content: center;
+  justify-content: space-between; /* 🔥 wichtig */
   align-items: center;
 }
 
 .mood-dot {
   width: 84px;
   text-align: center;
+  transform: translateY(-4px); /* kleine optische Korrektur */
 }
-
 /* SVG-Legende links (klein) */
 .svg-emoji {
-  display: inline-flex;
-  width: 46px;
-  height: 46px;
-  align-items: center;
-  justify-content: center;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 2px solid #6a16cc;
   background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .svg-emoji :deep(svg) {
-  width: 34px !important;
-  height: 34px !important;
-  display: block;
+  width: 30px !important;
+  height: 30px !important;
 }
 
 .txt {
@@ -432,7 +446,7 @@ onBeforeUnmount(() => {
   background: #fff;
   border-radius: 16px;
   padding: 1.25rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   min-height: 380px;
   display: flex;
   flex-direction: column;
