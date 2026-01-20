@@ -52,18 +52,19 @@ class MicrosoftUserService
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
+// Schüler-Mail (4 Ziffern) → Lehrer
 if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
-}
-
-if (preg_match('/^[a-z]{3}$/', $localPart)) {
     $this->ensureLehrer($existingUser, $vorname, $nachname);
     return 'Lehrer';
 }
 
-        return 'Unbekannt';
-    }
+// Lehrer-Mail (3 Buchstaben) → Schüler
+if (preg_match('/^[a-z]{3}$/', $localPart)) {
+    $this->ensureSchueler($existingUser, $vorname, $nachname);
+    return 'Schueler';
+}
+
+return 'Unbekannt';
 
     /**
      * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
