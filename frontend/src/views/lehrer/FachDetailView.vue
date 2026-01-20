@@ -126,7 +126,7 @@
           </div>
 
           <div class="scheme-pill">
-            Aktuell: <strong>{{ activeSchemeName }}</strong>
+            <p>Aktuell: <strong>{{ schemeName }}</strong></p>>
           </div>
         </div>
 
@@ -234,9 +234,11 @@ const courseSchemeId = ref("default");
 
 // Name des aktiven Schemas (für Modal-Anzeige)
 const activeSchemeName = computed(() => {
-  const s = grading.getActiveSchemeForCourse?.(kursId.value);
-  return s?.name || "Standard";
-});
+  const s = schemes.value.find(
+    x => String(x.id) === String(courseSchemeId.value)
+  )
+  return s?.name || "Standard"
+})
 
 // --- Tabs ---
 const tab = ref(route.path.endsWith("/leistungsfeststellungen") ? "assessments" : "overview");
