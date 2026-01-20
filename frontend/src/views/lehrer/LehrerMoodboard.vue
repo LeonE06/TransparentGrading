@@ -84,6 +84,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
 import { apiClient } from '@/services/apiClient'
+import { nextTick } from 'vue'
 
 
 const klassen = ref([])
@@ -123,17 +124,12 @@ async function loadMood() {
 
   try {
     const res = await apiClient.get('/lehrer/mood', {
-      params: {
-        klasseId: selectedKlasseId.value,
-        range: selectedRange.value
-      }
+      params: { klasseId: selectedKlasseId.value, range: selectedRange.value }
     })
 
     labels.value = res.data?.labels ?? []
     values.value = res.data?.values ?? []
     overallAvg.value = res.data?.overall_avg ?? null
-
-    renderChart()
   } catch (e) {
     error.value = e?.response?.data?.error || e?.message || 'Unbekannter Fehler'
     labels.value = []
@@ -142,6 +138,16 @@ async function loadMood() {
     destroyChart()
   } finally {
     loading.value = false
+
+    // ✅ Warten bis der Canvas wieder im DOM ist
+    await nextTick()
+
+    // ✅ Chart erst jetzt rendern
+    if (!error.value && labels.value.length > 0) {
+      renderChart()
+    } else {
+      destroyChart()
+    }
   }
 }
 
