@@ -75,6 +75,28 @@
             </div>
           </div>
 
+          <div class="card">
+            <h3>Notengrenzen (Gesamtnote)</h3>
+            <p class="help-text">Definieren Sie die Schwellenwerte in Prozent, ab denen eine Note gilt.</p>
+            <div class="grade-bands-table">
+              <div class="grade-bands-header">
+                <span>Ab %</span>
+                <span>Note</span>
+                <span></span>
+              </div>
+              <div
+                v-for="(band, idx) in localScheme.gradeBands"
+                :key="`band-${idx}`"
+                class="grade-bands-row"
+              >
+                <input v-model.number="band.min" type="number" min="0" max="100" class="form-control" />
+                <input v-model.number="band.grade" type="number" min="1" max="6" class="form-control" />
+                <button class="btn danger" @click="removeGradeBand(idx)" :disabled="localScheme.gradeBands.length <= 1">Entfernen</button>
+              </div>
+            </div>
+            <button class="btn primary" style="margin-top: 1rem;" @click="addGradeBand">Notengrenze hinzufügen</button>
+          </div>
+
           <div v-if="localScheme.mode === 'group'" class="card">
             <h3>Kategorien definieren</h3>
             <div class="categories-list">
@@ -119,12 +141,35 @@
 import { ref, computed, onMounted } from 'vue'
 import grading from '@/services/grading'
 
+const DEFAULT_GRADE_BANDS = [
+  { min: 92, grade: 1 },
+  { min: 81, grade: 2 },
+  { min: 65, grade: 3 },
+  { min: 50, grade: 4 },
+  { min: 0, grade: 5 }
+]
+
 const schemes = ref([])
 const selectedSchemeId = ref(null)
 const activeSchemeId = ref(null)
 const selectedName = ref('')
 
-const localScheme = ref({ mode: 'per-item', scoreType: 'grades', maxPoints: 100, categories: [] })
+const localScheme = ref({
+  mode: 'per-item',
+  scoreType: 'grades',
+  maxPoints: 100,
+  gradeBands: DEFAULT_GRADE_BANDS.map(b => ({ ...b })),
+  categories: []
+})
+
+function normalizeLocalScheme(scheme) {
+  const normalized = JSON.parse(JSON.stringify(scheme || {}))
+  if (!Array.isArray(normalized.categories)) normalized.categories = []
+  if (!Array.isArray(normalized.gradeBands) || normalized.gradeBands.length === 0) {
+    normalized.gradeBands = DEFAULT_GRADE_BANDS.map(b => ({ ...b }))
+  }
+  return normalized
+}
 
 function loadAll() {
   schemes.value = grading.loadAllSchemes()
@@ -134,7 +179,7 @@ function loadAll() {
   const activeObj = grading.getSchemeById(selectedSchemeId.value)
   if (activeObj) {
     selectedName.value = activeObj.name
-    localScheme.value = JSON.parse(JSON.stringify(activeObj.scheme))
+    localScheme.value = normalizeLocalScheme(activeObj.scheme)
   }
 }
 
@@ -154,7 +199,7 @@ function selectScheme(id) {
   const s = grading.getSchemeById(id)
   if (s) {
     selectedName.value = s.name
-    localScheme.value = JSON.parse(JSON.stringify(s.scheme))
+    localScheme.value = normalizeLocalScheme(s.scheme)
   }
 }
 
@@ -199,6 +244,10 @@ function setActive(id) {
 
 function saveSchemeChanges() {
   if (!selectedScheme.value) return
+  if (!Array.isArray(localScheme.value.gradeBands)) localScheme.value.gradeBands = []
+  localScheme.value.gradeBands = localScheme.value.gradeBands
+    .map(b => ({ min: Number(b.min), grade: Number(b.grade) }))
+    .sort((a, b) => b.min - a.min)
   // validate
   const validation = grading.validateScheme(localScheme.value)
   if (!validation.valid) {
@@ -224,6 +273,17 @@ function addCategory() {
 
 function removeCategory(idx) {
   localScheme.value.categories.splice(idx, 1)
+}
+
+function addGradeBand() {
+  if (!Array.isArray(localScheme.value.gradeBands)) localScheme.value.gradeBands = []
+  localScheme.value.gradeBands.push({ min: 0, grade: 5 })
+}
+
+function removeGradeBand(idx) {
+  if (!Array.isArray(localScheme.value.gradeBands)) return
+  if (localScheme.value.gradeBands.length <= 1) return
+  localScheme.value.gradeBands.splice(idx, 1)
 }
 
 // (helper functions defined above are used)
@@ -300,6 +360,24 @@ function removeCategory(idx) {
   grid-template-columns: 1fr 1fr auto;
   gap: 0.5rem;
   align-items: flex-end;
+}
+
+.grade-bands-table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.grade-bands-header,
+.grade-bands-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.grade-bands-header {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .btn {

@@ -274,6 +274,25 @@ export function validateScheme(scheme) {
   const errors = []
   if (!scheme || !scheme.mode) errors.push('Kein Modus gesetzt')
 
+  const bands = Array.isArray(scheme?.gradeBands) ? scheme.gradeBands : []
+  if (bands.length === 0) {
+    errors.push('Keine Notengrenzen definiert')
+  } else {
+    bands.forEach((b, idx) => {
+      const min = Number(b.min)
+      const grade = Number(b.grade)
+      if (!Number.isFinite(min) || min < 0 || min > 100) {
+        errors.push(`Ungültige Prozentgrenze in Zeile ${idx + 1}`)
+      }
+      if (!Number.isFinite(grade) || grade <= 0) {
+        errors.push(`Ungültige Note in Zeile ${idx + 1}`)
+      }
+    })
+    const mins = bands.map(b => Number(b.min))
+    const hasZero = mins.some(m => m === 0)
+    if (!hasZero) errors.push('Notengrenzen müssen eine Untergrenze von 0% enthalten')
+  }
+
   if (scheme.mode === 'group') {
     if (!Array.isArray(scheme.categories) || scheme.categories.length === 0) {
       errors.push('Keine Kategorien definiert')
