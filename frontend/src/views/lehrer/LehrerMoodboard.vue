@@ -1,91 +1,92 @@
-<!-- frontend/src/views/lehrer/LehrerMoodboard.vue  (oder MoodboardView.vue) -->
+<!-- frontend/src/views/lehrer/LehrerMoodboard.vue -->
 <template>
-  <section class="page">
-    <header class="head">
-      <h1 class="title">Moodboard</h1>
-      <p class="subtitle">Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.</p>
-    </header>
+  <SidebarLayout>
+    <section class="page">
+      <header class="head">
+        <h1 class="title">Moodboard</h1>
+        <p class="subtitle">Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.</p>
+      </header>
 
-    <div class="toolbar">
-      <label class="field">
-        <span class="label">Klasse</span>
-        <select class="select" v-model="selectedKlasseId">
-          <option value="">Auswählen</option>
-          <option v-for="k in klassen" :key="k.id" :value="String(k.id)">
-            {{ k.name }}
-          </option>
-        </select>
-      </label>
+      <div class="toolbar">
+        <label class="field">
+          <span class="label">Klasse</span>
+          <select class="select" v-model="selectedKlasseId">
+            <option value="">Auswählen</option>
+            <option v-for="k in klassen" :key="k.id" :value="String(k.id)">
+              {{ k.name }}
+            </option>
+          </select>
+        </label>
 
-      <label class="field">
-        <span class="label">Zeitraum</span>
-        <select class="select" v-model="selectedRange">
-          <option value="daily">Täglich</option>
-          <option value="weekly">Wöchentlich</option>
-          <option value="monthly">Monatlich</option>
-        </select>
-      </label>
+        <label class="field">
+          <span class="label">Zeitraum</span>
+          <select class="select" v-model="selectedRange">
+            <option value="daily">Täglich</option>
+            <option value="weekly">Wöchentlich</option>
+            <option value="monthly">Monatlich</option>
+          </select>
+        </label>
 
-      <div class="spacer"></div>
+        <div class="spacer"></div>
 
-      <button class="btn" type="button" @click="loadMood" :disabled="!selectedKlasseId || loading">
-        Aktualisieren
-      </button>
-    </div>
-
-    <div v-if="loading" class="state">Lade Mood-Daten …</div>
-    <div v-else-if="error" class="state error">Fehler: {{ error }}</div>
-
-    <div v-else class="board">
-      <!-- left mood scale -->
-      <div class="mood-scale">
-        <div class="mood-dot">
-          <span class="emoji">🙂</span>
-          <span class="txt">gut</span>
-        </div>
-        <div class="mood-dot">
-          <span class="emoji">😐</span>
-          <span class="txt">neutral</span>
-        </div>
-        <div class="mood-dot">
-          <span class="emoji">🙁</span>
-          <span class="txt">schlecht</span>
-        </div>
+        <button class="btn" type="button" @click="loadMood" :disabled="!selectedKlasseId || loading">
+          Aktualisieren
+        </button>
       </div>
 
-      <!-- chart -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">
-            Lern-Mood: <span class="muted">{{ klasseName }}</span>
-          </div>
+      <div v-if="loading" class="state">Lade Mood-Daten …</div>
+      <div v-else-if="error" class="state error">Fehler: {{ error }}</div>
 
-          <div class="avg" v-if="overallAvg !== null">
-            Ø {{ overallAvg }}
+      <div v-else class="board">
+        <!-- left mood scale -->
+        <div class="mood-scale">
+          <div class="mood-dot">
+            <span class="emoji">🙂</span>
+            <span class="txt">gut</span>
           </div>
-          <div class="avg muted" v-else>
-            Keine Daten
+          <div class="mood-dot">
+            <span class="emoji">😐</span>
+            <span class="txt">neutral</span>
+          </div>
+          <div class="mood-dot">
+            <span class="emoji">🙁</span>
+            <span class="txt">schlecht</span>
           </div>
         </div>
 
-        <div class="chart-wrap">
-          <canvas ref="moodChartEl"></canvas>
-        </div>
+        <!-- chart -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              Lern-Mood: <span class="muted">{{ klasseName }}</span>
+            </div>
 
-        <div class="hint" v-if="labels.length === 0">
-          Keine Mood-Einträge für die Auswahl vorhanden.
+            <div class="avg" v-if="overallAvg !== null">
+              Ø {{ overallAvg }}
+            </div>
+            <div class="avg muted" v-else>
+              Keine Daten
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas ref="moodChartEl"></canvas>
+          </div>
+
+          <div class="hint" v-if="labels.length === 0">
+            Keine Mood-Einträge für die Auswahl vorhanden.
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </SidebarLayout>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
 import Chart from 'chart.js/auto'
+import SidebarLayout from '@/components/SidebarLayout.vue'
 import { apiClient } from '@/services/apiClient'
-import { nextTick } from 'vue'
-
 
 const klassen = ref([])
 const selectedKlasseId = ref('')
@@ -167,7 +168,6 @@ function renderChart() {
 
   destroyChart()
 
-  // Gradient (wie bei dir im Projekt)
   const gradient = ctx.createLinearGradient(0, 0, 0, 260)
   gradient.addColorStop(0, 'rgba(106,22,204,0.0)')
   gradient.addColorStop(1, 'rgba(106,22,204,0.25)')
@@ -214,7 +214,6 @@ function renderChart() {
     }
   })
 }
-
 
 onMounted(async () => {
   await loadKlassen()
