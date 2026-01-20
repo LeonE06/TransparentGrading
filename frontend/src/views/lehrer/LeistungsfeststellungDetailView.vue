@@ -1,15 +1,21 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" :to="backToCourse">‹ {{ backLabel }}</router-link>
+      <router-link class="back" :to="backToCourse"
+        >‹ {{ backLabel }}</router-link
+      >
     </div>
 
     <header class="head">
       <div class="title-wrap">
-        <h1 class="title">{{ detail ? detail.thema : '—' }}</h1>
-        <div class="sub">{{ detail?.datum ? formatDate(detail.datum) : '' }}</div>
+        <h1 class="title">{{ detail ? detail.thema : "—" }}</h1>
+        <div class="sub">
+          {{ detail?.datum ? formatDate(detail.datum) : "" }}
+        </div>
       </div>
-      <button class="btn primary" @click="openCreate">Neue Schülerleistung erstellen</button>
+      <button class="btn primary" @click="openCreate">
+        Neue Schülerleistung erstellen
+      </button>
     </header>
 
     <div v-if="loading" class="empty">Lade …</div>
@@ -20,26 +26,47 @@
         <div class="kpi">
           <div class="kpi-label">Klassenschnitt</div>
           <div class="kpi-value">
-            {{ detail?.klassenschnittProzent != null && detail?.klassenschnitt != null ? `${detail.klassenschnittProzent}% (${formatGrade(detail.klassenschnitt)})` : '—' }}
+            {{
+              detail?.klassenschnittProzent != null &&
+              detail?.klassenschnitt != null
+                ? `${detail.klassenschnittProzent}% (${formatGrade(detail.klassenschnitt)})`
+                : "—"
+            }}
           </div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Gewichtung</div>
-          <div class="kpi-value">{{ detail?.gewichtungProzent != null ? `${detail.gewichtungProzent}%` : '—' }}</div>
+          <div class="kpi-value">
+            {{
+              detail?.gewichtungProzent != null
+                ? `${detail.gewichtungProzent}%`
+                : "—"
+            }}
+          </div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Teilnahmequote</div>
-          <div class="kpi-value">{{ detail?.teilnahmequote != null ? `${detail.teilnahmequote}%` : '—' }}</div>
+          <div class="kpi-value">
+            {{
+              detail?.teilnahmequote != null ? `${detail.teilnahmequote}%` : "—"
+            }}
+          </div>
         </div>
         <div class="kpi">
           <div class="kpi-label">mögliche Punkte</div>
-          <div class="kpi-value">{{ detail?.maxPunkte != null ? detail.maxPunkte : '—' }}</div>
+          <div class="kpi-value">
+            {{ detail?.maxPunkte != null ? detail.maxPunkte : "—" }}
+          </div>
         </div>
       </div>
 
       <div class="table-head">
         <div class="table-title">Schülerleistungen</div>
-        <input v-model="search" class="search" placeholder="Nach Schüler*in suchen" />
+        <input
+          v-model="search"
+          class="search"
+          placeholder="Nach Schüler*in suchen"
+        />
       </div>
 
       <DataTable
@@ -50,35 +77,84 @@
       >
         <template #cell-leistung="{ row }">
           <span v-if="row.punkte != null && detail?.maxPunkte != null">
-            {{ row.punkte }} Punkte ({{ Math.round((row.punkte / (detail.maxPunkte || 1)) * 100) }}%)
+            {{ row.punkte }} Punkte ({{
+              Math.round((row.punkte / (detail.maxPunkte || 1)) * 100)
+            }}%)
           </span>
           <span v-else>—</span>
         </template>
-        <template #cell-note="{ row }">{{ row.note != null ? formatGrade(row.note) : '—' }}</template>
+        <template #cell-note="{ row }">{{
+          row.note != null ? formatGrade(row.note) : "—"
+        }}</template>
         <template #cell-datum="{ row }">{{ formatDate(row.datum) }}</template>
-        <template #cell-kommentar="{ row }">{{ row.kommentar || '—' }}</template>
+        <template #cell-kommentar="{ row }">{{
+          row.kommentar || "—"
+        }}</template>
       </DataTable>
     </div>
 
-    <ModalForm :open="createOpen" title="Neue Schülerleistung erstellen" @close="closeCreate">
+    <ModalForm
+      :open="createOpen"
+      title="Neue Schülerleistung erstellen"
+      @close="closeCreate"
+    >
       <div class="form">
+        <!-- ✅ Aktives Schema im Modal -->
+        <div class="scheme-inline">
+          <div class="scheme-inline-title">Aktives Bewertungsschema</div>
+          <div class="scheme-inline-sub">
+            Dieses Schema wird für die Berechnung in diesem Fach verwendet.
+          </div>
+
+          <label class="field">
+            <span class="field-label">Schema auswählen</span>
+            <select
+              class="input"
+              v-model="courseSchemeId"
+              @change="saveCourseScheme"
+            >
+              <option v-for="s in schemes" :key="s.id" :value="s.id">
+                {{ s.name }}
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <!-- dein bestehendes Formular -->
         <label class="field">
           <span class="field-label">Schüler*in</span>
           <select v-model="createForm.schuelerId" class="input">
             <option value="">Schüler*in auswählen</option>
-            <option v-for="s in students" :key="s.id" :value="s.id">{{ s.vorname }} {{ s.nachname }}</option>
+            <option v-for="s in students" :key="s.id" :value="s.id">
+              {{ s.vorname }} {{ s.nachname }}
+            </option>
           </select>
         </label>
 
         <div class="row">
           <label class="field">
             <span class="field-label">Punkte</span>
-            <input v-model.number="createForm.punkte" class="input" type="number" min="0" :max="detail?.maxPunkte || 9999" />
+            <input
+              v-model.number="createForm.punkte"
+              class="input"
+              type="number"
+              min="0"
+              :max="detail?.maxPunkte || 9999"
+            />
           </label>
+
           <label class="field">
             <span class="field-label">Note</span>
-            <input v-model.number="createForm.note" class="input" type="number" min="1" max="5" step="0.1" />
+            <input
+              v-model.number="createForm.note"
+              class="input"
+              type="number"
+              min="1"
+              max="5"
+              step="0.1"
+            />
           </label>
+
           <label class="field">
             <span class="field-label">Datum</span>
             <input v-model="createForm.datum" class="input" type="date" />
@@ -87,131 +163,190 @@
 
         <label class="field">
           <span class="field-label">Kommentar</span>
-          <textarea v-model="createForm.kommentar" class="input textarea" rows="3" />
+          <textarea
+            v-model="createForm.kommentar"
+            class="input textarea"
+            rows="3"
+          />
         </label>
       </div>
 
       <template #actions>
-        <button class="btn ghost" type="button" @click="closeCreate">Abbrechen</button>
-        <button class="btn primary" type="button" :disabled="saving" @click="submitCreate">Schülerleistung erstellen</button>
+        <button class="btn ghost" type="button" @click="closeCreate">
+          Abbrechen
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="saving"
+          @click="submitCreate"
+        >
+          Schülerleistung erstellen
+        </button>
       </template>
     </ModalForm>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import DataTable from '@/components/DataTable.vue'
-import ModalForm from '@/components/ModalForm.vue'
-import { createStudentResult, getAssessmentDetail, getCourseStudents } from '@/services/teacherData'
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import DataTable from "@/components/DataTable.vue";
+import ModalForm from "@/components/ModalForm.vue";
+import grading from "@/services/grading";
+import {
+  createStudentResult,
+  getAssessmentDetail,
+  getCourseStudents,
+} from "@/services/teacherData";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const id = computed(() => route.params.id)
+const id = computed(() => route.params.id);
 
-const loading = ref(false)
-const error = ref('')
-const detail = ref(null)
-const students = ref([])
+const loading = ref(false);
+const error = ref("");
+const detail = ref(null);
+const students = ref([]);
 
-const search = ref('')
+const search = ref("");
 const columns = [
-  { key: 'vorname', label: 'Vorname' },
-  { key: 'nachname', label: 'Nachname' },
-  { key: 'leistung', label: 'Leistung' },
-  { key: 'note', label: 'Note' },
-  { key: 'datum', label: 'Datum' },
-  { key: 'kommentar', label: 'Kommentar', width: '42%' }
-]
+  { key: "vorname", label: "Vorname" },
+  { key: "nachname", label: "Nachname" },
+  { key: "leistung", label: "Leistung" },
+  { key: "note", label: "Note" },
+  { key: "datum", label: "Datum" },
+  { key: "kommentar", label: "Kommentar", width: "42%" },
+];
 
 const filteredRows = computed(() => {
-  const list = detail.value?.schuelerleistungen || []
-  if (!search.value) return list
-  const q = search.value.toLowerCase()
-  return list.filter((r) => `${r.vorname} ${r.nachname}`.toLowerCase().includes(q))
-})
+  const list = detail.value?.schuelerleistungen || [];
+  if (!search.value) return list;
+  const q = search.value.toLowerCase();
+  return list.filter((r) =>
+    `${r.vorname} ${r.nachname}`.toLowerCase().includes(q),
+  );
+});
+
+// ✅ Kurs-ID kommt aus Assessment-Detail
+const kursId = computed(() => detail.value?.kurs?.id ?? null);
 
 const backToCourse = computed(() => {
-  const kid = detail.value?.kurs?.id
-  return kid ? `/lehrer/faecher/${kid}/leistungsfeststellungen` : '/lehrer/faecher'
-})
+  const kid = detail.value?.kurs?.id;
+  return kid
+    ? `/lehrer/faecher/${kid}/leistungsfeststellungen`
+    : "/lehrer/faecher";
+});
 
-const backLabel = computed(() => (detail.value?.kurs?.name ? 'Meine Fächer' : 'Meine Fächer'))
+const backLabel = computed(() =>
+  detail.value?.kurs?.name ? "Meine Fächer" : "Meine Fächer",
+);
 
 function formatDate(d) {
-  if (!d) return '—'
+  if (!d) return "—";
   try {
-    return new Date(d).toLocaleDateString('de-DE')
+    return new Date(d).toLocaleDateString("de-DE");
   } catch {
-    return d
+    return d;
   }
 }
 
 function formatGrade(v) {
-  if (v == null) return '—'
-  return Number(v).toFixed(1).replace('.', ',')
+  if (v == null) return "—";
+  return Number(v).toFixed(1).replace(".", ",");
 }
 
 async function load() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
   try {
-    detail.value = await getAssessmentDetail(id.value)
-    const kid = detail.value?.kurs?.id
-    if (kid) students.value = await getCourseStudents(kid)
+    detail.value = await getAssessmentDetail(id.value);
+
+    const kid = detail.value?.kurs?.id;
+    if (kid) {
+      students.value = await getCourseStudents(kid);
+    } else {
+      students.value = [];
+    }
   } catch (e) {
-    error.value = e?.message || 'Unbekannter Fehler'
+    error.value = e?.message || "Unbekannter Fehler";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-onMounted(load)
-watch(id, load)
+onMounted(load);
+watch(id, load);
 
-const createOpen = ref(false)
-const saving = ref(false)
+// --------------------
+// ✅ Schema im Modal
+// --------------------
+const schemes = ref([]);
+const courseSchemeId = ref("default");
+
+function syncCourseSchemeUi() {
+  schemes.value = grading.loadAllSchemes();
+
+  const kid = kursId.value;
+  courseSchemeId.value =
+    (kid != null ? grading.getActiveSchemeIdForCourse?.(kid) : null) ||
+    grading.getActiveSchemeId?.() ||
+    "default";
+}
+
+function saveCourseScheme() {
+  const kid = kursId.value;
+  if (kid == null) return;
+  grading.setActiveSchemeIdForCourse(kid, courseSchemeId.value);
+}
+
+// --------------------
+// ✅ Modal Schülerleistung
+// --------------------
+const createOpen = ref(false);
+const saving = ref(false);
+
 const createForm = ref({
-  schuelerId: '',
+  schuelerId: "",
   punkte: null,
   note: null,
   datum: new Date().toISOString().slice(0, 10),
-  kommentar: ''
-})
+  kommentar: "",
+});
 
 function openCreate() {
-  createOpen.value = true
+  syncCourseSchemeUi(); // ✅ damit es immer aktuell ist
+  createOpen.value = true;
 }
 
 function closeCreate() {
-  createOpen.value = false
-  saving.value = false
+  createOpen.value = false;
+  saving.value = false;
 }
 
 async function submitCreate() {
   if (!createForm.value.schuelerId || createForm.value.note == null) {
-    alert('Bitte Schüler*in und Note ausfüllen.')
-    return
+    alert("Bitte Schüler*in und Note ausfüllen.");
+    return;
   }
 
-  saving.value = true
+  saving.value = true;
   try {
     await createStudentResult(id.value, {
       schuelerId: createForm.value.schuelerId,
       punkte: createForm.value.punkte,
       note: createForm.value.note,
       datum: createForm.value.datum,
-      kommentar: createForm.value.kommentar
-    })
-    closeCreate()
-    await load()
+      kommentar: createForm.value.kommentar,
+    });
+    closeCreate();
+    await load();
   } catch (e) {
-    alert('Konnte nicht erstellen.')
-    console.warn(e)
+    alert("Konnte nicht erstellen.");
+    console.warn(e);
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 </script>
@@ -361,5 +496,22 @@ html:not(.dark) .input {
   padding: 2rem 0;
   color: var(--muted);
 }
-</style>
+.scheme-inline {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.9rem;
+}
 
+.scheme-inline-title {
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.scheme-inline-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25rem;
+}
+</style>
