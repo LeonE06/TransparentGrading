@@ -126,7 +126,7 @@
           </div>
 
           <div class="scheme-pill">
-            <p>Aktuell: <strong>{{ schemeName }}</strong></p>>
+           <p>Aktuell: <strong>{{ activeSchemeName }}</strong></p> 
           </div>
         </div>
 
@@ -425,13 +425,8 @@ const createForm = ref({
 });
 
 function openCreateAssessment() {
-  // ✅ Modal übernimmt das aktive Schema aus der Overview-Auswahl
-  courseSchemeId.value =
-    grading.getActiveSchemeIdForCourse?.(kursId.value) ||
-    grading.getActiveSchemeId?.() ||
-    "default";
-
-  createOpen.value = true;
+  grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value)
+  createOpen.value = true
 }
 
 function closeCreateAssessment() {
