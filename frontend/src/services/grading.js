@@ -448,5 +448,10 @@ export default {
   setActiveSchemeId,
   getActiveSchemeId,
   getSchemeById,
-  getActiveScheme
+  getActiveScheme,
+
+  // ✅ per-course active scheme
+  setActiveSchemeIdForCourse,
+  getActiveSchemeIdForCourse,
+  getActiveSchemeForCourse,
 }

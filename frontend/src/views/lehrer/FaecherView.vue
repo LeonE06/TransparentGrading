@@ -258,4 +258,17 @@ function openDetail(id) {
   padding: 2rem 0;
   color: var(--muted);
 }
+.kebab {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
 </style>
