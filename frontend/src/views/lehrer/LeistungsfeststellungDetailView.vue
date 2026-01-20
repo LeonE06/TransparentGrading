@@ -1,109 +1,116 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" :to="backToCourse"
-        >‹ {{ backLabel }}</router-link
-      >
+      <router-link class="back" to="/lehrer/faecher">
+        ‹ Meine Fächer
+      </router-link>
     </div>
 
     <header class="head">
-      <div class="title-wrap">
-        <h1 class="title">{{ detail ? detail.thema : "—" }}</h1>
-        <div class="sub">
-          {{ detail?.datum ? formatDate(detail.datum) : "" }}
-        </div>
+      <h1 class="course-title">{{ course?.name || "—" }}</h1>
+      <div class="head-actions">
+        <button class="btn primary" @click="openCreateAssessment">
+          neue Leistungsfeststellung erstellen
+        </button>
+        <button class="btn primary ghost" @click="goToAssessments">
+          neue Schülerleistung erstellen
+        </button>
       </div>
-      <button class="btn primary" @click="openCreate">
-        Neue Schülerleistung erstellen
-      </button>
     </header>
+
+    <TgTabs v-model="tab" :tabs="tabs">
+      <template #right>
+        <input
+          v-if="tab === 'assessments'"
+          v-model="search"
+          class="search"
+          placeholder="Nach Leistungsfeststellung suchen"
+        />
+      </template>
+    </TgTabs>
 
     <div v-if="loading" class="empty">Lade …</div>
     <div v-else-if="error" class="empty">Fehler: {{ error }}</div>
 
-    <div v-else>
-      <div class="kpis">
-        <div class="kpi">
-          <div class="kpi-label">Klassenschnitt</div>
-          <div class="kpi-value">
-            {{
-              detail?.klassenschnittProzent != null &&
-              detail?.klassenschnitt != null
-                ? `${detail.klassenschnittProzent}% (${formatGrade(detail.klassenschnitt)})`
-                : "—"
-            }}
-          </div>
+    <!-- ================= Übersicht ================= -->
+    <div v-else-if="tab === 'overview'" class="overview">
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Klassenschnitt</div>
+          <div class="value">{{ overview?.klassenschnitt ?? "—" }}</div>
         </div>
-        <div class="kpi">
-          <div class="kpi-label">Gewichtung</div>
-          <div class="kpi-value">
-            {{
-              detail?.gewichtungProzent != null
-                ? `${detail.gewichtungProzent}%`
-                : "—"
-            }}
-          </div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Teilnahmequote</div>
-          <div class="kpi-value">
-            {{
-              detail?.teilnahmequote != null ? `${detail.teilnahmequote}%` : "—"
-            }}
-          </div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">mögliche Punkte</div>
-          <div class="kpi-value">
-            {{ detail?.maxPunkte != null ? detail.maxPunkte : "—" }}
+        <div class="stat">
+          <div class="label">Durchschnittliche Teilnahmequote</div>
+          <div class="value">
+            {{ overview?.teilnahmequote != null ? `${overview.teilnahmequote}%` : "—" }}
           </div>
         </div>
       </div>
 
-      <div class="table-head">
-        <div class="table-title">Schülerleistungen</div>
-        <input
-          v-model="search"
-          class="search"
-          placeholder="Nach Schüler*in suchen"
-        />
-      </div>
+      <div class="scheme-card">
+        <div class="scheme-title">Aktives Bewertungsschema</div>
+        <div class="scheme-sub">
+          Dieses Schema wird für die Berechnung der Gesamtnote in diesem Fach verwendet.
+        </div>
 
+        <label class="field">
+          <span class="field-label">Schema auswählen</span>
+          <select class="input" v-model="courseSchemeId" @change="saveCourseScheme">
+            <option v-for="s in schemes" :key="s.id" :value="s.id">
+              {{ s.name }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- ================= Schüler ================= -->
+    <div v-else-if="tab === 'students'" class="panel">
       <DataTable
-        :columns="columns"
-        :rows="filteredRows"
+        :columns="studentColumns"
+        :rows="students"
+        row-key="id"
+        empty-text="Keine Daten vorhanden."
+      />
+    </div>
+
+    <!-- ================= Leistungsfeststellungen ================= -->
+    <div v-else class="panel">
+      <DataTable
+        :columns="assessmentColumns"
+        :rows="filteredAssessments"
         row-key="id"
         empty-text="Keine Daten vorhanden."
       >
-        <template #cell-leistung="{ row }">
-          <span v-if="row.punkte != null && detail?.maxPunkte != null">
-            {{ row.punkte }} Punkte ({{
-              Math.round((row.punkte / (detail.maxPunkte || 1)) * 100)
-            }}%)
-          </span>
-          <span v-else>—</span>
-        </template>
-        <template #cell-note="{ row }">{{
-          row.note != null ? formatGrade(row.note) : "—"
-        }}</template>
         <template #cell-datum="{ row }">{{ formatDate(row.datum) }}</template>
-        <template #cell-kommentar="{ row }">{{
-          row.kommentar || "—"
-        }}</template>
+        <template #cell-gewichtungProzent="{ row }">
+          {{ row.gewichtungProzent != null ? `${row.gewichtungProzent}%` : "—" }}
+        </template>
+        <template #cell-klassenschnitt="{ row }">
+          {{
+            row.klassenschnittProzent != null && row.klassenschnitt != null
+              ? `${row.klassenschnittProzent}% (${formatGrade(row.klassenschnitt)})`
+              : "—"
+          }}
+        </template>
+        <template #cell-teilnahmequote="{ row }">
+          {{ row.teilnahmequote != null ? `${row.teilnahmequote}%` : "—" }}
+        </template>
       </DataTable>
     </div>
 
+    <!-- ================= Modal ================= -->
     <ModalForm
       :open="createOpen"
-      title="Neue Schülerleistung erstellen"
-      @close="closeCreate"
+      title="Neue Leistungsfeststellung erstellen"
+      @close="closeCreateAssessment"
     >
       <div class="form">
-        <!-- ✅ Aktives Schema im Modal -->
+        <!-- ✅ Bewertungsschema im Modal -->
         <div class="scheme-inline">
           <div class="scheme-inline-title">Aktives Bewertungsschema</div>
           <div class="scheme-inline-sub">
-            Dieses Schema wird für die Berechnung in diesem Fach verwendet.
+            Dieses Schema wird für neue Leistungsfeststellungen in diesem Fach verwendet.
           </div>
 
           <label class="field">
@@ -120,38 +127,33 @@
           </label>
         </div>
 
-        <!-- dein bestehendes Formular -->
         <label class="field">
-          <span class="field-label">Schüler*in</span>
-          <select v-model="createForm.schuelerId" class="input">
-            <option value="">Schüler*in auswählen</option>
-            <option v-for="s in students" :key="s.id" :value="s.id">
-              {{ s.vorname }} {{ s.nachname }}
+          <span class="field-label">Thema</span>
+          <input
+            v-model="createForm.thema"
+            class="input"
+            placeholder="z.B. Objektorientiertes Programmieren"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Feststellungsart</span>
+          <select v-model="createForm.benotungsartId" class="input">
+            <option value="">Feststellungsart wählen</option>
+            <option v-for="t in benotungsarten" :key="t.id" :value="t.id">
+              {{ t.name }}
             </option>
           </select>
         </label>
 
         <div class="row">
           <label class="field">
-            <span class="field-label">Punkte</span>
+            <span class="field-label">Mögliche Punkte</span>
             <input
-              v-model.number="createForm.punkte"
+              v-model.number="createForm.maxPunkte"
               class="input"
               type="number"
               min="0"
-              :max="detail?.maxPunkte || 9999"
-            />
-          </label>
-
-          <label class="field">
-            <span class="field-label">Note</span>
-            <input
-              v-model.number="createForm.note"
-              class="input"
-              type="number"
-              min="1"
-              max="5"
-              step="0.1"
             />
           </label>
 
@@ -159,29 +161,31 @@
             <span class="field-label">Datum</span>
             <input v-model="createForm.datum" class="input" type="date" />
           </label>
-        </div>
 
-        <label class="field">
-          <span class="field-label">Kommentar</span>
-          <textarea
-            v-model="createForm.kommentar"
-            class="input textarea"
-            rows="3"
-          />
-        </label>
+          <label class="field">
+            <span class="field-label">Gewichtung (%)</span>
+            <input
+              v-model.number="createForm.gewichtungProzent"
+              class="input"
+              type="number"
+              min="0"
+              max="100"
+            />
+          </label>
+        </div>
       </div>
 
       <template #actions>
-        <button class="btn ghost" type="button" @click="closeCreate">
+        <button class="btn ghost" type="button" @click="closeCreateAssessment">
           Abbrechen
         </button>
         <button
           class="btn primary"
           type="button"
-          :disabled="saving"
-          @click="submitCreate"
+          :disabled="createSaving"
+          @click="submitCreateAssessment"
         >
-          Schülerleistung erstellen
+          Leistungsfeststellung erstellen
         </button>
       </template>
     </ModalForm>
@@ -191,65 +195,70 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import grading from "@/services/grading";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
-import grading from "@/services/grading";
+import TgTabs from "@/components/TgTabs.vue";
 import {
-  createStudentResult,
-  getAssessmentDetail,
+  createAssessment,
+  getAssessmentsForCourse,
+  getCourseDetail,
+  getCourseOverview,
   getCourseStudents,
+  getGradingTypes,
 } from "@/services/teacherData";
 
 const route = useRoute();
 const router = useRouter();
 
-const id = computed(() => route.params.id);
+const kursId = computed(() => Number(route.params.id));
 
 const loading = ref(false);
 const error = ref("");
-const detail = ref(null);
-const students = ref([]);
 
-const search = ref("");
-const columns = [
-  { key: "vorname", label: "Vorname" },
-  { key: "nachname", label: "Nachname" },
-  { key: "leistung", label: "Leistung" },
-  { key: "note", label: "Note" },
-  { key: "datum", label: "Datum" },
-  { key: "kommentar", label: "Kommentar", width: "42%" },
+const course = ref(null);
+const overview = ref(null);
+const students = ref([]);
+const assessments = ref([]);
+const benotungsarten = ref([]);
+
+const schemes = ref([]);
+const courseSchemeId = ref("default");
+
+const tab = ref("overview");
+const tabs = [
+  { key: "overview", label: "Übersicht" },
+  { key: "students", label: "Schüler*innen" },
+  { key: "assessments", label: "Leistungsfeststellungen" },
 ];
 
-const filteredRows = computed(() => {
-  const list = detail.value?.schuelerleistungen || [];
-  if (!search.value) return list;
+const search = ref("");
+const filteredAssessments = computed(() => {
+  if (!search.value) return assessments.value;
   const q = search.value.toLowerCase();
-  return list.filter((r) =>
-    `${r.vorname} ${r.nachname}`.toLowerCase().includes(q),
+  return assessments.value.filter((a) =>
+    String(a.thema || "").toLowerCase().includes(q),
   );
 });
 
-// ✅ Kurs-ID kommt aus Assessment-Detail
-const kursId = computed(() => detail.value?.kurs?.id ?? null);
+const assessmentColumns = [
+  { key: "thema", label: "Thema" },
+  { key: "typ", label: "Feststellungsart" },
+  { key: "datum", label: "Datum" },
+  { key: "gewichtungProzent", label: "Gewichtung" },
+  { key: "klassenschnitt", label: "Klassenschnitt" },
+  { key: "teilnahmequote", label: "Teilnahmequote" },
+];
 
-const backToCourse = computed(() => {
-  const kid = detail.value?.kurs?.id;
-  return kid
-    ? `/lehrer/faecher/${kid}/leistungsfeststellungen`
-    : "/lehrer/faecher";
-});
-
-const backLabel = computed(() =>
-  detail.value?.kurs?.name ? "Meine Fächer" : "Meine Fächer",
-);
+const studentColumns = [
+  { key: "vorname", label: "Vorname" },
+  { key: "nachname", label: "Nachname" },
+  { key: "klasse", label: "Klasse" },
+];
 
 function formatDate(d) {
   if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString("de-DE");
-  } catch {
-    return d;
-  }
+  return new Date(d).toLocaleDateString("de-DE");
 }
 
 function formatGrade(v) {
@@ -257,18 +266,33 @@ function formatGrade(v) {
   return Number(v).toFixed(1).replace(".", ",");
 }
 
-async function load() {
-  loading.value = true;
-  error.value = "";
-  try {
-    detail.value = await getAssessmentDetail(id.value);
+function syncCourseSchemeUi() {
+  schemes.value = grading.loadAllSchemes();
+  courseSchemeId.value =
+    grading.getActiveSchemeIdForCourse(kursId.value) ||
+    grading.getActiveSchemeId() ||
+    "default";
+}
 
-    const kid = detail.value?.kurs?.id;
-    if (kid) {
-      students.value = await getCourseStudents(kid);
-    } else {
-      students.value = [];
-    }
+function saveCourseScheme() {
+  grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
+}
+
+async function loadAll() {
+  loading.value = true;
+  try {
+    const [c, o, s, a, t] = await Promise.all([
+      getCourseDetail(kursId.value),
+      getCourseOverview(kursId.value),
+      getCourseStudents(kursId.value),
+      getAssessmentsForCourse(kursId.value),
+      getGradingTypes(kursId.value),
+    ]);
+    course.value = c;
+    overview.value = o;
+    students.value = s;
+    assessments.value = a;
+    benotungsarten.value = t;
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
@@ -276,80 +300,59 @@ async function load() {
   }
 }
 
-onMounted(load);
-watch(id, load);
-
-// --------------------
-// ✅ Schema im Modal
-// --------------------
-const schemes = ref([]);
-const courseSchemeId = ref("default");
-
-function syncCourseSchemeUi() {
-  schemes.value = grading.loadAllSchemes();
-
-  const kid = kursId.value;
-  courseSchemeId.value =
-    (kid != null ? grading.getActiveSchemeIdForCourse?.(kid) : null) ||
-    grading.getActiveSchemeId?.() ||
-    "default";
-}
-
-function saveCourseScheme() {
-  const kid = kursId.value;
-  if (kid == null) return;
-  grading.setActiveSchemeIdForCourse(kid, courseSchemeId.value);
-}
-
-// --------------------
-// ✅ Modal Schülerleistung
-// --------------------
-const createOpen = ref(false);
-const saving = ref(false);
-
-const createForm = ref({
-  schuelerId: "",
-  punkte: null,
-  note: null,
-  datum: new Date().toISOString().slice(0, 10),
-  kommentar: "",
+onMounted(() => {
+  loadAll();
+  syncCourseSchemeUi();
 });
 
-function openCreate() {
-  syncCourseSchemeUi(); // ✅ damit es immer aktuell ist
+watch(kursId, () => {
+  loadAll();
+  syncCourseSchemeUi();
+});
+
+function goToAssessments() {
+  tab.value = "assessments";
+}
+
+const createOpen = ref(false);
+const createSaving = ref(false);
+const createForm = ref({
+  thema: "",
+  benotungsartId: "",
+  maxPunkte: null,
+  datum: new Date().toISOString().slice(0, 10),
+  gewichtungProzent: null,
+});
+
+function openCreateAssessment() {
+  syncCourseSchemeUi();
   createOpen.value = true;
 }
 
-function closeCreate() {
+function closeCreateAssessment() {
   createOpen.value = false;
-  saving.value = false;
+  createSaving.value = false;
 }
 
-async function submitCreate() {
-  if (!createForm.value.schuelerId || createForm.value.note == null) {
-    alert("Bitte Schüler*in und Note ausfüllen.");
+async function submitCreateAssessment() {
+  if (!createForm.value.thema || !createForm.value.datum) {
+    alert("Bitte Thema und Datum ausfüllen.");
     return;
   }
-
-  saving.value = true;
+  createSaving.value = true;
   try {
-    await createStudentResult(id.value, {
-      schuelerId: createForm.value.schuelerId,
-      punkte: createForm.value.punkte,
-      note: createForm.value.note,
-      datum: createForm.value.datum,
-      kommentar: createForm.value.kommentar,
-    });
-    closeCreate();
-    await load();
-  } catch (e) {
+    await createAssessment(kursId.value, { ...createForm.value });
+    closeCreateAssessment();
+    assessments.value = await getAssessmentsForCourse(kursId.value);
+    overview.value = await getCourseOverview(kursId.value);
+  } catch {
     alert("Konnte nicht erstellen.");
-    console.warn(e);
   } finally {
-    saving.value = false;
+    createSaving.value = false;
   }
 }
 </script>
+
 
 <style scoped>
 .page {
