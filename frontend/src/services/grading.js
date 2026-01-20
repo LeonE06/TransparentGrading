@@ -44,6 +44,7 @@ export function loadScheme() {
  */
 const STORAGE_KEY_SCHEMES = 'gradingSchemes'
 const STORAGE_KEY_ACTIVE = 'gradingActiveSchemeId'
+const STORAGE_KEY_ACTIVE_BY_COURSE = 'gradingActiveSchemeByCourse'
 
 function loadAllSchemes() {
   try {
@@ -166,6 +167,42 @@ function getActiveSchemeId() {
   return localStorage.getItem(STORAGE_KEY_ACTIVE) || null
 }
 
+function loadActiveByCourse() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ACTIVE_BY_COURSE)
+    return raw ? JSON.parse(raw) : {}
+  } catch (e) {
+    console.error('Fehler beim Laden activeSchemeByCourse', e)
+    return {}
+  }
+}
+
+function saveActiveByCourse(map) {
+  try {
+    localStorage.setItem(STORAGE_KEY_ACTIVE_BY_COURSE, JSON.stringify(map || {}))
+  } catch (e) {
+    console.error('Fehler beim Speichern activeSchemeByCourse', e)
+  }
+}
+
+function setActiveSchemeIdForCourse(courseId, schemeId) {
+  const map = loadActiveByCourse()
+  map[String(courseId)] = String(schemeId)
+  saveActiveByCourse(map)
+  return true
+}
+
+function getActiveSchemeIdForCourse(courseId) {
+  const map = loadActiveByCourse()
+  return map[String(courseId)] || null
+}
+
+function getActiveSchemeForCourse(courseId) {
+  const id = getActiveSchemeIdForCourse(courseId)
+  if (!id) return getActiveScheme() // fallback: global aktiv (oder default)
+  return getSchemeById(id) || getActiveScheme()
+}
+
 function getSchemeById(id) {
   const schemes = loadAllSchemes()
   return schemes.find(s => s.id === id) || null
@@ -253,9 +290,22 @@ export function validateScheme(scheme) {
 
 
 
-export function computeFinalGrade(items = [], scheme = null) {
-  // Wenn kein Schema übergeben wird, lade das gespeicherte
-  if (!scheme) scheme = loadScheme()
+export function computeFinalGrade(items = [], scheme = null, courseId = null) {
+  // ✅ Schema automatisch bestimmen
+  if (!scheme) {
+    if (courseId != null) {
+      // pro-Fach Schema (Multi-Schema Objekt -> .scheme)
+      scheme = getActiveSchemeForCourse(courseId)?.scheme
+    } else {
+      // Fallback: altes single-schema
+      scheme = loadScheme()
+    }
+  }
+
+  // letzter Fallback, falls irgendwas null ist
+  if (!scheme) scheme = { ...DEFAULT_SCHEME }
+
+  // ===== AB HIER bleibt dein Original-Code unverändert =====
 
   // Normalisieren: Noten/Punkte → Prozent + Note, eigene MaxPoints möglich
   const normalized = items.map(it => {
@@ -270,7 +320,7 @@ export function computeFinalGrade(items = [], scheme = null) {
       note = pct != null ? percentageToGrade(pct, scheme.gradeBands || DEFAULT_SCHEME.gradeBands) : null
     } else {
       note = it.note != null ? Number(it.note) : null
-      pct = note != null ? 100 - ((note - 1) / 4) * 100 : null // Näherung für Anzeige
+      pct = note != null ? 100 - ((note - 1) / 4) * 100 : null
     }
 
     return {
@@ -285,7 +335,6 @@ export function computeFinalGrade(items = [], scheme = null) {
   })
 
   if (scheme.mode === 'per-item') {
-    // gewichteter Durchschnitt: sum(note * gewicht) / sum(gewicht)
     let weightedSum = 0
     let weightSum = 0
     let pctWeighted = 0
@@ -311,12 +360,10 @@ export function computeFinalGrade(items = [], scheme = null) {
   }
 
   if (scheme.mode === 'group') {
-    // Kategorien-Map für schnellen Zugriff
     const categories = Array.isArray(scheme.categories) ? scheme.categories : []
     const catMap = {}
     categories.forEach(c => { catMap[c.key] = { ...c, percent: Number(c.percent) || 0 } })
 
-    // Gruppiere Items nach Kategorie
     const itemsByCat = {}
     normalized.forEach(i => {
       const key = i.category || '__uncategorized__'
@@ -324,7 +371,6 @@ export function computeFinalGrade(items = [], scheme = null) {
       itemsByCat[key].push(i)
     })
 
-    // Berechne pro Kategorie einen Durchschnitt (gewichteter innerhalb der Kategorie)
     const categoryResults = {}
     categories.forEach(cat => {
       const key = cat.key
@@ -343,7 +389,6 @@ export function computeFinalGrade(items = [], scheme = null) {
       categoryResults[key] = { avg: avg != null ? Number(avg.toFixed(2)) : null, count: itemsInCat.length }
     })
 
-    // Gesamtnote: Summe über Kategorien (categoryAvg * percent)/100
     let final = 0
     let finalPct = 0
     let appliedPercentSum = 0
@@ -353,18 +398,12 @@ export function computeFinalGrade(items = [], scheme = null) {
       const catRes = categoryResults[key]
       if (catRes && catRes.avg != null) {
         final += catRes.avg * (percent / 100)
-        if (catRes.avg != null) {
-          // rückwärts Prozent aus Note (für Anzeige)
-          const approxPct = 100 - ((catRes.avg - 1) / 4) * 100
-          finalPct += approxPct * (percent / 100)
-        }
+        const approxPct = 100 - ((catRes.avg - 1) / 4) * 100
+        finalPct += approxPct * (percent / 100)
         appliedPercentSum += percent
       }
     })
 
-    // Falls Kategorien Prozent nicht 100 ergeben oder es Kategorien ohne Items gibt,
-    // final ist die gewichtete Summe über die vorhandenen Kategorien. Wir geben
-    // zusätzlich an, wieviel Prozent angewandt wurden.
     return {
       finalGrade: appliedPercentSum > 0 ? Number(final.toFixed(2)) : null,
       finalPercent: appliedPercentSum > 0 ? Number(finalPct.toFixed(1)) : null,
@@ -376,9 +415,9 @@ export function computeFinalGrade(items = [], scheme = null) {
     }
   }
 
-  // Unbekannter Modus
   return { finalGrade: null, details: { error: 'Unknown grading mode' } }
 }
+
 
 /**
  * Hilfsfunktion: Beispiel-Usage
