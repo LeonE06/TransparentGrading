@@ -1,9 +1,9 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" to="/lehrer/faecher"
-        >‹ Meine Fächer</router-link
-      >
+      <router-link class="back" to="/lehrer/faecher">
+        ‹ Meine Fächer
+      </router-link>
     </div>
 
     <header class="head">
@@ -32,6 +32,7 @@
     <div v-if="loading" class="empty">Lade …</div>
     <div v-else-if="error" class="empty">Fehler: {{ error }}</div>
 
+    <!-- ================= Übersicht ================= -->
     <div v-else-if="tab === 'overview'" class="overview">
       <div class="stats">
         <div class="stat">
@@ -41,44 +42,29 @@
         <div class="stat">
           <div class="label">Durchschnittliche Teilnahmequote</div>
           <div class="value">
-            {{
-              overview?.teilnahmequote != null
-                ? `${overview.teilnahmequote}%`
-                : "—"
-            }}
+            {{ overview?.teilnahmequote != null ? `${overview.teilnahmequote}%` : "—" }}
           </div>
         </div>
       </div>
+
       <div class="scheme-card">
-        <div class="scheme-head">
-          <div>
-            <div class="scheme-title">Aktives Bewertungsschema</div>
-            <div class="scheme-sub">
-              Dieses Schema wird für die Berechnung der Gesamtnote in diesem
-              Fach verwendet.
-            </div>
-          </div>
+        <div class="scheme-title">Aktives Bewertungsschema</div>
+        <div class="scheme-sub">
+          Dieses Schema wird für die Berechnung der Gesamtnote in diesem Fach verwendet.
         </div>
 
-        <label class="scheme-field">
-          <span class="scheme-label">Schema auswählen</span>
-          <select
-            class="scheme-select"
-            v-model="courseSchemeId"
-            @change="saveCourseScheme"
-          >
+        <label class="field">
+          <span class="field-label">Schema auswählen</span>
+          <select class="input" v-model="courseSchemeId" @change="saveCourseScheme">
             <option v-for="s in schemes" :key="s.id" :value="s.id">
               {{ s.name }}
             </option>
           </select>
         </label>
       </div>
-      <div class="chart-card">
-        <div class="chart-label">Notenverlauf</div>
-        <canvas ref="chartEl" height="110"></canvas>
-      </div>
     </div>
 
+    <!-- ================= Schüler ================= -->
     <div v-else-if="tab === 'students'" class="panel">
       <DataTable
         :columns="studentColumns"
@@ -88,6 +74,7 @@
       />
     </div>
 
+    <!-- ================= Leistungsfeststellungen ================= -->
     <div v-else class="panel">
       <DataTable
         :columns="assessmentColumns"
@@ -96,9 +83,9 @@
         empty-text="Keine Daten vorhanden."
       >
         <template #cell-datum="{ row }">{{ formatDate(row.datum) }}</template>
-        <template #cell-gewichtungProzent="{ row }">{{
-          row.gewichtungProzent != null ? `${row.gewichtungProzent}%` : "—"
-        }}</template>
+        <template #cell-gewichtungProzent="{ row }">
+          {{ row.gewichtungProzent != null ? `${row.gewichtungProzent}%` : "—" }}
+        </template>
         <template #cell-klassenschnitt="{ row }">
           {{
             row.klassenschnittProzent != null && row.klassenschnitt != null
@@ -106,36 +93,40 @@
               : "—"
           }}
         </template>
-        <template #cell-teilnahmequote="{ row }">{{
-          row.teilnahmequote != null ? `${row.teilnahmequote}%` : "—"
-        }}</template>
-        <template #actions="{ row }">
-          <button
-            class="icon-action"
-            type="button"
-            title="Öffnen"
-            @click="openAssessment(row.id)"
-          >
-            <ExternalLink :size="18" />
-          </button>
-          <button
-            class="icon-action"
-            type="button"
-            title="Löschen"
-            @click="removeAssessment(row.id)"
-          >
-            <Trash2 :size="18" />
-          </button>
+        <template #cell-teilnahmequote="{ row }">
+          {{ row.teilnahmequote != null ? `${row.teilnahmequote}%` : "—" }}
         </template>
       </DataTable>
     </div>
 
+    <!-- ================= Modal ================= -->
     <ModalForm
       :open="createOpen"
-      title="Neues Leistungsfeststellung erstellen"
+      title="Neue Leistungsfeststellung erstellen"
       @close="closeCreateAssessment"
     >
       <div class="form">
+        <!-- ✅ Bewertungsschema im Modal -->
+        <div class="scheme-inline">
+          <div class="scheme-inline-title">Aktives Bewertungsschema</div>
+          <div class="scheme-inline-sub">
+            Dieses Schema wird für neue Leistungsfeststellungen in diesem Fach verwendet.
+          </div>
+
+          <label class="field">
+            <span class="field-label">Schema auswählen</span>
+            <select
+              class="input"
+              v-model="courseSchemeId"
+              @change="saveCourseScheme"
+            >
+              <option v-for="s in schemes" :key="s.id" :value="s.id">
+                {{ s.name }}
+              </option>
+            </select>
+          </label>
+        </div>
+
         <label class="field">
           <span class="field-label">Thema</span>
           <input
@@ -146,7 +137,7 @@
         </label>
 
         <label class="field">
-          <span class="field-label">Feststellungsart auswählen</span>
+          <span class="field-label">Feststellungsart</span>
           <select v-model="createForm.benotungsartId" class="input">
             <option value="">Feststellungsart wählen</option>
             <option v-for="t in benotungsarten" :key="t.id" :value="t.id">
@@ -163,13 +154,14 @@
               class="input"
               type="number"
               min="0"
-              placeholder="z.B. 24"
             />
           </label>
+
           <label class="field">
             <span class="field-label">Datum</span>
             <input v-model="createForm.datum" class="input" type="date" />
           </label>
+
           <label class="field">
             <span class="field-label">Gewichtung (%)</span>
             <input
@@ -178,7 +170,6 @@
               type="number"
               min="0"
               max="100"
-              placeholder="z.B. 50"
             />
           </label>
         </div>
@@ -202,24 +193,14 @@
 </template>
 
 <script setup>
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
-import { Chart } from "chart.js/auto";
-import { ExternalLink, Trash2 } from "lucide-vue-next";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
 import TgTabs from "@/components/TgTabs.vue";
 import {
   createAssessment,
-  deleteAssessment,
   getAssessmentsForCourse,
   getCourseDetail,
   getCourseOverview,
@@ -244,35 +225,24 @@ const benotungsarten = ref([]);
 const schemes = ref([]);
 const courseSchemeId = ref("default");
 
-const tab = ref(
-  route.path.endsWith("/leistungsfeststellungen") ? "assessments" : "overview",
-);
+const tab = ref("overview");
 const tabs = [
   { key: "overview", label: "Übersicht" },
   { key: "students", label: "Schüler*innen" },
   { key: "assessments", label: "Leistungsfeststellungen" },
 ];
 
-watch(
-  () => route.path,
-  (p) => {
-    if (p.endsWith("/leistungsfeststellungen")) tab.value = "assessments";
-  },
-);
-
 const search = ref("");
 const filteredAssessments = computed(() => {
   if (!search.value) return assessments.value;
   const q = search.value.toLowerCase();
   return assessments.value.filter((a) =>
-    String(a.thema || "")
-      .toLowerCase()
-      .includes(q),
+    String(a.thema || "").toLowerCase().includes(q),
   );
 });
 
 const assessmentColumns = [
-  { key: "thema", label: "Thema", width: "42%" },
+  { key: "thema", label: "Thema" },
   { key: "typ", label: "Feststellungsart" },
   { key: "datum", label: "Datum" },
   { key: "gewichtungProzent", label: "Gewichtung" },
@@ -288,15 +258,7 @@ const studentColumns = [
 
 function formatDate(d) {
   if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString("de-DE");
-  } catch {
-    return d;
-  }
-}
-
-function saveCourseScheme() {
-  grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
+  return new Date(d).toLocaleDateString("de-DE");
 }
 
 function formatGrade(v) {
@@ -304,9 +266,20 @@ function formatGrade(v) {
   return Number(v).toFixed(1).replace(".", ",");
 }
 
+function syncCourseSchemeUi() {
+  schemes.value = grading.loadAllSchemes();
+  courseSchemeId.value =
+    grading.getActiveSchemeIdForCourse(kursId.value) ||
+    grading.getActiveSchemeId() ||
+    "default";
+}
+
+function saveCourseScheme() {
+  grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
+}
+
 async function loadAll() {
   loading.value = true;
-  error.value = "";
   try {
     const [c, o, s, a, t] = await Promise.all([
       getCourseDetail(kursId.value),
@@ -320,8 +293,6 @@ async function loadAll() {
     students.value = s;
     assessments.value = a;
     benotungsarten.value = t;
-    await nextTick();
-    renderChart();
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
@@ -330,86 +301,17 @@ async function loadAll() {
 }
 
 onMounted(() => {
-  schemes.value = grading.loadAllSchemes();
-  courseSchemeId.value =
-    grading.getActiveSchemeIdForCourse?.(kursId.value) ||
-    grading.getActiveSchemeId?.() ||
-    "default";
-});
-watch(kursId, (v) => {
-  if (!v) return;
   loadAll();
+  syncCourseSchemeUi();
 });
 
-const chartEl = ref(null);
-let chart = null;
-function renderChart() {
-  if (!chartEl.value) return;
-  if (chart) {
-    chart.destroy();
-    chart = null;
-  }
-
-  const trend = overview.value?.trend || [];
-  const labels = trend.map((t) => (t.ym || "").replace("-", " "));
-  const values = trend.map((t) => t.avgNote);
-
-  chart = new Chart(chartEl.value, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          data: values,
-          borderColor: "rgba(144, 125, 255, 1)",
-          backgroundColor: "rgba(144, 125, 255, 0.12)",
-          tension: 0.35,
-          fill: true,
-          pointRadius: 0,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: "#9aa0a6", maxRotation: 0 },
-        },
-        y: {
-          grid: { color: "rgba(255,255,255,0.06)" },
-          ticks: { color: "#9aa0a6" },
-        },
-      },
-    },
-  });
-}
-
-onBeforeUnmount(() => {
-  if (chart) chart.destroy();
+watch(kursId, () => {
+  loadAll();
+  syncCourseSchemeUi();
 });
 
 function goToAssessments() {
-  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`);
-}
-
-function openAssessment(id) {
-  router.push(`/lehrer/leistungsfeststellungen/${id}`);
-}
-
-async function removeAssessment(id) {
-  if (!confirm("Leistungsfeststellung löschen?")) return;
-  try {
-    await deleteAssessment(id);
-    assessments.value = await getAssessmentsForCourse(
-      kursId.value,
-      search.value ? { search: search.value } : {},
-    );
-  } catch (e) {
-    alert("Konnte nicht löschen.");
-    console.warn(e);
-  }
+  tab.value = "assessments";
 }
 
 const createOpen = ref(false);
@@ -423,6 +325,7 @@ const createForm = ref({
 });
 
 function openCreateAssessment() {
+  syncCourseSchemeUi();
   createOpen.value = true;
 }
 
@@ -442,11 +345,8 @@ async function submitCreateAssessment() {
     closeCreateAssessment();
     assessments.value = await getAssessmentsForCourse(kursId.value);
     overview.value = await getCourseOverview(kursId.value);
-    await nextTick();
-    renderChart();
-  } catch (e) {
+  } catch {
     alert("Konnte nicht erstellen.");
-    console.warn(e);
   } finally {
     createSaving.value = false;
   }
