@@ -1,440 +1,510 @@
 <template>
-  <section class="page">
-    <header class="head">
-      <h1 class="title">Moodboard</h1>
-      <p class="subtitle">Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.</p>
-    </header>
+  <div class="moodboard-wrapper">
+    <h1>Moodboard</h1>
 
-    <div class="toolbar">
-      <label class="field">
-        <span class="label">Klasse</span>
-        <select class="select" v-model="selectedKlasseId">
-          <option value="">Auswählen</option>
-          <option v-for="k in klassen" :key="k.id" :value="String(k.id)">
-            {{ k.name }}
-          </option>
-        </select>
-      </label>
+    <div class="mood-card">
+      <h2>Wie ist deine Lernmotivation heute?</h2>
 
-      <label class="field">
-        <span class="label">Zeitraum</span>
-        <select class="select" v-model="selectedRange">
-          <option value="daily">Täglich</option>
-          <option value="weekly">Wöchentlich</option>
-          <option value="monthly">Monatlich</option>
-        </select>
-      </label>
+      <!-- ✅ NUR DIESE ZEILE IST GEÄNDERT -->
+      <div class="emoji-row">
+        <div
+          class="emoji"
+          :class="{ active: mood === 'gut' }"
+          @click="setMood('gut')"
+          v-html="getSvg('gut')"
+        ></div>
 
-      <div class="spacer"></div>
+        <div
+          class="emoji"
+          :class="{ active: mood === 'neutral' }"
+          @click="setMood('neutral')"
+          v-html="getSvg('neutral')"
+        ></div>
 
-      <button class="btn" type="button" @click="loadMood" :disabled="!selectedKlasseId || loading">
-        Aktualisieren
-      </button>
-    </div>
-
-    <div v-if="loading" class="state">Lade Mood-Daten …</div>
-    <div v-else-if="error" class="state error">Fehler: {{ error }}</div>
-
-    <div v-else class="board">
-      <!-- left mood scale -->
-      <div class="mood-scale">
-        <div class="mood-dot">
-          <div class="svg-emoji" v-html="getLegendSvg('gut')"></div>
-          <span class="txt">gut</span>
-        </div>
-
-        <div class="mood-dot">
-          <div class="svg-emoji" v-html="getLegendSvg('neutral')"></div>
-          <span class="txt">neutral</span>
-        </div>
-
-        <div class="mood-dot">
-          <div class="svg-emoji" v-html="getLegendSvg('schlecht')"></div>
-          <span class="txt">schlecht</span>
-        </div>
+        <div
+          class="emoji"
+          :class="{ active: mood === 'schlecht' }"
+          @click="setMood('schlecht')"
+          v-html="getSvg('schlecht')"
+        ></div>
       </div>
 
-      <!-- chart -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">
-            Lern-Mood: <span class="muted">{{ klasseName }}</span>
-          </div>
+      <select v-if="mood" v-model="note">
+        <option disabled value="">Wähle eine passende Antwort aus:</option>
+        <option v-for="option in moodOptions[mood]" :key="option">
+          {{ option }}
+        </option>
+      </select>
 
-          <div class="avg" v-if="overallAvg !== null">
-            Ø {{ overallAvg }}
-          </div>
-          <div class="avg muted" v-else>
-            Keine Daten
-          </div>
-        </div>
+      <button
+  class="save-btn"
+  @click="saveMood"
+  :disabled="hasMoodToday"
+>
+  {{ hasMoodToday ? "Heute schon gespeichert" : "Speichern" }}
+</button>
+      <button class="delete-btn" @click="deleteMoodData">Mood-Daten löschen</button>
+    </div>
 
-        <div class="chart-wrap">
-          <canvas ref="moodChartEl"></canvas>
-        </div>
-
-        <div class="hint" v-if="labels.length === 0">
-          Keine Mood-Einträge für die Auswahl vorhanden.
-        </div>
+    <div class="chart-card">
+      <h2>Dein Lern-Mood Verlauf</h2>
+      <div class="chart-placeholder">
+        <canvas ref="chartRef"></canvas>
       </div>
     </div>
-  </section>
+
+    <p v-if="saved" class="saved-message">Deine Stimmung wurde gespeichert!</p>
+  </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
-import { apiClient } from '@/services/apiClient'
+import { ref, onMounted, onBeforeUnmount   } from "vue";
+import Chart from "chart.js/auto";
 
-const klassen = ref([])
-const selectedKlasseId = ref('')
-const selectedRange = ref('weekly')
 
-const labels = ref([])
-const values = ref([])
-const overallAvg = ref(null)
+const mood = ref("");
+const note = ref("");
+const saved = ref(false);
+const hasMoodToday = ref(false)
 
-const loading = ref(false)
-const error = ref('')
+const moodOptions = {
+  gut: [
+    "Super motiviert! 💪",
+    "Voller Energie 🚀",
+    "Heute läuft’s richtig gut 😄",
+  ],
+  neutral: ["Geht so… 😐", "Könnte besser sein 🤷‍♂️", "Weder gut noch schlecht"],
+  schlecht: [
+    "Müde / unmotiviert 😴",
+    "Konzentration fällt schwer 😞",
+    "Heute ist kein guter Lerntag 😔",
+  ],
+};
 
-const moodChartEl = ref(null)
-let chart = null
+function setMood(m) {
+  mood.value = m;
+  note.value = "";
+  saved.value = false;
+}
 
-const klasseName = computed(() => {
-  const k = klassen.value.find(x => String(x.id) === String(selectedKlasseId.value))
-  return k?.name ?? '—'
-})
+/* 🔥 SVG-LOGIK */
+function getSvg(type) {
+  const active = mood.value === type;
 
-async function loadKlassen() {
-  const res = await apiClient.get('/lehrer/klassen')
-  klassen.value = res.data || []
-
-  if (!selectedKlasseId.value && klassen.value.length > 0) {
-    selectedKlasseId.value = String(klassen.value[0].id)
+  if (type === "gut") {
+    return active ? svgGutAktiv : svgGut;
   }
-}
-
-async function loadMood() {
-  if (!selectedKlasseId.value) return
-
-  loading.value = true
-  error.value = ''
-
-  try {
-    const res = await apiClient.get('/lehrer/mood', {
-      params: { klasseId: selectedKlasseId.value, range: selectedRange.value }
-    })
-
-    labels.value = res.data?.labels ?? []
-    values.value = res.data?.values ?? []
-    overallAvg.value = res.data?.overall_avg ?? null
-  } catch (e) {
-    error.value = e?.response?.data?.error || e?.message || 'Unbekannter Fehler'
-    labels.value = []
-    values.value = []
-    overallAvg.value = null
-    destroyChart()
-  } finally {
-    loading.value = false
-    await nextTick()
-
-    if (!error.value && labels.value.length > 0) {
-      renderChart()
-    } else {
-      destroyChart()
-    }
+  if (type === "neutral") {
+    return active ? svgNeutralAktiv : svgNeutral;
   }
+  return active ? svgSchlechtAktiv : svgSchlecht;
 }
 
-function destroyChart() {
-  if (chart) {
-    chart.destroy()
-    chart = null
-  }
-}
-
-function renderChart() {
-  const canvas = moodChartEl.value
-  if (!canvas) return
-
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-
-  destroyChart()
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, 260)
-  gradient.addColorStop(0, 'rgba(106,22,204,0.0)')
-  gradient.addColorStop(1, 'rgba(106,22,204,0.25)')
-
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels.value,
-      datasets: [{
-        label: 'Mood (Ø)',
-        data: values.value,
-        borderColor: '#6a16cc',
-        backgroundColor: gradient,
-        tension: 0.35,
-        fill: { target: 'start' },
-        pointBackgroundColor: '#6a16cc',
-        pointRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          min: 1,
-          max: 3,
-          ticks: {
-            stepSize: 1,
-            callback: (v) => {
-              if (v === 3) return '🙂'
-              if (v === 2) return '😐'
-              if (v === 1) return '🙁'
-              return v
-            }
-          }
-        },
-        x: {
-          ticks: { maxRotation: 0 }
-        }
-      }
-    }
-  })
-}
-
-/* =======================
-   ✅ SVG-Legende (NEU)
-   ======================= */
-
-// aus deinem Schüler-Moodboard, aber als graue Icons (ohne aktiv)
+/* 🖼️ SVGs – HIER kannst du später 1:1 Laras finale SVGs reinkopieren */
 const svgNeutral = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <line x1="28" y1="76.5" x2="83" y2="76.5" stroke="#B6B6B6" stroke-width="3"/>
 </svg>
-`
+`;
 
-const svgSchlecht = `
+const svgNeutralAktiv = `
 <svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8761)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8761)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8761)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8761)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8761)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8761)" stroke-width="3"/>
+<line x1="28" y1="76.5" x2="83" y2="76.5" stroke="url(#paint6_linear_2217_8761)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8761" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8761" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8761" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8761" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8761" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8761" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8761" x1="55.5" y1="78" x2="55.5" y2="79" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
+</svg>
+`;
+
+const svgSchlecht = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="#B6B6B6" stroke-width="3"/>
-</svg>
-`
-
-const svgGut = `
-<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+</svg>`;
+const svgSchlechtAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8753)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8753)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8753)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8753)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8753)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8753)" stroke-width="3"/>
+<path d="M28 83C28 75.268 39.6406 69 54 69C68.3594 69 80 75.268 80 83" stroke="url(#paint6_linear_2217_8753)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8753" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8753" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8753" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8753" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8753" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8753" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8753" x1="54" y1="83" x2="54" y2="69" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
+</svg>`;
+const svgGut = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="54" cy="54" r="52.5" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="31.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <circle cx="75.5" cy="40.5" r="4" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="#B6B6B6" stroke-width="3"/>
 <path d="M27.5 68.5H82.5" stroke="#B6B6B6" stroke-width="3"/>
-</svg>
-`
+</svg>`;
+const svgGutAktiv = `<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint0_linear_2217_8769)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint1_linear_2217_8769)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint2_linear_2217_8769)" stroke-width="3"/>
+<circle cx="54" cy="54" r="52.5" stroke="url(#paint3_linear_2217_8769)" stroke-width="3"/>
+<circle cx="31.5" cy="40.5" r="4" stroke="url(#paint4_linear_2217_8769)" stroke-width="3"/>
+<circle cx="75.5" cy="40.5" r="4" stroke="url(#paint5_linear_2217_8769)" stroke-width="3"/>
+<path d="M81 70C81 77.732 69.3594 84 55 84C40.6406 84 29 77.732 29 70" stroke="url(#paint6_linear_2217_8769)" stroke-width="3"/>
+<path d="M27.5 68.5H82.5" stroke="url(#paint7_linear_2217_8769)" stroke-width="3"/>
+<defs>
+<linearGradient id="paint0_linear_2217_8769" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2217_8769" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2217_8769" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint3_linear_2217_8769" x1="54" y1="0" x2="54" y2="108" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint4_linear_2217_8769" x1="31.5" y1="35" x2="31.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint5_linear_2217_8769" x1="75.5" y1="35" x2="75.5" y2="46" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint6_linear_2217_8769" x1="55" y1="70" x2="55" y2="84" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+<linearGradient id="paint7_linear_2217_8769" x1="55" y1="68.5" x2="55" y2="69.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A16CC"/>
+<stop offset="1" stop-color="#73A0F1"/>
+</linearGradient>
+</defs>
+</svg>`;
 
-function getLegendSvg(type) {
-  if (type === 'gut') return svgGut
-  if (type === 'neutral') return svgNeutral
-  return svgSchlecht
+/* ✅ 401 FIX: COOKIE AUTH */
+async function saveMood() {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("Du bist nicht eingeloggt (Token fehlt).");
+    return;
+  }
+
+  if (!mood.value) {
+    alert("Bitte wähle zuerst eine Stimmung aus.");
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      "https://transparentgrading.onrender.com/api/mood",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mood: mood.value,
+          note: note.value, // ✅ passt zu deiner DB-Spalte "note"
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("❌ Mood speichern fehlgeschlagen:", res.status, txt);
+      alert("Fehler beim Speichern der Stimmung.");
+      return;
+    }
+
+    saved.value = true;
+    hasMoodToday.value = true;
+    await loadChart();
+  } catch (err) {
+    console.error("❌ Netzwerk/Fetch Fehler:", err);
+    alert("Netzwerkfehler beim Speichern der Stimmung.");
+  }
 }
 
+
+async function deleteMoodData() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Du bist nicht eingeloggt.");
+    return;
+  }
+
+  const ok = confirm(
+    "Willst du wirklich ALLE deine Mood-Daten löschen?"
+  );
+  if (!ok) return;
+
+  try {
+    const res = await fetch(
+      "https://transparentgrading.onrender.com/api/mood",
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      console.error("❌ Löschen fehlgeschlagen:", res.status);
+      alert("Fehler beim Löschen der Mood-Daten.");
+      return;
+    }
+
+    alert("Mood-Daten wurden gelöscht ✅");
+
+    saved.value = false;
+    mood.value = "";
+    note.value = "";
+    await loadHasMoodToday();
+
+    // Chart neu laden (jetzt leer)
+    await loadChart();
+  } catch (err) {
+    console.error("❌ Netzwerkfehler:", err);
+    alert("Netzwerkfehler beim Löschen.");
+  }
+}
+
+
+const chartRef = ref(null);
+let chartInstance = null;
+
+async function loadChart() {
+  const token = localStorage.getItem("token");
+  if (!token || !chartRef.value) return;
+
+  const res = await fetch("https://transparentgrading.onrender.com/api/mood/stats", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    console.error("Mood stats error", res.status, await res.text());
+    return;
+  }
+
+  const rows = await res.json();
+  const labels = rows.map((r) => r.day);
+  const values = rows.map((r) => Number(r.avg_score));
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(chartRef.value, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{ label: "Mood Ø pro Tag", data: values }],
+    },
+    options: {
+      scales: {
+        y: { min: 1, max: 3, ticks: { stepSize: 1 } },
+      },
+    },
+  });
+}
+
+async function loadHasMoodToday() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  const res = await fetch("https://transparentgrading.onrender.com/api/mood/today", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    hasMoodToday.value = data.hasMoodToday;
+  }
+}
+
+
 onMounted(async () => {
-  await loadKlassen()
-  if (selectedKlasseId.value) await loadMood()
-})
+  await loadHasMoodToday();
+  await loadChart();
+});
 
 onBeforeUnmount(() => {
-  destroyChart()
-})
+  if (chartInstance) chartInstance.destroy();
+});
 </script>
 
 <style scoped>
-.page {
-  padding: 2rem;
+.moodboard-wrapper {
+  max-width: 900px;
+  margin: 2rem auto;
+  font-family: "Inter", sans-serif;
 }
 
-.head {
-  margin-bottom: 1.25rem;
-}
-
-.title {
+h1 {
   font-size: 2rem;
-  font-weight: 700;
-  margin: 0;
+  margin-bottom: 1.5rem;
 }
 
-.subtitle {
-  margin: 0.35rem 0 0;
-  color: #666;
+h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
 }
 
-.toolbar {
+.mood-card,
+.chart-card {
+  background: var(--first-background-color);
+  border-radius: 14px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #ddd;
+}
+
+.emoji-row {
   display: flex;
-  gap: 1.25rem;
-  align-items: end;
-  margin: 1.5rem 0;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3rem;
+  margin-bottom: 1.5rem;
 }
 
-.field {
-  display: grid;
-  gap: 0.5rem;
+.emoji {
+  width: 108px;
+  height: 108px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: 0.2s;
 }
 
-.label {
+.emoji.active {
+  opacity: 1;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px var(--primary));
+}
+
+select {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-bottom: 1.5rem;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 0.9rem;
+  border: none;
+  border-radius: 12px;
   font-weight: 600;
-}
-
-.select {
-  width: 240px;
-  padding: 0.8rem 1rem;
-  border-radius: 12px;
-  border: 2px solid #b99af2;
-  background: #fff;
-  outline: none;
-}
-
-.spacer {
-  flex: 1;
-}
-
-.btn {
-  padding: 0.85rem 1.1rem;
-  border-radius: 12px;
-  border: 2px solid #6a16cc;
-  background: #6a16cc;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
   color: white;
-  font-weight: 700;
+}
+
+.chart-placeholder {
+  background: #fafafa;
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px dashed #bbb;
+  text-align: center;
+}
+
+.saved-message {
+  color: var(--primary);
+  font-weight: 600;
+  text-align: center;
+}
+
+.delete-btn {
+  width: 100%;
+  padding: 0.9rem;
+  margin-top: 0.7rem;
+  border: 1px solid #d33;
+  border-radius: 12px;
+  font-weight: 600;
+  background: #fff;
+  color: #d33;
   cursor: pointer;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.delete-btn:hover {
+  background: #d33;
+  color: white;
 }
 
-.state {
-  padding: 1rem;
-  border-radius: 14px;
-  background: #fafafa;
-  border: 1px solid #eee;
-}
-
-.state.error {
-  background: #fff3f3;
-  border-color: #ffd2d2;
-  color: #7a1c1c;
-}
-
-.board {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 1.25rem;
-  align-items: stretch;
-}
-
-.mood-scale {
-  background: #f7f7fb;
-  border-radius: 16px;
-  padding: 1rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  justify-content: center;
-  align-items: center;
-}
-
-.mood-dot {
-  width: 84px;
-  text-align: center;
-}
-
-/* ✅ NEU: SVG-Icons statt Emoji */
-.svg-emoji {
-  display: inline-flex;
-  width: 46px;   /* <- nicht zu groß */
-  height: 46px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 2px solid #6a16cc;
-  background: #fff;
-}
-
-/* zwingt das SVG kleiner zu sein als seine eingebauten 108px */
-.svg-emoji :deep(svg) {
-  width: 34px !important;
-  height: 34px !important;
-  display: block;
-}
-
-.txt {
-  display: block;
-  margin-top: 0.35rem;
-  color: #555;
-  font-size: 0.9rem;
-}
-
-.card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  min-height: 380px;
-  display: flex;
-  flex-direction: column;
-}
-
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
-}
-
-.card-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.muted {
-  color: #777;
-  font-weight: 600;
-}
-
-.avg {
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid #eee;
-  background: #fafafa;
-  font-weight: 800;
-}
-
-.chart-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 260px;
-}
-
-.chart-wrap canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.hint {
-  margin-top: 0.75rem;
-  text-align: center;
-  color: #888;
-}
 </style>
