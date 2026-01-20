@@ -52,58 +52,60 @@ class MicrosoftUserService
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
-// Schüler-Mail (4 Ziffern) → Lehrer
-if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
-}
+        // Schüler-Mail (4 Ziffern) → Lehrer
+        if (preg_match('/^[0-9]{4}$/', $localPart)) {
+            $this->ensureLehrer($existingUser, $vorname, $nachname);
+            return 'Lehrer';
+        }
 
-// Lehrer-Mail (3 Buchstaben) → Schüler
-if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
-}
+        // Lehrer-Mail (3 Buchstaben) → Schüler
+        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            return 'Schueler';
+        }
 
-return 'Unbekannt';
+        return 'Unbekannt';
+    }
 
     /**
      * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
      */
     private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
-{
-    $schueler = $this->em->getRepository(Schueler::class)
-        ->findOneBy(['ms365User' => $m365User]);
+    {
+        $schueler = $this->em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $m365User]);
 
-    if ($schueler) {
-        return;
+        if ($schueler) {
+            return;
+        }
+
+        $schueler = new Schueler();
+        $schueler->setVorname($vorname);
+        $schueler->setNachname($nachname);
+        $schueler->setMs365User($m365User);
+
+        $this->em->persist($schueler);
+        $this->em->flush();
     }
-
-    $schueler = new Schueler();
-    $schueler->setVorname($vorname);
-    $schueler->setNachname($nachname);
-    $schueler->setMs365User($m365User);
-
-    $this->em->persist($schueler);
-    $this->em->flush();
-}
 
 
     /**
      * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
      */
-private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
-{
-    $lehrer = $this->em->getRepository(Lehrer::class)
-        ->findOneBy(['ms365User' => $m365User]);
+    private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
+    {
+        $lehrer = $this->em->getRepository(Lehrer::class)
+            ->findOneBy(['ms365User' => $m365User]);
 
-    if ($lehrer) return;
+        if ($lehrer)
+            return;
 
-    $lehrer = new Lehrer();
-    $lehrer->setVorname($vorname);
-    $lehrer->setNachname($nachname);
-    $lehrer->setMs365User($m365User);
+        $lehrer = new Lehrer();
+        $lehrer->setVorname($vorname);
+        $lehrer->setNachname($nachname);
+        $lehrer->setMs365User($m365User);
 
-    $this->em->persist($lehrer);
-    $this->em->flush();
-}
+        $this->em->persist($lehrer);
+        $this->em->flush();
+    }
 }
