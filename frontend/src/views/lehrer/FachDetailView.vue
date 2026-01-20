@@ -1,14 +1,20 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" to="/lehrer/faecher">‹ Meine Fächer</router-link>
+      <router-link class="back" to="/lehrer/faecher"
+        >‹ Meine Fächer</router-link
+      >
     </div>
 
     <header class="head">
-      <h1 class="course-title">{{ course?.name || '—' }}</h1>
+      <h1 class="course-title">{{ course?.name || "—" }}</h1>
       <div class="head-actions">
-        <button class="btn primary" @click="openCreateAssessment">neue Leistungsfeststellung erstellen</button>
-        <button class="btn primary ghost" @click="goToAssessments">neue Schülerleistung erstellen</button>
+        <button class="btn primary" @click="openCreateAssessment">
+          neue Leistungsfeststellung erstellen
+        </button>
+        <button class="btn primary ghost" @click="goToAssessments">
+          neue Schülerleistung erstellen
+        </button>
       </div>
     </header>
 
@@ -30,14 +36,43 @@
       <div class="stats">
         <div class="stat">
           <div class="label">Klassenschnitt</div>
-          <div class="value">{{ overview?.klassenschnitt ?? '—' }}</div>
+          <div class="value">{{ overview?.klassenschnitt ?? "—" }}</div>
         </div>
         <div class="stat">
           <div class="label">Durchschnittliche Teilnahmequote</div>
-          <div class="value">{{ overview?.teilnahmequote != null ? `${overview.teilnahmequote}%` : '—' }}</div>
+          <div class="value">
+            {{
+              overview?.teilnahmequote != null
+                ? `${overview.teilnahmequote}%`
+                : "—"
+            }}
+          </div>
         </div>
       </div>
+      <div class="scheme-card">
+        <div class="scheme-head">
+          <div>
+            <div class="scheme-title">Aktives Bewertungsschema</div>
+            <div class="scheme-sub">
+              Dieses Schema wird für die Berechnung der Gesamtnote in diesem
+              Fach verwendet.
+            </div>
+          </div>
+        </div>
 
+        <label class="scheme-field">
+          <span class="scheme-label">Schema auswählen</span>
+          <select
+            class="scheme-select"
+            v-model="courseSchemeId"
+            @change="saveCourseScheme"
+          >
+            <option v-for="s in schemes" :key="s.id" :value="s.id">
+              {{ s.name }}
+            </option>
+          </select>
+        </label>
+      </div>
       <div class="chart-card">
         <div class="chart-label">Notenverlauf</div>
         <canvas ref="chartEl" height="110"></canvas>
@@ -61,41 +96,75 @@
         empty-text="Keine Daten vorhanden."
       >
         <template #cell-datum="{ row }">{{ formatDate(row.datum) }}</template>
-        <template #cell-gewichtungProzent="{ row }">{{ row.gewichtungProzent != null ? `${row.gewichtungProzent}%` : '—' }}</template>
+        <template #cell-gewichtungProzent="{ row }">{{
+          row.gewichtungProzent != null ? `${row.gewichtungProzent}%` : "—"
+        }}</template>
         <template #cell-klassenschnitt="{ row }">
-          {{ row.klassenschnittProzent != null && row.klassenschnitt != null ? `${row.klassenschnittProzent}% (${formatGrade(row.klassenschnitt)})` : '—' }}
+          {{
+            row.klassenschnittProzent != null && row.klassenschnitt != null
+              ? `${row.klassenschnittProzent}% (${formatGrade(row.klassenschnitt)})`
+              : "—"
+          }}
         </template>
-        <template #cell-teilnahmequote="{ row }">{{ row.teilnahmequote != null ? `${row.teilnahmequote}%` : '—' }}</template>
+        <template #cell-teilnahmequote="{ row }">{{
+          row.teilnahmequote != null ? `${row.teilnahmequote}%` : "—"
+        }}</template>
         <template #actions="{ row }">
-          <button class="icon-action" type="button" title="Öffnen" @click="openAssessment(row.id)">
+          <button
+            class="icon-action"
+            type="button"
+            title="Öffnen"
+            @click="openAssessment(row.id)"
+          >
             <ExternalLink :size="18" />
           </button>
-          <button class="icon-action" type="button" title="Löschen" @click="removeAssessment(row.id)">
+          <button
+            class="icon-action"
+            type="button"
+            title="Löschen"
+            @click="removeAssessment(row.id)"
+          >
             <Trash2 :size="18" />
           </button>
         </template>
       </DataTable>
     </div>
 
-    <ModalForm :open="createOpen" title="Neues Leistungsfeststellung erstellen" @close="closeCreateAssessment">
+    <ModalForm
+      :open="createOpen"
+      title="Neues Leistungsfeststellung erstellen"
+      @close="closeCreateAssessment"
+    >
       <div class="form">
         <label class="field">
           <span class="field-label">Thema</span>
-          <input v-model="createForm.thema" class="input" placeholder="z.B. Objektorientiertes Programmieren" />
+          <input
+            v-model="createForm.thema"
+            class="input"
+            placeholder="z.B. Objektorientiertes Programmieren"
+          />
         </label>
 
         <label class="field">
           <span class="field-label">Feststellungsart auswählen</span>
           <select v-model="createForm.benotungsartId" class="input">
             <option value="">Feststellungsart wählen</option>
-            <option v-for="t in benotungsarten" :key="t.id" :value="t.id">{{ t.name }}</option>
+            <option v-for="t in benotungsarten" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
           </select>
         </label>
 
         <div class="row">
           <label class="field">
             <span class="field-label">Mögliche Punkte</span>
-            <input v-model.number="createForm.maxPunkte" class="input" type="number" min="0" placeholder="z.B. 24" />
+            <input
+              v-model.number="createForm.maxPunkte"
+              class="input"
+              type="number"
+              min="0"
+              placeholder="z.B. 24"
+            />
           </label>
           <label class="field">
             <span class="field-label">Datum</span>
@@ -103,14 +172,28 @@
           </label>
           <label class="field">
             <span class="field-label">Gewichtung (%)</span>
-            <input v-model.number="createForm.gewichtungProzent" class="input" type="number" min="0" max="100" placeholder="z.B. 50" />
+            <input
+              v-model.number="createForm.gewichtungProzent"
+              class="input"
+              type="number"
+              min="0"
+              max="100"
+              placeholder="z.B. 50"
+            />
           </label>
         </div>
       </div>
 
       <template #actions>
-        <button class="btn ghost" type="button" @click="closeCreateAssessment">Abbrechen</button>
-        <button class="btn primary" type="button" :disabled="createSaving" @click="submitCreateAssessment">
+        <button class="btn ghost" type="button" @click="closeCreateAssessment">
+          Abbrechen
+        </button>
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="createSaving"
+          @click="submitCreateAssessment"
+        >
           Leistungsfeststellung erstellen
         </button>
       </template>
@@ -119,13 +202,21 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { Chart } from 'chart.js/auto'
-import { ExternalLink, Trash2 } from 'lucide-vue-next'
-import DataTable from '@/components/DataTable.vue'
-import ModalForm from '@/components/ModalForm.vue'
-import TgTabs from '@/components/TgTabs.vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
+import { useRoute, useRouter } from "vue-router";
+import grading from "@/services/grading";
+import { Chart } from "chart.js/auto";
+import { ExternalLink, Trash2 } from "lucide-vue-next";
+import DataTable from "@/components/DataTable.vue";
+import ModalForm from "@/components/ModalForm.vue";
+import TgTabs from "@/components/TgTabs.vue";
 import {
   createAssessment,
   deleteAssessment,
@@ -133,206 +224,231 @@ import {
   getCourseDetail,
   getCourseOverview,
   getCourseStudents,
-  getGradingTypes
-} from '@/services/teacherData'
+  getGradingTypes,
+} from "@/services/teacherData";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const kursId = computed(() => Number(route.params.id))
+const kursId = computed(() => Number(route.params.id));
 
-const loading = ref(false)
-const error = ref('')
+const loading = ref(false);
+const error = ref("");
 
-const course = ref(null)
-const overview = ref(null)
-const students = ref([])
-const assessments = ref([])
-const benotungsarten = ref([])
+const course = ref(null);
+const overview = ref(null);
+const students = ref([]);
+const assessments = ref([]);
+const benotungsarten = ref([]);
 
-const tab = ref(route.path.endsWith('/leistungsfeststellungen') ? 'assessments' : 'overview')
+const schemes = ref([]);
+const courseSchemeId = ref("default");
+
+const tab = ref(
+  route.path.endsWith("/leistungsfeststellungen") ? "assessments" : "overview",
+);
 const tabs = [
-  { key: 'overview', label: 'Übersicht' },
-  { key: 'students', label: 'Schüler*innen' },
-  { key: 'assessments', label: 'Leistungsfeststellungen' }
-]
+  { key: "overview", label: "Übersicht" },
+  { key: "students", label: "Schüler*innen" },
+  { key: "assessments", label: "Leistungsfeststellungen" },
+];
 
 watch(
   () => route.path,
   (p) => {
-    if (p.endsWith('/leistungsfeststellungen')) tab.value = 'assessments'
-  }
-)
+    if (p.endsWith("/leistungsfeststellungen")) tab.value = "assessments";
+  },
+);
 
-const search = ref('')
+const search = ref("");
 const filteredAssessments = computed(() => {
-  if (!search.value) return assessments.value
-  const q = search.value.toLowerCase()
-  return assessments.value.filter((a) => String(a.thema || '').toLowerCase().includes(q))
-})
+  if (!search.value) return assessments.value;
+  const q = search.value.toLowerCase();
+  return assessments.value.filter((a) =>
+    String(a.thema || "")
+      .toLowerCase()
+      .includes(q),
+  );
+});
 
 const assessmentColumns = [
-  { key: 'thema', label: 'Thema', width: '42%' },
-  { key: 'typ', label: 'Feststellungsart' },
-  { key: 'datum', label: 'Datum' },
-  { key: 'gewichtungProzent', label: 'Gewichtung' },
-  { key: 'klassenschnitt', label: 'Klassenschnitt' },
-  { key: 'teilnahmequote', label: 'Teilnahmequote' }
-]
+  { key: "thema", label: "Thema", width: "42%" },
+  { key: "typ", label: "Feststellungsart" },
+  { key: "datum", label: "Datum" },
+  { key: "gewichtungProzent", label: "Gewichtung" },
+  { key: "klassenschnitt", label: "Klassenschnitt" },
+  { key: "teilnahmequote", label: "Teilnahmequote" },
+];
 
 const studentColumns = [
-  { key: 'vorname', label: 'Vorname' },
-  { key: 'nachname', label: 'Nachname' },
-  { key: 'klasse', label: 'Klasse' }
-]
+  { key: "vorname", label: "Vorname" },
+  { key: "nachname", label: "Nachname" },
+  { key: "klasse", label: "Klasse" },
+];
 
 function formatDate(d) {
-  if (!d) return '—'
+  if (!d) return "—";
   try {
-    return new Date(d).toLocaleDateString('de-DE')
+    return new Date(d).toLocaleDateString("de-DE");
   } catch {
-    return d
+    return d;
   }
+}
+
+function saveCourseScheme() {
+  grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
 }
 
 function formatGrade(v) {
-  if (v == null) return '—'
-  return Number(v).toFixed(1).replace('.', ',')
+  if (v == null) return "—";
+  return Number(v).toFixed(1).replace(".", ",");
 }
 
 async function loadAll() {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
   try {
     const [c, o, s, a, t] = await Promise.all([
       getCourseDetail(kursId.value),
       getCourseOverview(kursId.value),
       getCourseStudents(kursId.value),
       getAssessmentsForCourse(kursId.value),
-      getGradingTypes(kursId.value)
-    ])
-    course.value = c
-    overview.value = o
-    students.value = s
-    assessments.value = a
-    benotungsarten.value = t
-    await nextTick()
-    renderChart()
+      getGradingTypes(kursId.value),
+    ]);
+    course.value = c;
+    overview.value = o;
+    students.value = s;
+    assessments.value = a;
+    benotungsarten.value = t;
+    await nextTick();
+    renderChart();
   } catch (e) {
-    error.value = e?.message || 'Unbekannter Fehler'
+    error.value = e?.message || "Unbekannter Fehler";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 onMounted(() => {
-  if (!kursId.value) return
-  loadAll()
-})
+  schemes.value = grading.loadAllSchemes();
+  courseSchemeId.value =
+    grading.getActiveSchemeIdForCourse?.(kursId.value) ||
+    grading.getActiveSchemeId?.() ||
+    "default";
+});
 watch(kursId, (v) => {
-  if (!v) return
-  loadAll()
-})
+  if (!v) return;
+  loadAll();
+});
 
-const chartEl = ref(null)
-let chart = null
+const chartEl = ref(null);
+let chart = null;
 function renderChart() {
-  if (!chartEl.value) return
+  if (!chartEl.value) return;
   if (chart) {
-    chart.destroy()
-    chart = null
+    chart.destroy();
+    chart = null;
   }
 
-  const trend = overview.value?.trend || []
-  const labels = trend.map((t) => (t.ym || '').replace('-', ' '))
-  const values = trend.map((t) => t.avgNote)
+  const trend = overview.value?.trend || [];
+  const labels = trend.map((t) => (t.ym || "").replace("-", " "));
+  const values = trend.map((t) => t.avgNote);
 
   chart = new Chart(chartEl.value, {
-    type: 'line',
+    type: "line",
     data: {
       labels,
       datasets: [
         {
           data: values,
-          borderColor: 'rgba(144, 125, 255, 1)',
-          backgroundColor: 'rgba(144, 125, 255, 0.12)',
+          borderColor: "rgba(144, 125, 255, 1)",
+          backgroundColor: "rgba(144, 125, 255, 0.12)",
           tension: 0.35,
           fill: true,
-          pointRadius: 0
-        }
-      ]
+          pointRadius: 0,
+        },
+      ],
     },
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#9aa0a6', maxRotation: 0 } },
-        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa0a6' } }
-      }
-    }
-  })
+        x: {
+          grid: { display: false },
+          ticks: { color: "#9aa0a6", maxRotation: 0 },
+        },
+        y: {
+          grid: { color: "rgba(255,255,255,0.06)" },
+          ticks: { color: "#9aa0a6" },
+        },
+      },
+    },
+  });
 }
 
 onBeforeUnmount(() => {
-  if (chart) chart.destroy()
-})
+  if (chart) chart.destroy();
+});
 
 function goToAssessments() {
-  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`)
+  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`);
 }
 
 function openAssessment(id) {
-  router.push(`/lehrer/leistungsfeststellungen/${id}`)
+  router.push(`/lehrer/leistungsfeststellungen/${id}`);
 }
 
 async function removeAssessment(id) {
-  if (!confirm('Leistungsfeststellung löschen?')) return
+  if (!confirm("Leistungsfeststellung löschen?")) return;
   try {
-    await deleteAssessment(id)
-    assessments.value = await getAssessmentsForCourse(kursId.value, search.value ? { search: search.value } : {})
+    await deleteAssessment(id);
+    assessments.value = await getAssessmentsForCourse(
+      kursId.value,
+      search.value ? { search: search.value } : {},
+    );
   } catch (e) {
-    alert('Konnte nicht löschen.')
-    console.warn(e)
+    alert("Konnte nicht löschen.");
+    console.warn(e);
   }
 }
 
-const createOpen = ref(false)
-const createSaving = ref(false)
+const createOpen = ref(false);
+const createSaving = ref(false);
 const createForm = ref({
-  thema: '',
-  benotungsartId: '',
+  thema: "",
+  benotungsartId: "",
   maxPunkte: null,
   datum: new Date().toISOString().slice(0, 10),
-  gewichtungProzent: null
-})
+  gewichtungProzent: null,
+});
 
 function openCreateAssessment() {
-  createOpen.value = true
+  createOpen.value = true;
 }
 
 function closeCreateAssessment() {
-  createOpen.value = false
-  createSaving.value = false
+  createOpen.value = false;
+  createSaving.value = false;
 }
 
 async function submitCreateAssessment() {
   if (!createForm.value.thema || !createForm.value.datum) {
-    alert('Bitte Thema und Datum ausfüllen.')
-    return
+    alert("Bitte Thema und Datum ausfüllen.");
+    return;
   }
-  createSaving.value = true
+  createSaving.value = true;
   try {
-    await createAssessment(kursId.value, { ...createForm.value })
-    closeCreateAssessment()
-    assessments.value = await getAssessmentsForCourse(kursId.value)
-    overview.value = await getCourseOverview(kursId.value)
-    await nextTick()
-    renderChart()
+    await createAssessment(kursId.value, { ...createForm.value });
+    closeCreateAssessment();
+    assessments.value = await getAssessmentsForCourse(kursId.value);
+    overview.value = await getCourseOverview(kursId.value);
+    await nextTick();
+    renderChart();
   } catch (e) {
-    alert('Konnte nicht erstellen.')
-    console.warn(e)
+    alert("Konnte nicht erstellen.");
+    console.warn(e);
   } finally {
-    createSaving.value = false
+    createSaving.value = false;
   }
 }
 </script>
@@ -405,9 +521,10 @@ async function submitCreateAssessment() {
 
 .overview {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 340px 340px 1fr;
   gap: 1.2rem;
   margin-top: 1rem;
+  align-items: start;
 }
 
 .stats {
@@ -496,5 +613,53 @@ html:not(.dark) .input {
   padding: 2rem 0;
   color: var(--muted);
 }
-</style>
+.scheme-card {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1rem;
+}
 
+.scheme-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.scheme-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.scheme-sub {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.25rem;
+}
+
+.scheme-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.scheme-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.scheme-select {
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  outline: none;
+}
+
+html:not(.dark) .scheme-select {
+  background: rgba(0, 0, 0, 0.04);
+}
+</style>
