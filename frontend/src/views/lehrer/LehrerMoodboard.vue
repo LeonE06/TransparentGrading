@@ -1,18 +1,26 @@
-<!-- frontend/src/views/lehrer/LehrerMoodboard.vue -->
 <template>
-  <SidebarLayout>
+  <div class="teacher-page">
+    <!-- ✅ TeacherNavbar direkt eingebunden -->
+    <TeacherNavbar />
+
     <section class="page">
       <header class="head">
         <h1 class="title">Moodboard</h1>
-        <p class="subtitle">Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.</p>
+        <p class="subtitle">
+          Durchschnittliche Stimmung deiner Schüler je Klasse und Zeitraum.
+        </p>
       </header>
 
       <div class="toolbar">
         <label class="field">
           <span class="label">Klasse</span>
-          <select class="select" v-model="selectedKlasseId">
+          <select v-model="selectedKlasseId">
             <option value="">Auswählen</option>
-            <option v-for="k in klassen" :key="k.id" :value="String(k.id)">
+            <option
+              v-for="k in klassen"
+              :key="k.id"
+              :value="String(k.id)"
+            >
               {{ k.name }}
             </option>
           </select>
@@ -20,178 +28,161 @@
 
         <label class="field">
           <span class="label">Zeitraum</span>
-          <select class="select" v-model="selectedRange">
+          <select v-model="selectedRange">
             <option value="daily">Täglich</option>
             <option value="weekly">Wöchentlich</option>
             <option value="monthly">Monatlich</option>
           </select>
         </label>
 
-        <div class="spacer"></div>
-
-        <button class="btn" type="button" @click="loadMood" :disabled="!selectedKlasseId || loading">
+        <button
+          type="button"
+          @click="loadMood"
+          :disabled="!selectedKlasseId || loading"
+        >
           Aktualisieren
         </button>
       </div>
 
-      <div v-if="loading" class="state">Lade Mood-Daten …</div>
-      <div v-else-if="error" class="state error">Fehler: {{ error }}</div>
+      <div v-if="loading">
+        Lade Mood-Daten …
+      </div>
 
-      <div v-else class="board">
-        <!-- left mood scale -->
-        <div class="mood-scale">
-          <div class="mood-dot">
-            <span class="emoji">🙂</span>
-            <span class="txt">gut</span>
-          </div>
-          <div class="mood-dot">
-            <span class="emoji">😐</span>
-            <span class="txt">neutral</span>
-          </div>
-          <div class="mood-dot">
-            <span class="emoji">🙁</span>
-            <span class="txt">schlecht</span>
-          </div>
+      <div v-else-if="error">
+        Fehler: {{ error }}
+      </div>
+
+      <div v-else>
+        <div>
+          <strong>
+            Lern-Mood: {{ klasseName }}
+          </strong>
+          <span v-if="overallAvg !== null">
+            (Ø {{ overallAvg }})
+          </span>
         </div>
 
-        <!-- chart -->
-        <div class="card">
-          <div class="card-head">
-            <div class="card-title">
-              Lern-Mood: <span class="muted">{{ klasseName }}</span>
-            </div>
+        <div>
+          <canvas ref="moodChartEl"></canvas>
+        </div>
 
-            <div class="avg" v-if="overallAvg !== null">
-              Ø {{ overallAvg }}
-            </div>
-            <div class="avg muted" v-else>
-              Keine Daten
-            </div>
-          </div>
-
-          <div class="chart-wrap">
-            <canvas ref="moodChartEl"></canvas>
-          </div>
-
-          <div class="hint" v-if="labels.length === 0">
-            Keine Mood-Einträge für die Auswahl vorhanden.
-          </div>
+        <div v-if="labels.length === 0">
+          Keine Mood-Einträge vorhanden.
         </div>
       </div>
     </section>
-  </SidebarLayout>
+  </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
-import SidebarLayout from '@/components/SidebarLayout.vue'
-import { apiClient } from '@/services/apiClient'
+import { computed, onBeforeUnmount, onMounted, ref, nextTick } from "vue";
+import Chart from "chart.js/auto";
+import { apiClient } from "@/services/apiClient";
+import TeacherNavbar from "@/components/TeacherNavbar.vue";
 
-const klassen = ref([])
-const selectedKlasseId = ref('')
-const selectedRange = ref('weekly')
+const klassen = ref([]);
+const selectedKlasseId = ref("");
+const selectedRange = ref("weekly");
 
-const labels = ref([])
-const values = ref([])
-const overallAvg = ref(null)
+const labels = ref([]);
+const values = ref([]);
+const overallAvg = ref(null);
 
-const loading = ref(false)
-const error = ref('')
+const loading = ref(false);
+const error = ref("");
 
-const moodChartEl = ref(null)
-let chart = null
+const moodChartEl = ref(null);
+let chart = null;
 
 const klasseName = computed(() => {
-  const k = klassen.value.find(x => String(x.id) === String(selectedKlasseId.value))
-  return k?.name ?? '—'
-})
+  const k = klassen.value.find(
+    x => String(x.id) === String(selectedKlasseId.value)
+  );
+  return k?.name || "—";
+});
 
 async function loadKlassen() {
-  const res = await apiClient.get('/lehrer/klassen')
-  klassen.value = res.data || []
+  const res = await apiClient.get("/lehrer/klassen");
+  klassen.value = res.data || [];
 
-  // Auto-select erste Klasse (wenn vorhanden)
   if (!selectedKlasseId.value && klassen.value.length > 0) {
-    selectedKlasseId.value = String(klassen.value[0].id)
+    selectedKlasseId.value = String(klassen.value[0].id);
   }
 }
 
 async function loadMood() {
-  if (!selectedKlasseId.value) return
+  if (!selectedKlasseId.value) return;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
-    const res = await apiClient.get('/lehrer/mood', {
-      params: { klasseId: selectedKlasseId.value, range: selectedRange.value }
-    })
+    const res = await apiClient.get("/lehrer/mood", {
+      params: {
+        klasseId: selectedKlasseId.value,
+        range: selectedRange.value,
+      },
+    });
 
-    labels.value = res.data?.labels ?? []
-    values.value = res.data?.values ?? []
-    overallAvg.value = res.data?.overall_avg ?? null
+    labels.value = res.data?.labels ?? [];
+    values.value = res.data?.values ?? [];
+    overallAvg.value = res.data?.overall_avg ?? null;
   } catch (e) {
-    error.value = e?.response?.data?.error || e?.message || 'Unbekannter Fehler'
-    labels.value = []
-    values.value = []
-    overallAvg.value = null
-    destroyChart()
+    error.value =
+      e?.response?.data?.error ||
+      e?.message ||
+      "Unbekannter Fehler";
+
+    labels.value = [];
+    values.value = [];
+    overallAvg.value = null;
+    destroyChart();
   } finally {
-    loading.value = false
+    loading.value = false;
+    await nextTick();
 
-    // ✅ Warten bis der Canvas wieder im DOM ist
-    await nextTick()
-
-    // ✅ Chart erst jetzt rendern
     if (!error.value && labels.value.length > 0) {
-      renderChart()
+      renderChart();
     } else {
-      destroyChart()
+      destroyChart();
     }
   }
 }
 
 function destroyChart() {
   if (chart) {
-    chart.destroy()
-    chart = null
+    chart.destroy();
+    chart = null;
   }
 }
 
 function renderChart() {
-  const canvas = moodChartEl.value
-  if (!canvas) return
+  const canvas = moodChartEl.value;
+  if (!canvas) return;
 
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  destroyChart()
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, 260)
-  gradient.addColorStop(0, 'rgba(106,22,204,0.0)')
-  gradient.addColorStop(1, 'rgba(106,22,204,0.25)')
+  destroyChart();
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
       labels: labels.value,
-      datasets: [{
-        label: 'Mood (Ø)',
-        data: values.value,
-        borderColor: '#6a16cc',
-        backgroundColor: gradient,
-        tension: 0.35,
-        fill: { target: 'start' },
-        pointBackgroundColor: '#6a16cc',
-        pointRadius: 4
-      }]
+      datasets: [
+        {
+          label: "Mood (Ø)",
+          data: values.value,
+          tension: 0.35,
+          fill: false,
+          pointRadius: 4,
+        },
+      ],
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
       },
       scales: {
         y: {
@@ -199,30 +190,29 @@ function renderChart() {
           max: 3,
           ticks: {
             stepSize: 1,
-            callback: (v) => {
-              if (v === 3) return '🙂'
-              if (v === 2) return '😐'
-              if (v === 1) return '🙁'
-              return v
-            }
-          }
+            callback: v => {
+              if (v === 3) return "🙂";
+              if (v === 2) return "😐";
+              if (v === 1) return "🙁";
+              return v;
+            },
+          },
         },
-        x: {
-          ticks: { maxRotation: 0 }
-        }
-      }
-    }
-  })
+      },
+    },
+  });
 }
 
 onMounted(async () => {
-  await loadKlassen()
-  if (selectedKlasseId.value) await loadMood()
-})
+  await loadKlassen();
+  if (selectedKlasseId.value) {
+    await loadMood();
+  }
+});
 
 onBeforeUnmount(() => {
-  destroyChart()
-})
+  destroyChart();
+});
 </script>
 
 <style scoped>
