@@ -50,7 +50,7 @@
         <!-- left mood scale -->
         <div class="mood-scale">
           <div class="mood-dot">
-            <div class="svg-emoji" v-html="getLegendSvg('gut')"></div>
+            <div  class="svg-emoji" v-html="getLegendSvg('gut')"></div>
             <span class="txt">gut</span>
           </div>
           <div class="mood-dot">
@@ -404,35 +404,41 @@ onBeforeUnmount(() => {
 }
 
 .mood-scale {
-  background: #f7f7fb;
-  border-radius: 16px;
-  padding: 2rem 0.75rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* 🔥 wichtig */
+  justify-content: space-between;   /* 🔥 verteilt gut / neutral / schlecht */
   align-items: center;
+
+  padding: 1.5rem 0.5rem;
+  margin-right: 0.5rem;
+
+  background: transparent;          /* ❗ kein Card-Hintergrund */
+  border-right: 1px solid rgba(0,0,0,0.06); /* subtile Chart-Anmutung */
 }
 
 .mood-dot {
-  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;          /* Abstand Emoji ↔ Text */
   text-align: center;
-  transform: translateY(-4px); /* kleine optische Korrektur */
 }
 /* SVG-Legende links (klein) */
 .svg-emoji {
   width: 44px;
   height: 44px;
+
   border-radius: 50%;
   border: 2px solid #6a16cc;
-  background: #fff;
+  background: white;
+
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
 .svg-emoji :deep(svg) {
-  width: 30px !important;
-  height: 30px !important;
+  width: 26px !important;
+  height: 26px !important;
 }
 
 .txt {
@@ -493,5 +499,11 @@ onBeforeUnmount(() => {
   margin-top: 0.75rem;
   text-align: center;
   color: #888;
+}
+.mood-label {
+  font-size: 0.75rem;
+  color: #777;
+  font-weight: 600;
+  text-transform: lowercase;
 }
 </style>
