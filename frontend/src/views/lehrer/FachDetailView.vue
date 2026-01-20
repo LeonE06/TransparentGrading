@@ -1,9 +1,7 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" to="/lehrer/faecher">
-        ‹ Meine Fächer
-      </router-link>
+      <router-link class="back" to="/lehrer/faecher">‹ Meine Fächer</router-link>
     </div>
 
     <header class="head">
@@ -47,6 +45,7 @@
         </div>
       </div>
 
+      <!-- ✅ Schema wird hier ausgewählt -->
       <div class="scheme-card">
         <div class="scheme-title">Aktives Bewertungsschema</div>
         <div class="scheme-sub">
@@ -61,6 +60,11 @@
             </option>
           </select>
         </label>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-label">Notenverlauf</div>
+        <canvas ref="chartEl" height="110"></canvas>
       </div>
     </div>
 
@@ -96,35 +100,34 @@
         <template #cell-teilnahmequote="{ row }">
           {{ row.teilnahmequote != null ? `${row.teilnahmequote}%` : "—" }}
         </template>
+        <template #actions="{ row }">
+          <button class="icon-action" type="button" title="Öffnen" @click="openAssessment(row.id)">
+            <ExternalLink :size="18" />
+          </button>
+          <button class="icon-action" type="button" title="Löschen" @click="removeAssessment(row.id)">
+            <Trash2 :size="18" />
+          </button>
+        </template>
       </DataTable>
     </div>
 
-    <!-- ================= Modal ================= -->
+    <!-- ================= Modal: Leistungsfeststellung erstellen ================= -->
     <ModalForm
       :open="createOpen"
       title="Neue Leistungsfeststellung erstellen"
       @close="closeCreateAssessment"
     >
       <div class="form">
-        <!-- ✅ Bewertungsschema im Modal -->
+        <!-- ✅ Schema im Modal NUR anzeigen (keine Auswahl) -->
         <div class="scheme-inline">
           <div class="scheme-inline-title">Aktives Bewertungsschema</div>
           <div class="scheme-inline-sub">
             Dieses Schema wird für neue Leistungsfeststellungen in diesem Fach verwendet.
           </div>
 
-          <label class="field">
-            <span class="field-label">Schema auswählen</span>
-            <select
-              class="input"
-              v-model="courseSchemeId"
-              @change="saveCourseScheme"
-            >
-              <option v-for="s in schemes" :key="s.id" :value="s.id">
-                {{ s.name }}
-              </option>
-            </select>
-          </label>
+          <div class="scheme-pill">
+            Aktuell: <strong>{{ activeSchemeName }}</strong>
+          </div>
         </div>
 
         <label class="field">
@@ -137,7 +140,7 @@
         </label>
 
         <label class="field">
-          <span class="field-label">Feststellungsart</span>
+          <span class="field-label">Feststellungsart auswählen</span>
           <select v-model="createForm.benotungsartId" class="input">
             <option value="">Feststellungsart wählen</option>
             <option v-for="t in benotungsarten" :key="t.id" :value="t.id">
@@ -154,14 +157,13 @@
               class="input"
               type="number"
               min="0"
+              placeholder="z.B. 24"
             />
           </label>
-
           <label class="field">
             <span class="field-label">Datum</span>
             <input v-model="createForm.datum" class="input" type="date" />
           </label>
-
           <label class="field">
             <span class="field-label">Gewichtung (%)</span>
             <input
@@ -170,6 +172,7 @@
               type="number"
               min="0"
               max="100"
+              placeholder="z.B. 50"
             />
           </label>
         </div>
@@ -193,14 +196,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
+import { Chart } from "chart.js/auto";
+import { ExternalLink, Trash2 } from "lucide-vue-next";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
 import TgTabs from "@/components/TgTabs.vue";
 import {
   createAssessment,
+  deleteAssessment,
   getAssessmentsForCourse,
   getCourseDetail,
   getCourseOverview,
@@ -222,27 +228,42 @@ const students = ref([]);
 const assessments = ref([]);
 const benotungsarten = ref([]);
 
+// --- Schema state (Auswahl in Overview) ---
 const schemes = ref([]);
 const courseSchemeId = ref("default");
 
-const tab = ref("overview");
+// Name des aktiven Schemas (für Modal-Anzeige)
+const activeSchemeName = computed(() => {
+  const s = grading.getActiveSchemeForCourse?.(kursId.value);
+  return s?.name || "Standard";
+});
+
+// --- Tabs ---
+const tab = ref(route.path.endsWith("/leistungsfeststellungen") ? "assessments" : "overview");
 const tabs = [
   { key: "overview", label: "Übersicht" },
   { key: "students", label: "Schüler*innen" },
   { key: "assessments", label: "Leistungsfeststellungen" },
 ];
 
+watch(
+  () => route.path,
+  (p) => {
+    if (p.endsWith("/leistungsfeststellungen")) tab.value = "assessments";
+  }
+);
+
+// --- Search ---
 const search = ref("");
 const filteredAssessments = computed(() => {
   if (!search.value) return assessments.value;
   const q = search.value.toLowerCase();
-  return assessments.value.filter((a) =>
-    String(a.thema || "").toLowerCase().includes(q),
-  );
+  return assessments.value.filter((a) => String(a.thema || "").toLowerCase().includes(q));
 });
 
+// --- Tables ---
 const assessmentColumns = [
-  { key: "thema", label: "Thema" },
+  { key: "thema", label: "Thema", width: "42%" },
   { key: "typ", label: "Feststellungsart" },
   { key: "datum", label: "Datum" },
   { key: "gewichtungProzent", label: "Gewichtung" },
@@ -258,7 +279,11 @@ const studentColumns = [
 
 function formatDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("de-DE");
+  try {
+    return new Date(d).toLocaleDateString("de-DE");
+  } catch {
+    return d;
+  }
 }
 
 function formatGrade(v) {
@@ -266,11 +291,12 @@ function formatGrade(v) {
   return Number(v).toFixed(1).replace(".", ",");
 }
 
+// --- Schema helpers ---
 function syncCourseSchemeUi() {
   schemes.value = grading.loadAllSchemes();
   courseSchemeId.value =
-    grading.getActiveSchemeIdForCourse(kursId.value) ||
-    grading.getActiveSchemeId() ||
+    grading.getActiveSchemeIdForCourse?.(kursId.value) ||
+    grading.getActiveSchemeId?.() ||
     "default";
 }
 
@@ -278,8 +304,10 @@ function saveCourseScheme() {
   grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
 }
 
+// --- Load data ---
 async function loadAll() {
   loading.value = true;
+  error.value = "";
   try {
     const [c, o, s, a, t] = await Promise.all([
       getCourseDetail(kursId.value),
@@ -293,6 +321,9 @@ async function loadAll() {
     students.value = s;
     assessments.value = a;
     benotungsarten.value = t;
+
+    await nextTick();
+    renderChart();
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
@@ -301,21 +332,88 @@ async function loadAll() {
 }
 
 onMounted(() => {
-  loadAll();
   syncCourseSchemeUi();
+  loadAll();
 });
 
-watch(kursId, () => {
-  loadAll();
+watch(kursId, (v) => {
+  if (!v) return;
   syncCourseSchemeUi();
+  loadAll();
 });
 
-function goToAssessments() {
-  tab.value = "assessments";
+// --- Chart ---
+const chartEl = ref(null);
+let chart = null;
+
+function renderChart() {
+  if (!chartEl.value) return;
+  if (chart) {
+    chart.destroy();
+    chart = null;
+  }
+
+  const trend = overview.value?.trend || [];
+  const labels = trend.map((t) => (t.ym || "").replace("-", " "));
+  const values = trend.map((t) => t.avgNote);
+
+  chart = new Chart(chartEl.value, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          borderColor: "rgba(144, 125, 255, 1)",
+          backgroundColor: "rgba(144, 125, 255, 0.12)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#9aa0a6", maxRotation: 0 } },
+        y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#9aa0a6" } },
+      },
+    },
+  });
 }
 
+onBeforeUnmount(() => {
+  if (chart) chart.destroy();
+});
+
+// --- Navigation/actions ---
+function goToAssessments() {
+  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`);
+}
+
+function openAssessment(id) {
+  router.push(`/lehrer/leistungsfeststellungen/${id}`);
+}
+
+async function removeAssessment(id) {
+  if (!confirm("Leistungsfeststellung löschen?")) return;
+  try {
+    await deleteAssessment(id);
+    assessments.value = await getAssessmentsForCourse(
+      kursId.value,
+      search.value ? { search: search.value } : {}
+    );
+  } catch (e) {
+    alert("Konnte nicht löschen.");
+    console.warn(e);
+  }
+}
+
+// --- Modal create assessment ---
 const createOpen = ref(false);
 const createSaving = ref(false);
+
 const createForm = ref({
   thema: "",
   benotungsartId: "",
@@ -325,7 +423,12 @@ const createForm = ref({
 });
 
 function openCreateAssessment() {
-  syncCourseSchemeUi();
+  // ✅ Modal übernimmt das aktive Schema aus der Overview-Auswahl
+  courseSchemeId.value =
+    grading.getActiveSchemeIdForCourse?.(kursId.value) ||
+    grading.getActiveSchemeId?.() ||
+    "default";
+
   createOpen.value = true;
 }
 
@@ -345,13 +448,17 @@ async function submitCreateAssessment() {
     closeCreateAssessment();
     assessments.value = await getAssessmentsForCourse(kursId.value);
     overview.value = await getCourseOverview(kursId.value);
-  } catch {
+    await nextTick();
+    renderChart();
+  } catch (e) {
     alert("Konnte nicht erstellen.");
+    console.warn(e);
   } finally {
     createSaving.value = false;
   }
 }
 </script>
+
 
 <style scoped>
 .page {
