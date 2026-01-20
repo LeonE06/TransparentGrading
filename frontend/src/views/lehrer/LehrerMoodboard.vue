@@ -14,13 +14,9 @@
       <div class="toolbar">
         <label class="field">
           <span class="label">Klasse</span>
-          <select v-model="selectedKlasseId">
+          <select class="select" v-model="selectedKlasseId">
             <option value="">Auswählen</option>
-            <option
-              v-for="k in klassen"
-              :key="k.id"
-              :value="String(k.id)"
-            >
+            <option v-for="k in klassen" :key="k.id" :value="String(k.id)">
               {{ k.name }}
             </option>
           </select>
@@ -28,14 +24,17 @@
 
         <label class="field">
           <span class="label">Zeitraum</span>
-          <select v-model="selectedRange">
+          <select class="select" v-model="selectedRange">
             <option value="daily">Täglich</option>
             <option value="weekly">Wöchentlich</option>
             <option value="monthly">Monatlich</option>
           </select>
         </label>
 
+        <div class="spacer"></div>
+
         <button
+          class="btn"
           type="button"
           @click="loadMood"
           :disabled="!selectedKlasseId || loading"
@@ -44,31 +43,21 @@
         </button>
       </div>
 
-      <div v-if="loading">
-        Lade Mood-Daten …
-      </div>
+      <div v-if="loading">Lade Mood-Daten …</div>
 
-      <div v-else-if="error">
-        Fehler: {{ error }}
-      </div>
+      <div v-else-if="error">Fehler: {{ error }}</div>
 
       <div v-else>
         <div>
-          <strong>
-            Lern-Mood: {{ klasseName }}
-          </strong>
-          <span v-if="overallAvg !== null">
-            (Ø {{ overallAvg }})
-          </span>
+          <strong> Lern-Mood: {{ klasseName }} </strong>
+          <span v-if="overallAvg !== null"> (Ø {{ overallAvg }}) </span>
         </div>
 
         <div>
           <canvas ref="moodChartEl"></canvas>
         </div>
 
-        <div v-if="labels.length === 0">
-          Keine Mood-Einträge vorhanden.
-        </div>
+        <div v-if="labels.length === 0">Keine Mood-Einträge vorhanden.</div>
       </div>
     </section>
   </div>
@@ -96,7 +85,7 @@ let chart = null;
 
 const klasseName = computed(() => {
   const k = klassen.value.find(
-    x => String(x.id) === String(selectedKlasseId.value)
+    (x) => String(x.id) === String(selectedKlasseId.value),
   );
   return k?.name || "—";
 });
@@ -129,9 +118,7 @@ async function loadMood() {
     overallAvg.value = res.data?.overall_avg ?? null;
   } catch (e) {
     error.value =
-      e?.response?.data?.error ||
-      e?.message ||
-      "Unbekannter Fehler";
+      e?.response?.data?.error || e?.message || "Unbekannter Fehler";
 
     labels.value = [];
     values.value = [];
@@ -190,7 +177,7 @@ function renderChart() {
           max: 3,
           ticks: {
             stepSize: 1,
-            callback: v => {
+            callback: (v) => {
               if (v === 3) return "🙂";
               if (v === 2) return "😐";
               if (v === 1) return "🙁";
@@ -339,7 +326,7 @@ onBeforeUnmount(() => {
   background: #fff;
   border-radius: 16px;
   padding: 1.25rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   min-height: 380px;
   display: flex;
   flex-direction: column;
