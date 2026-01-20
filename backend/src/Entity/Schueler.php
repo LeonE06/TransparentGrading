@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Entity;
+
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Repository\SchuelerRepository;
@@ -33,10 +34,11 @@ class Schueler
     #[ORM\JoinColumn(name: "klasse_id", referencedColumnName: "id", nullable: true)]
     private ?Klassen $klasse = null;
 
-    #[ORM\OneToOne(mappedBy: 'schueler', targetEntity: Einstellungen::class)]
+    // ✅ inverse side bleibt mappedBy: 'schueler'
+    // ✅ cascade ist sinnvoll, damit Einstellungen automatisch persist/remove geht
+    #[ORM\OneToOne(mappedBy: 'schueler', targetEntity: Einstellungen::class, cascade: ['persist', 'remove'])]
     #[Groups(['student_read'])]
     private ?Einstellungen $einstellungen = null;
-
 
     #[ORM\OneToMany(mappedBy: 'zielSchueler', targetEntity: Nachrichten::class)]
     private Collection $empfangeneNachrichten;
@@ -74,7 +76,6 @@ class Schueler
             $this->kursEinstellungen->add($kursEinstellung);
             $kursEinstellung->setSchueler($this);
         }
-
         return $this;
     }
 
@@ -85,23 +86,23 @@ class Schueler
                 $kursEinstellung->setSchueler(null);
             }
         }
-
         return $this;
     }
-        public function getEmpfangeneNachrichten(): Collection
-        {
-            return $this->empfangeneNachrichten;
-        }
 
-        public function getNachrichtenStatus(): Collection
-        {
-            return $this->nachrichtenStatus;
-        }
+    public function getEmpfangeneNachrichten(): Collection
+    {
+        return $this->empfangeneNachrichten;
+    }
 
-        public function getKursSchueler(): Collection
-        {
-            return $this->kursSchueler;
-        }
+    public function getNachrichtenStatus(): Collection
+    {
+        return $this->nachrichtenStatus;
+    }
+
+    public function getKursSchueler(): Collection
+    {
+        return $this->kursSchueler;
+    }
 
     public function getId(): ?int { return $this->id; }
     public function getVorname(): ?string { return $this->vorname; }
@@ -116,24 +117,31 @@ class Schueler
     public function getKlasse(): ?Klassen { return $this->klasse; }
     public function setKlasse(?Klassen $klasse): self { $this->klasse = $klasse; return $this; }
 
-public function getEinstellungen(): ?Einstellungen
-{
-    return $this->einstellungen;
-}
+    public function getEinstellungen(): ?Einstellungen
+    {
+        return $this->einstellungen;
+    }
 
-public function setEinstellungen(?Einstellungen $einstellungen): self
-{
-    $this->einstellungen = $einstellungen;
-    return $this;
-}
-public function getMs365User(): ?Microsoft365User
-{
-    return $this->ms365User;
-}
+    // ✅ Synchronisiert beide Seiten der Relation
+    public function setEinstellungen(?Einstellungen $einstellungen): self
+    {
+        $this->einstellungen = $einstellungen;
 
-public function setMs365User(?Microsoft365User $ms365User): self
-{
-    $this->ms365User = $ms365User;
-    return $this;
-}
+        if ($einstellungen !== null && $einstellungen->getSchueler() !== $this) {
+            $einstellungen->setSchueler($this);
+        }
+
+        return $this;
+    }
+
+    public function getMs365User(): ?Microsoft365User
+    {
+        return $this->ms365User;
+    }
+
+    public function setMs365User(?Microsoft365User $ms365User): self
+    {
+        $this->ms365User = $ms365User;
+        return $this;
+    }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
@@ -9,11 +11,18 @@ use Doctrine\ORM\Mapping as ORM;
 class Einstellungen
 {
     /**
-     * Primärschlüssel = schueler_id
+     * Primärschlüssel = schueler_id (OneToOne zu Schueler)
      */
-    #[ORM\Id]
-    #[ORM\Column(type: 'integer')]
-    private int $id;
+#[ORM\Id]
+#[ORM\OneToOne(targetEntity: Schueler::class, inversedBy: 'einstellungen')]
+#[ORM\JoinColumn(
+    name: 'schueler_id',
+    referencedColumnName: 'id',
+    nullable: false,
+    onDelete: 'CASCADE'
+)]
+private Schueler $schueler;
+
 
     #[ORM\Column(type: 'string', length: 100, nullable: true)]
     private ?string $sprache = null;
@@ -27,7 +36,6 @@ class Einstellungen
     #[ORM\Column(type: 'boolean', options: ['default' => 0])]
     private bool $benachrichtigungen = false;
 
-    // ✅ NEU: Mood-Benachrichtigung
     #[ORM\Column(
         name: 'mood_benachrichtigung',
         type: 'boolean',
@@ -35,22 +43,34 @@ class Einstellungen
     )]
     private bool $moodBenachrichtigung = true;
 
-    #[ORM\Column(type: 'boolean', options: ['default' => 0])]
-    private bool $light_darkmode = false;
+    #[ORM\Column(
+        name: 'light_darkmode',
+        type: 'boolean',
+        options: ['default' => 0]
+    )]
+    private bool $lightDarkmode = false;
 
     /* ==========================
        Getter / Setter
        ========================== */
 
-    public function getId(): int
+    public function getSchueler(): Schueler
     {
-        return $this->id;
+        return $this->schueler;
     }
 
-    public function setId(int $id): self
+    public function setSchueler(Schueler $schueler): self
     {
-        $this->id = $id;
+        $this->schueler = $schueler;
         return $this;
+    }
+
+    /**
+     * Optional: Convenience-Getter für die ID des Schülers
+     */
+    public function getSchuelerId(): int
+    {
+        return $this->schueler->getId();
     }
 
     public function getSprache(): ?string
@@ -97,7 +117,6 @@ class Einstellungen
         return $this;
     }
 
-    // ✅ Mood Reminder
     public function isMoodBenachrichtigung(): bool
     {
         return $this->moodBenachrichtigung;
@@ -111,12 +130,12 @@ class Einstellungen
 
     public function isLightDarkmode(): bool
     {
-        return $this->light_darkmode;
+        return $this->lightDarkmode;
     }
 
-    public function setLightDarkmode(bool $light_darkmode): self
+    public function setLightDarkmode(bool $lightDarkmode): self
     {
-        $this->light_darkmode = $light_darkmode;
+        $this->lightDarkmode = $lightDarkmode;
         return $this;
     }
 }
