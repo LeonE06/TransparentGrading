@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Einstellungen;
 use App\Entity\KursEinstellungen;
+use App\Entity\Microsoft365User;
+use App\Entity\Schueler;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,19 +17,22 @@ class SettingsController extends AbstractController
     #[Route('/api/settings', name: 'api_get_settings', methods: ['GET'])]
     public function getSettings(ManagerRegistry $doctrine): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $schueler = $this->resolveSchueler($doctrine);
+        if (!$schueler) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
         $repo = $doctrine->getRepository(Einstellungen::class);
-        $settings = $repo->findOneBy(['schueler' => $user]);
+
+        // je nach Mapping kannst du auch ->find($schueler) verwenden,
+        // findOneBy ist aber safe
+        $settings = $repo->findOneBy(['schueler' => $schueler]);
 
         // Prüfe ob Schüler über 18 ist
         $isUeber18 = false;
-        if ($user->getGeburtsdatum()) {
+        if ($schueler->getGeburtsdatum()) {
             $today = new \DateTime();
-            $geburtsdatum = $user->getGeburtsdatum();
+            $geburtsdatum = $schueler->getGeburtsdatum();
             $age = $today->diff($geburtsdatum)->y;
             $isUeber18 = $age >= 18;
         }
@@ -44,30 +49,33 @@ class SettingsController extends AbstractController
     #[Route('/api/settings', name: 'api_put_settings', methods: ['PUT'])]
     public function putSettings(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$user) {
+        $schueler = $this->resolveSchueler($doctrine);
+        if (!$schueler) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
 
         $em = $doctrine->getManager();
         $repo = $doctrine->getRepository(Einstellungen::class);
         $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
 
-        $settings = $repo->findOneBy(['schueler' => $user]);
+        $settings = $repo->findOneBy(['schueler' => $schueler]);
 
         if (!$settings) {
             $settings = new Einstellungen();
-            $settings->setSchueler($user);
+            $settings->setSchueler($schueler);
             $em->persist($settings);
         }
 
         // Prüfe ob Schüler über 18 ist
         $isUeber18 = false;
-        if ($user->getGeburtsdatum()) {
+        if ($schueler->getGeburtsdatum()) {
             $today = new \DateTime();
-            $geburtsdatum = $user->getGeburtsdatum();
+            $geburtsdatum = $schueler->getGeburtsdatum();
             $age = $today->diff($geburtsdatum)->y;
             $isUeber18 = $age >= 18;
         }
@@ -78,40 +86,36 @@ class SettingsController extends AbstractController
         }
 
         if (array_key_exists('benachrichtigungen', $data)) {
-            $globalValue = $data['benachrichtigungen'];
+            $globalValue = (bool)$data['benachrichtigungen'];
             $settings->setBenachrichtigungen($globalValue);
 
             // Alle KursEinstellungen für diesen Schüler aktualisieren
-            // 1. Alle Kurse des Schülers finden (über KursSchueler)
-            $kursSchueler = $user->getKursSchueler();
+            $kursSchueler = $schueler->getKursSchueler();
 
             foreach ($kursSchueler as $ks) {
                 $kurs = $ks->getKurs();
 
-                // 2. Prüfen ob bereits eine KursEinstellung existiert
                 $kursEinstellung = $kursEinstellungenRepo->findOneBy([
-                    'schueler' => $user,
+                    'schueler' => $schueler,
                     'kurs' => $kurs
                 ]);
 
-                // 3. Falls nicht vorhanden, neue erstellen
                 if (!$kursEinstellung) {
                     $kursEinstellung = new KursEinstellungen();
-                    $kursEinstellung->setSchueler($user);
+                    $kursEinstellung->setSchueler($schueler);
                     $kursEinstellung->setKurs($kurs);
                     $em->persist($kursEinstellung);
                 }
 
-                // 4. Benachrichtigung auf den globalen Wert setzen
                 $kursEinstellung->setBenachrichtigung($globalValue);
             }
         }
 
-        // Eltern-Email und Aktivierung (nur wenn über 18)
+        // Eltern-Email und Aktivierung (nur wenn über 18) -> bleibt wie du willst
         if ($isUeber18) {
             if (array_key_exists('elternemail', $data)) {
                 $email = $data['elternemail'];
-                // Email-Validierung: null oder leer = erlaubt, sonst muss es eine gültige Email sein
+
                 if ($email === null || $email === '') {
                     $settings->setElternemail(null);
                 } elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -122,7 +126,7 @@ class SettingsController extends AbstractController
             }
 
             if (array_key_exists('elternaktivierung', $data)) {
-                $settings->setElternaktivierung($data['elternaktivierung']);
+                $settings->setElternaktivierung((bool)$data['elternaktivierung']);
             }
         } else {
             // Wenn unter 18, keine Änderungen erlauben
@@ -140,5 +144,21 @@ class SettingsController extends AbstractController
             'elternaktivierung' => $settings->getElternaktivierung(),
             'isUeber18' => $isUeber18
         ], 200);
+    }
+
+    private function resolveSchueler(ManagerRegistry $doctrine): ?Schueler
+    {
+        $jwtUser = $this->getUser();
+        if (!$jwtUser) return null;
+
+        $em = $doctrine->getManager();
+
+        $ms365User = $em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $jwtUser->getUserIdentifier()]);
+
+        if (!$ms365User) return null;
+
+        return $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
     }
 }
