@@ -20,8 +20,10 @@ class StudentAuthentificationController extends AbstractController
         if (!$user) {
             return new JsonResponse(['error' => 'Not authorized'], 401);
         }
+
         $ms365User = $em->getRepository(\App\Entity\Microsoft365User::class)
             ->findOneBy(['email' => $user->getUserIdentifier()]);
+
         $schueler = $em->getRepository(\App\Entity\Schueler::class)
             ->findOneBy(['ms365User' => $ms365User]);
 
@@ -29,20 +31,12 @@ class StudentAuthentificationController extends AbstractController
             return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
         }
 
-        // Einstellungen explizit laden, falls vorhanden
+        // ✅ Einstellungen korrekt laden (nicht find($id))
         $einstellungen = $em->getRepository(\App\Entity\Einstellungen::class)
-            ->find($schueler->getId());
+            ->findOneBy(['schueler' => $schueler]);
 
         if ($einstellungen) {
             $schueler->setEinstellungen($einstellungen);
-        }
-
-        // Debug: Prüfen ob Einstellungen geladen wurden
-        // Entferne das später wieder!
-        $debugEinstellungen = $schueler->getEinstellungen();
-        error_log("DEBUG: Einstellungen vorhanden: " . ($debugEinstellungen ? "JA" : "NEIN"));
-        if ($debugEinstellungen) {
-            error_log("DEBUG: Elternemail: " . ($debugEinstellungen->getElternemail() ?? "NULL"));
         }
 
         $json = $serializer->serialize($schueler, 'json', [
