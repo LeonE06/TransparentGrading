@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\Einstellungen;
 use App\Entity\KursEinstellungen;
-use App\Entity\Microsoft365User;
 use App\Entity\Schueler;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,15 +16,28 @@ class SettingsController extends AbstractController
     #[Route('/api/settings', name: 'api_get_settings', methods: ['GET'])]
     public function getSettings(ManagerRegistry $doctrine): JsonResponse
     {
-        $schueler = $this->resolveSchueler($doctrine);
-        if (!$schueler) {
+        $user = $this->getUser();
+        if (!$user) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
-        $repo = $doctrine->getRepository(Einstellungen::class);
+        // Hole den Schueler aus der DB basierend auf der Email
+        $em = $doctrine->getManager();
+        $ms365User = $em->getRepository(\App\Entity\Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
 
-        // je nach Mapping kannst du auch ->find($schueler) verwenden,
-        // findOneBy ist aber safe
+        if (!$ms365User) {
+            return new JsonResponse(['error' => 'Benutzer nicht gefunden'], 404);
+        }
+
+        $schueler = $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
+        }
+
+        $repo = $doctrine->getRepository(Einstellungen::class);
         $settings = $repo->findOneBy(['schueler' => $schueler]);
 
         // Prüfe ob Schüler über 18 ist
@@ -49,25 +61,37 @@ class SettingsController extends AbstractController
     #[Route('/api/settings', name: 'api_put_settings', methods: ['PUT'])]
     public function putSettings(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
-        $schueler = $this->resolveSchueler($doctrine);
-        if (!$schueler) {
+        $user = $this->getUser();
+        if (!$user) {
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
-        $data = json_decode($request->getContent(), true);
-        if (!is_array($data)) {
-            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        // Hole den Schueler aus der DB basierend auf der Email
+        $em = $doctrine->getManager();
+        $ms365User = $em->getRepository(\App\Entity\Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+
+        if (!$ms365User) {
+            return new JsonResponse(['error' => 'Benutzer nicht gefunden'], 404);
         }
 
-        $em = $doctrine->getManager();
+        $schueler = $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
         $repo = $doctrine->getRepository(Einstellungen::class);
         $kursEinstellungenRepo = $doctrine->getRepository(KursEinstellungen::class);
 
-        $settings = $repo->findOneBy(['schueler' => $schueler]);
+        $settings = $repo->find($schueler->getId()); // ← Direkt über die ID finden, da die ID = Schueler-ID ist
 
         if (!$settings) {
             $settings = new Einstellungen();
-            $settings->setSchueler($schueler);
+            $settings->setSchueler($schueler); // Das setzt automatisch die ID
             $em->persist($settings);
         }
 
@@ -86,7 +110,7 @@ class SettingsController extends AbstractController
         }
 
         if (array_key_exists('benachrichtigungen', $data)) {
-            $globalValue = (bool)$data['benachrichtigungen'];
+            $globalValue = $data['benachrichtigungen'];
             $settings->setBenachrichtigungen($globalValue);
 
             // Alle KursEinstellungen für diesen Schüler aktualisieren
@@ -111,31 +135,31 @@ class SettingsController extends AbstractController
             }
         }
 
-        // Eltern-Email und Aktivierung (nur wenn über 18) -> bleibt wie du willst
-        if ($isUeber18) {
-            if (array_key_exists('elternemail', $data)) {
-                $email = $data['elternemail'];
-
-                if ($email === null || $email === '') {
-                    $settings->setElternemail(null);
-                } elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $settings->setElternemail($email);
-                } else {
-                    return new JsonResponse(['error' => 'Ungültige E-Mail-Adresse'], 400);
-                }
-            }
-
-            if (array_key_exists('elternaktivierung', $data)) {
-                $settings->setElternaktivierung((bool)$data['elternaktivierung']);
-            }
-        } else {
-            // Wenn unter 18, keine Änderungen erlauben
-            if (array_key_exists('elternemail', $data) || array_key_exists('elternaktivierung', $data)) {
-                return new JsonResponse(['error' => 'Nur Schüler über 18 können die Eltern-E-Mail bearbeiten'], 403);
+        // Eltern-Email und Aktivierung (auch wenn unter 18 - für die erste Eingabe)
+        if (array_key_exists('elternemail', $data)) {
+            $email = $data['elternemail'];
+            if ($email === null || $email === '') {
+                $settings->setElternemail(null);
+            } elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $settings->setElternemail($email);
+            } else {
+                return new JsonResponse(['error' => 'Ungültige E-Mail-Adresse'], 400);
             }
         }
 
-        $em->flush();
+        // Eltern-Aktivierung nur wenn über 18
+        if ($isUeber18 && array_key_exists('elternaktivierung', $data)) {
+            $settings->setElternaktivierung($data['elternaktivierung']);
+        }
+
+        try {
+            $em->flush();
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Fehler beim Speichern',
+                'details' => $e->getMessage()
+            ], 500);
+        }
 
         return new JsonResponse([
             'light_darkmode' => $settings->getLightDarkmode(),
@@ -144,21 +168,5 @@ class SettingsController extends AbstractController
             'elternaktivierung' => $settings->getElternaktivierung(),
             'isUeber18' => $isUeber18
         ], 200);
-    }
-
-    private function resolveSchueler(ManagerRegistry $doctrine): ?Schueler
-    {
-        $jwtUser = $this->getUser();
-        if (!$jwtUser) return null;
-
-        $em = $doctrine->getManager();
-
-        $ms365User = $em->getRepository(Microsoft365User::class)
-            ->findOneBy(['email' => $jwtUser->getUserIdentifier()]);
-
-        if (!$ms365User) return null;
-
-        return $em->getRepository(Schueler::class)
-            ->findOneBy(['ms365User' => $ms365User]);
     }
 }
