@@ -7,13 +7,18 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
+use App\Entity\Kurse;
+
 #[Route('/api')]
 class StudentGradesController extends AbstractController
 {
     #[Route('/schueler/faecher/{kursId}/noten', methods: ['GET'])]
     public function getNoten(
         int $kursId,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        MailerInterface $mailer
     ): JsonResponse {
 
         // ------------------------------------------------
@@ -40,7 +45,7 @@ class StudentGradesController extends AbstractController
             }
 
             $schueler = $em->getRepository(\App\Entity\Schueler::class)
-                           ->findOneBy(['ms365User' => $user->getId()]);
+                ->findOneBy(['ms365User' => $user->getId()]);
 
             if (!$schueler) {
                 return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
@@ -82,6 +87,49 @@ class StudentGradesController extends AbstractController
             'kid' => $kursId
         ])->fetchOne();
 
+
+        // ------------------------------------------------
+        // 2.1) Sende Email an Eltern wenn Notenstand schlechter als 4.5
+        // ------------------------------------------------
+        // Schwelle: ab Durchschnitt 4.5
+        if ($schuelerDurchschnitt !== null && (float) $schuelerDurchschnitt >= 4.5) {
+            // Einstellungen / Elternmail
+            $einstellungen = $schueler->getEinstellungen();
+            $elternEmail = $einstellungen?->getElternemail();
+            $elternAktiviert = $einstellungen?->getElternaktivierung();
+
+            if ($elternEmail && $elternAktiviert) {
+                // Kurs + Lehrer
+                $kurs = $em->getRepository(Kurse::class)->find($kursId);
+                $lehrer = $kurs?->getLehrer();
+                $lehrerEmail = $lehrer?->getMs365User()?->getEmail();
+
+                if ($lehrerEmail) {
+                    $fachName = $kurs?->getFach()?->getName() ?? 'Fach';
+
+                    $mail = (new Email())
+                        ->from($lehrerEmail)
+                        ->to($elternEmail)
+                        ->subject('Leistungsinformation zu ' . $fachName)
+                        ->text(
+                            sprintf(
+                                "Sehr geehrte Ehrziehungsberechtigte,\n\n" .
+                                "Ihr Kind %s %s steht aktuell in %s auf der Note %.2f.\n" .
+                                "Bitte setzen Sie sich mit mir in Verbindung, falls Sie Fragen haben.\n\n" .
+                                "Mit freundlichen Grüßen\n%s %s",
+                                $schueler->getVorname(),
+                                $schueler->getNachname(),
+                                $fachName,
+                                (float) $schuelerDurchschnitt,
+                                $lehrer?->getVorname() ?? '',
+                                $lehrer?->getNachname() ?? ''
+                            )
+                        );
+
+                    $mailer->send($mail);
+                }
+            }
+        }
 
         // ------------------------------------------------
         // 3) Berechne Klassenschnitt
