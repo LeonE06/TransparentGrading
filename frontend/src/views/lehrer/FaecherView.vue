@@ -16,9 +16,9 @@
           <option value="name">Sortiert A - Z</option>
           <option value="klasse">Sortiert nach Klasse</option>
         </select>
-        <button class="btn primary" disabled title="Noch nicht implementiert (DB-Feld fehlt)">
-          Neues Fach erstellen
-        </button>
+<button class="btn primary" title="Noch nicht implementiert (DB-Feld fehlt)">
+  Neues Fach erstellen
+</button>
       </div>
     </div>
 
