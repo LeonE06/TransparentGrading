@@ -2,6 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\Kurse;
+use App\Entity\Microsoft365User;
+use App\Entity\Schueler;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -9,11 +12,30 @@ use Symfony\Component\Routing\Annotation\Route;
 
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use App\Entity\Kurse;
 
 #[Route('/api')]
 class StudentGradesController extends AbstractController
 {
+    private function getCurrentSchueler(EntityManagerInterface $em): ?Schueler
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return null;
+        }
+
+        // Microsoft365User über die E-Mail (UserIdentifier) finden
+        $ms365User = $em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+
+        if (!$ms365User) {
+            return null;
+        }
+
+        // Schueler über Relation ms365User finden
+        return $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+    }
+
     #[Route('/schueler/faecher/{kursId}/noten', methods: ['GET'])]
     public function getNoten(
         int $kursId,
@@ -21,35 +43,10 @@ class StudentGradesController extends AbstractController
         MailerInterface $mailer
     ): JsonResponse {
 
-        // ------------------------------------------------
-        // 🔧 DEBUG-MODUS (temporär: arbeitet ohne Login!)
-        // ------------------------------------------------
-        $DEBUG = true;  // <-- später auf false setzen, wenn MS Login fertig!
-
-        if ($DEBUG) {
-            // Nutze Schüler mit ID = 1
-            $schueler = $em->getRepository(\App\Entity\Schueler::class)->find(1);
-
-            if (!$schueler) {
-                return new JsonResponse([
-                    'error' => 'DEBUG FEHLER: Schüler mit ID 1 existiert nicht.'
-                ], 500);
-            }
-        } else {
-            // ------------------------------------------------
-            // 🔒 ORIGINALER MODE (Microsoft Login)
-            // ------------------------------------------------
-            $user = $this->getUser();
-            if (!$user) {
-                return new JsonResponse(['error' => 'Not authorized'], 401);
-            }
-
-            $schueler = $em->getRepository(\App\Entity\Schueler::class)
-                ->findOneBy(['ms365User' => $user->getId()]);
-
-            if (!$schueler) {
-                return new JsonResponse(['error' => 'Schüler nicht gefunden'], 404);
-            }
+        // 🔒 Login erforderlich (Microsoft via Symfony Security)
+        $schueler = $this->getCurrentSchueler($em);
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Not authorized'], 401);
         }
 
         // ------------------------------------------------
@@ -73,7 +70,6 @@ class StudentGradesController extends AbstractController
             'kid' => $kursId
         ])->fetchAllAssociative();
 
-
         // ------------------------------------------------
         // 2) Berechne Schüler-Durchschnitt
         // ------------------------------------------------
@@ -87,19 +83,15 @@ class StudentGradesController extends AbstractController
             'kid' => $kursId
         ])->fetchOne();
 
-
         // ------------------------------------------------
         // 2.1) Sende Email an Eltern wenn Notenstand schlechter als 4.5
         // ------------------------------------------------
-        // Schwelle: ab Durchschnitt 4.5
         if ($schuelerDurchschnitt !== null && (float) $schuelerDurchschnitt >= 4.5) {
-            // Einstellungen / Elternmail
             $einstellungen = $schueler->getEinstellungen();
             $elternEmail = $einstellungen?->getElternemail();
             $elternAktiviert = $einstellungen?->getElternaktivierung();
 
             if ($elternEmail && $elternAktiviert) {
-                // Kurs + Lehrer
                 $kurs = $em->getRepository(Kurse::class)->find($kursId);
                 $lehrer = $kurs?->getLehrer();
                 $lehrerEmail = $lehrer?->getMs365User()?->getEmail();
@@ -111,20 +103,18 @@ class StudentGradesController extends AbstractController
                         ->from($lehrerEmail)
                         ->to($elternEmail)
                         ->subject('Leistungsinformation zu ' . $fachName)
-                        ->text(
-                            sprintf(
-                                "Sehr geehrte Ehrziehungsberechtigte,\n\n" .
-                                "Ihr Kind %s %s steht aktuell in %s auf der Note %.2f.\n" .
-                                "Bitte setzen Sie sich mit mir in Verbindung, falls Sie Fragen haben.\n\n" .
-                                "Mit freundlichen Grüßen\n%s %s",
-                                $schueler->getVorname(),
-                                $schueler->getNachname(),
-                                $fachName,
-                                (float) $schuelerDurchschnitt,
-                                $lehrer?->getVorname() ?? '',
-                                $lehrer?->getNachname() ?? ''
-                            )
-                        );
+                        ->text(sprintf(
+                            "Sehr geehrte Erziehungsberechtigte,\n\n" .
+                            "Ihr Kind %s %s steht aktuell in %s auf der Note %.2f.\n" .
+                            "Bitte setzen Sie sich mit mir in Verbindung, falls Sie Fragen haben.\n\n" .
+                            "Mit freundlichen Grüßen\n%s %s",
+                            $schueler->getVorname(),
+                            $schueler->getNachname(),
+                            $fachName,
+                            (float) $schuelerDurchschnitt,
+                            $lehrer?->getVorname() ?? '',
+                            $lehrer?->getNachname() ?? ''
+                        ));
 
                     $mailer->send($mail);
                 }
@@ -142,14 +132,13 @@ class StudentGradesController extends AbstractController
             'kid' => $kursId
         ])->fetchOne();
 
-
         // ------------------------------------------------
         // 4) JSON Rückgabe
         // ------------------------------------------------
         return new JsonResponse([
             'noten' => $noten,
-            'schueler_notenstand' => $schuelerDurchschnitt ? round($schuelerDurchschnitt, 2) : null,
-            'klassenschnitt' => $klassenDurchschnitt ? round($klassenDurchschnitt, 2) : null,
+            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float)$schuelerDurchschnitt, 2) : null,
+            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float)$klassenDurchschnitt, 2) : null,
         ]);
     }
 }

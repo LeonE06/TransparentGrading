@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\Microsoft365User;
+use App\Entity\Schueler;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -10,10 +12,33 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/schueler')]
 class StudentClassController extends AbstractController
 {
+    private function getCurrentSchueler(EntityManagerInterface $em): ?Schueler
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return null;
+        }
+
+        $ms365User = $em->getRepository(Microsoft365User::class)
+            ->findOneBy(['email' => $user->getUserIdentifier()]);
+
+        if (!$ms365User) {
+            return null;
+        }
+
+        return $em->getRepository(Schueler::class)
+            ->findOneBy(['ms365User' => $ms365User]);
+    }
+
     #[Route('/faecher', methods: ['GET'])]
     public function getFaecher(EntityManagerInterface $em): JsonResponse
     {
-        $schuelerId = 1; // TODO: Auth später
+        $schueler = $this->getCurrentSchueler($em);
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Not authorized'], 401);
+        }
+
+        $schuelerId = $schueler->getId();
 
         $rows = $em->getConnection()->executeQuery("
             SELECT 
@@ -37,11 +62,13 @@ class StudentClassController extends AbstractController
         return new JsonResponse($rows);
     }
 
-
     #[Route('/faecher/{kursId}/toggle-visibility', methods: ['PUT'])]
     public function toggleVisibility(int $kursId, EntityManagerInterface $em): JsonResponse
     {
-        $schuelerId = 1;
+        $schueler = $this->getCurrentSchueler($em);
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Not authorized'], 401);
+        }
 
         $sql = "
             INSERT INTO Kurs_Einstellungen (schueler_id, kurs_id, sichtbar)
@@ -50,18 +77,20 @@ class StudentClassController extends AbstractController
         ";
 
         $em->getConnection()->executeStatement($sql, [
-            'sid' => $schuelerId,
+            'sid' => $schueler->getId(),
             'kid' => $kursId
         ]);
 
         return new JsonResponse(['status' => 'ok']);
     }
 
-
     #[Route('/faecher/{kursId}/toggle-notif', methods: ['PUT'])]
     public function toggleNotif(int $kursId, EntityManagerInterface $em): JsonResponse
     {
-        $schuelerId = 1;
+        $schueler = $this->getCurrentSchueler($em);
+        if (!$schueler) {
+            return new JsonResponse(['error' => 'Not authorized'], 401);
+        }
 
         $sql = "
             INSERT INTO Kurs_Einstellungen (schueler_id, kurs_id, benachrichtigung)
@@ -70,7 +99,7 @@ class StudentClassController extends AbstractController
         ";
 
         $em->getConnection()->executeStatement($sql, [
-            'sid' => $schuelerId,
+            'sid' => $schueler->getId(),
             'kid' => $kursId
         ]);
 
