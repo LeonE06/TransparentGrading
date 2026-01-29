@@ -54,13 +54,13 @@ class MicrosoftUserService
 
         // Schüler-Mail (4 Ziffern) → Lehrer
 if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
+    $this->ensureLehrer($existingUser, $vorname, $nachname);
+    return 'Lehrer';
 }
 
 if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
+    $this->ensureSchueler($existingUser, $vorname, $nachname);
+    return 'Schueler';
 }
 
         return 'Unbekannt';
