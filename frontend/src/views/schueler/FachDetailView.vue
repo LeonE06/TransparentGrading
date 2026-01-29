@@ -79,7 +79,7 @@ let chart = null
 
 async function loadData() {
   try {
-    const response = await axios.get(`/schueler/faecher/${kursId}/noten`)
+    const response = await axios.get(`/api/schueler/faecher/${kursId}/noten`)
     const data = response.data
 
     noten.value = data.noten
@@ -148,7 +148,7 @@ function renderChart() {
 
 async function loadFachName() {
   try {
-    const res = await axios.get(`/schueler/faecher`)
+    const res = await axios.get(`/api/schueler/faecher`)
     const fach = res.data.find(f => f.id == kursId)
 
     fachName.value = fach?.fach?.name || 'Fachdetails'
