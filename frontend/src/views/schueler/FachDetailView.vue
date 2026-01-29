@@ -34,8 +34,8 @@
         <thead>
           <tr>
             <th>Datum</th>
-            <th>Note</th>
             <th>Art</th>
+            <th>Note</th>
             <th>Gewichtung</th>
             <th>Kommentar</th>
           </tr>
@@ -48,8 +48,8 @@
 
           <tr v-for="note in noten" :key="note.id">
             <td>{{ note.datum }}</td>
-            <td>{{ note.note }}</td>
             <td>{{ note.typ_name }}</td>
+            <td>{{ note.note }}</td>
             <td>{{ note.gewichtung }}</td>
             <td>{{ note.kommentar || '-' }}</td>
           </tr>
