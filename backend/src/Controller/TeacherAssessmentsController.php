@@ -32,7 +32,7 @@ class TeacherAssessmentsController extends AbstractController
 
     private function assertCourseOwnedByTeacher(Connection $conn, int $kursId, int $lehrerId): bool
     {
-        return (int)$conn->fetchOne(
+        return (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
             ['kid' => $kursId, 'lid' => $lehrerId]
         ) > 0;
@@ -48,7 +48,7 @@ class TeacherAssessmentsController extends AbstractController
             ['aid' => $aufgabeId, 'lid' => $lehrerId]
         );
 
-        return $kursId !== false ? (int)$kursId : null;
+        return $kursId !== false ? (int) $kursId : null;
     }
 
     // ------------------------------------------------------------
@@ -58,7 +58,8 @@ class TeacherAssessmentsController extends AbstractController
     public function listForCourse(int $kursId, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
-        if (!$lehrer) return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        if (!$lehrer)
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
 
         $conn = $em->getConnection();
 
@@ -66,7 +67,7 @@ class TeacherAssessmentsController extends AbstractController
             return new JsonResponse(['error' => 'Kurs nicht gefunden'], 404);
         }
 
-        $search = trim((string)$request->query->get('search', ''));
+        $search = trim((string) $request->query->get('search', ''));
 
         $sql = "
             SELECT
@@ -98,26 +99,26 @@ class TeacherAssessmentsController extends AbstractController
 
         $rows = $conn->fetchAllAssociative($sql, $params);
 
-        $studentsTotal = (int)$conn->fetchOne(
+        $studentsTotal = (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM Kurs_Schueler WHERE kurs_id = :kid",
             ['kid' => $kursId]
         );
 
-        $mapped = array_map(static function(array $r) use ($studentsTotal): array {
+        $mapped = array_map(static function (array $r) use ($studentsTotal): array {
             $teilnahmequote = null;
             if ($studentsTotal > 0) {
-                $teilnahmequote = round(((int)$r['teilnehmer'] / $studentsTotal) * 100, 1);
+                $teilnahmequote = round(((int) $r['teilnehmer'] / $studentsTotal) * 100, 1);
             }
 
             return [
-                'id' => (int)$r['id'],
+                'id' => (int) $r['id'],
                 'thema' => $r['thema'],
                 'typ' => $r['typ'],
-                'benotungsartId' => $r['benotungsartId'] !== null ? (int)$r['benotungsartId'] : null,
+                'benotungsartId' => $r['benotungsartId'] !== null ? (int) $r['benotungsartId'] : null,
                 'datum' => $r['datum'],
-                'gewichtungProzent' => $r['gewichtungProzent'] !== null ? (float)$r['gewichtungProzent'] : null,
-                'maxPunkte' => $r['maxPunkte'] !== null ? (int)$r['maxPunkte'] : null,
-                'klassenschnitt' => $r['klassenschnitt'] !== null ? (float)$r['klassenschnitt'] : null,
+                'gewichtungProzent' => $r['gewichtungProzent'] !== null ? (float) $r['gewichtungProzent'] : null,
+                'maxPunkte' => $r['maxPunkte'] !== null ? (int) $r['maxPunkte'] : null,
+                'klassenschnitt' => $r['klassenschnitt'] !== null ? (float) $r['klassenschnitt'] : null,
                 'klassenschnittProzent' => null,
                 'teilnahmequote' => $teilnahmequote,
             ];
@@ -133,7 +134,8 @@ class TeacherAssessmentsController extends AbstractController
     public function createForCourse(int $kursId, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
-        if (!$lehrer) return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        if (!$lehrer)
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
 
         $conn = $em->getConnection();
 
@@ -143,8 +145,8 @@ class TeacherAssessmentsController extends AbstractController
 
         $data = json_decode($request->getContent(), true) ?: [];
 
-        $thema = trim((string)($data['thema'] ?? ''));
-        $datum = (string)($data['datum'] ?? '');
+        $thema = trim((string) ($data['thema'] ?? ''));
+        $datum = (string) ($data['datum'] ?? '');
 
         if ($thema === '' || $datum === '') {
             return new JsonResponse(['error' => 'thema und datum sind Pflichtfelder'], 400);
@@ -156,18 +158,19 @@ class TeacherAssessmentsController extends AbstractController
         }
 
         $benotungsartId = $data['benotungsartId'] ?? null;
-        $benotungsartId = ($benotungsartId === '' || $benotungsartId === null) ? null : (int)$benotungsartId;
+        $benotungsartId = ($benotungsartId === '' || $benotungsartId === null) ? null : (int) $benotungsartId;
 
         if ($benotungsartId !== null) {
-            $exists = (int)$conn->fetchOne("SELECT COUNT(*) FROM Benotungsarten WHERE id = :id", ['id' => $benotungsartId]);
-            if ($exists === 0) return new JsonResponse(['error' => 'Ungültige benotungsartId'], 400);
+            $exists = (int) $conn->fetchOne("SELECT COUNT(*) FROM Benotungsarten WHERE id = :id", ['id' => $benotungsartId]);
+            if ($exists === 0)
+                return new JsonResponse(['error' => 'Ungültige benotungsartId'], 400);
         }
 
         $gewichtung = $data['gewichtungProzent'] ?? null;
-        $gewichtung = ($gewichtung === '' || $gewichtung === null) ? null : (float)$gewichtung;
+        $gewichtung = ($gewichtung === '' || $gewichtung === null) ? null : (float) $gewichtung;
 
         $maxPunkte = $data['maxPunkte'] ?? null;
-        $maxPunkte = ($maxPunkte === '' || $maxPunkte === null) ? null : (int)$maxPunkte;
+        $maxPunkte = ($maxPunkte === '' || $maxPunkte === null) ? null : (int) $maxPunkte;
 
         $conn->insert('Aufgaben', [
             'kurs_id' => $kursId,
@@ -180,8 +183,41 @@ class TeacherAssessmentsController extends AbstractController
             'benotungsart_id' => $benotungsartId,
         ]);
 
-        $newId = (int)$conn->lastInsertId();
+        $newId = (int) $conn->lastInsertId();
 
+        // Kursname holen
+        $kursName = (string) $conn->fetchOne(
+            'SELECT name FROM Kurse WHERE id = :id',
+            ['id' => $kursId]
+        );
+
+        // Text der Benachrichtigung
+        $titel = 'Neue Leistungsfeststellung';
+        $inhalt = 'Im Kurs "' . $kursName . '" wurde eine neue Leistungsfeststellung angelegt (Datum: ' . $datum . ').';
+
+        // 1) Nachricht anlegen
+        $conn->insert('Nachrichten', [
+            'kurs_id' => $kursId,
+            'titel' => $titel,
+            'inhalt' => $inhalt,
+            'erstellt_am' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ]);
+
+        $nachrichtId = (int) $conn->lastInsertId();
+
+        // 2) Status für ALLE Schüler im Kurs (ungelesen)
+        $schuelerIds = $conn->fetchFirstColumn(
+            'SELECT schueler_id FROM Kurs_Schueler WHERE kurs_id = :kid',
+            ['kid' => $kursId]
+        );
+
+        foreach ($schuelerIds as $sid) {
+            $conn->insert('Nachrichten_Status', [
+                'nachricht_id' => $nachrichtId,
+                'schueler_id' => (int) $sid,
+                'gelesen' => 0,
+            ]);
+        }
         return new JsonResponse(['id' => $newId], 201);
     }
 
@@ -192,7 +228,8 @@ class TeacherAssessmentsController extends AbstractController
     public function detail(int $id, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
-        if (!$lehrer) return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        if (!$lehrer)
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
 
         $conn = $em->getConnection();
 
@@ -224,7 +261,8 @@ class TeacherAssessmentsController extends AbstractController
             ['id' => $id]
         );
 
-        if (!$a) return new JsonResponse(['error' => 'Leistungsfeststellung nicht gefunden'], 404);
+        if (!$a)
+            return new JsonResponse(['error' => 'Leistungsfeststellung nicht gefunden'], 404);
 
         $rows = $conn->fetchAllAssociative(
             "SELECT
@@ -242,32 +280,32 @@ class TeacherAssessmentsController extends AbstractController
             ['aid' => $id]
         );
 
-        $schuelerleistungen = array_map(static function(array $r): array {
+        $schuelerleistungen = array_map(static function (array $r): array {
             return [
-                'id' => (int)$r['id'],
-                'schuelerId' => (int)$r['schueler_id'],
+                'id' => (int) $r['id'],
+                'schuelerId' => (int) $r['schueler_id'],
                 'vorname' => $r['vorname'],
                 'nachname' => $r['nachname'],
-                'punkte' => $r['punkte'] !== null ? (int)$r['punkte'] : null,
-                'note' => $r['note'] !== null ? (float)$r['note'] : null,
+                'punkte' => $r['punkte'] !== null ? (int) $r['punkte'] : null,
+                'note' => $r['note'] !== null ? (float) $r['note'] : null,
                 'datum' => $r['datum'],
             ];
         }, $rows);
 
         return new JsonResponse([
-            'id' => (int)$a['id'],
+            'id' => (int) $a['id'],
             'kurs' => [
-                'id' => (int)$a['kurs_id'],
+                'id' => (int) $a['kurs_id'],
                 'name' => $a['kurs_name'],
                 'fach' => $a['fach_name'],
                 'klasse' => $a['klasse_name'],
             ],
             'thema' => $a['kommentar'] ?? $a['titel'],
             'typ' => $a['typ'],
-            'benotungsartId' => $a['benotungsartId'] !== null ? (int)$a['benotungsartId'] : null,
+            'benotungsartId' => $a['benotungsartId'] !== null ? (int) $a['benotungsartId'] : null,
             'datum' => $a['datum'],
-            'gewichtungProzent' => $a['gewichtungProzent'] !== null ? (float)$a['gewichtungProzent'] : null,
-            'maxPunkte' => $a['maxPunkte'] !== null ? (int)$a['maxPunkte'] : null,
+            'gewichtungProzent' => $a['gewichtungProzent'] !== null ? (float) $a['gewichtungProzent'] : null,
+            'maxPunkte' => $a['maxPunkte'] !== null ? (int) $a['maxPunkte'] : null,
             'klassenschnitt' => null,
             'klassenschnittProzent' => null,
             'teilnahmequote' => null,
@@ -282,7 +320,8 @@ class TeacherAssessmentsController extends AbstractController
     public function delete(int $id, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
-        if (!$lehrer) return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        if (!$lehrer)
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
 
         $conn = $em->getConnection();
 
@@ -304,7 +343,8 @@ class TeacherAssessmentsController extends AbstractController
     public function createStudentResult(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
-        if (!$lehrer) return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        if (!$lehrer)
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
 
         $conn = $em->getConnection();
 
@@ -316,13 +356,13 @@ class TeacherAssessmentsController extends AbstractController
         $data = json_decode($request->getContent(), true) ?: [];
 
         $schuelerId = $data['schuelerId'] ?? $data['schueler_id'] ?? null;
-        $schuelerId = ($schuelerId === '' || $schuelerId === null) ? null : (int)$schuelerId;
+        $schuelerId = ($schuelerId === '' || $schuelerId === null) ? null : (int) $schuelerId;
         if (!$schuelerId) {
             return new JsonResponse(['error' => 'schuelerId ist Pflicht'], 400);
         }
 
         // Schüler ist im Kurs?
-        $inCourse = (int)$conn->fetchOne(
+        $inCourse = (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM Kurs_Schueler WHERE kurs_id = :kid AND schueler_id = :sid",
             ['kid' => $kursId, 'sid' => $schuelerId]
         );
@@ -331,17 +371,18 @@ class TeacherAssessmentsController extends AbstractController
         }
 
         $punkte = $data['punkte'] ?? null;
-        $punkte = ($punkte === '' || $punkte === null) ? null : (int)$punkte;
+        $punkte = ($punkte === '' || $punkte === null) ? null : (int) $punkte;
 
         $note = $data['note'] ?? null;
-        $note = ($note === '' || $note === null) ? null : (float)$note;
+        $note = ($note === '' || $note === null) ? null : (float) $note;
 
         // datum: du hast DATETIME mit Default current_timestamp()
-        $datum = (string)($data['datum'] ?? '');
+        $datum = (string) ($data['datum'] ?? '');
         if ($datum !== '') {
             // akzeptiere "YYYY-MM-DD" -> mache "YYYY-MM-DD 00:00:00"
             $d = \DateTimeImmutable::createFromFormat('Y-m-d', $datum);
-            if (!$d) return new JsonResponse(['error' => 'Ungültiges datum (YYYY-MM-DD)'], 400);
+            if (!$d)
+                return new JsonResponse(['error' => 'Ungültiges datum (YYYY-MM-DD)'], 400);
             $datum = $d->format('Y-m-d 00:00:00');
         } else {
             $datum = null; // DB default nimmt current_timestamp()
