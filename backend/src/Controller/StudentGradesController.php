@@ -108,9 +108,15 @@ class StudentGradesController extends AbstractController
                     $fachName = $kurs?->getFach()?->getName() ?? 'Fach';
 
                     $mail = (new Email())
-                        ->from($lehrerEmail)
+                        ->from('1033@htl.rennweg.at')
+                        ->replyTo($lehrerEmail)
                         ->to($elternEmail)
-                        ->subject('Leistungsinformation zu ' . $fachName)
+                        ->subject(sprintf(
+                            'Leistungsinformation %s – %s %s',
+                            $fachName,
+                            $schueler->getVorname(),
+                            $schueler->getNachname()
+                        ))
                         ->text(
                             sprintf(
                                 "Sehr geehrte Ehrziehungsberechtigte,\n\n" .
