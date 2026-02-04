@@ -3,16 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Benotungsarten;
-use App\Entity\Kurse;
 use App\Entity\Lehrer;
 use App\Entity\Microsoft365User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/api/lehrer', name: 'api_lehrer_courses_')]
+#[Route('/api/lehrer', name: 'api_lehrer_')]
 class TeacherCoursesController extends AbstractController
 {
     private function resolveLehrer(EntityManagerInterface $em): ?Lehrer
@@ -31,7 +29,11 @@ class TeacherCoursesController extends AbstractController
         return $em->getRepository(Lehrer::class)->findOneBy(['ms365User' => $m365]);
     }
 
-    #[Route('/faecher', name: 'my_courses', methods: ['GET'])]
+    /**
+     * Liste der Kurse des Lehrers (Legacy: /faecher)
+     */
+    #[Route('/kurse', name: 'courses_list', methods: ['GET'])]
+    #[Route('/faecher', name: 'courses_list_legacy', methods: ['GET'])]
     public function myCourses(EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
@@ -70,7 +72,11 @@ class TeacherCoursesController extends AbstractController
         return new JsonResponse($mapped);
     }
 
-    #[Route('/faecher/{kursId<\\d+>}', name: 'course_detail', methods: ['GET'])]
+    /**
+     * Kurs-Detail (Legacy: /faecher/{kursId})
+     */
+    #[Route('/kurse/{kursId<\\d+>}', name: 'course_detail', methods: ['GET'])]
+    #[Route('/faecher/{kursId<\\d+>}', name: 'course_detail_legacy', methods: ['GET'])]
     public function courseDetail(int $kursId, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
@@ -109,7 +115,11 @@ class TeacherCoursesController extends AbstractController
         ]);
     }
 
-    #[Route('/faecher/{kursId<\\d+>}/uebersicht', name: 'course_overview', methods: ['GET'])]
+    /**
+     * Kurs-Übersicht (Legacy: /faecher/{kursId}/uebersicht)
+     */
+    #[Route('/kurse/{kursId<\\d+>}/uebersicht', name: 'course_overview', methods: ['GET'])]
+    #[Route('/faecher/{kursId<\\d+>}/uebersicht', name: 'course_overview_legacy', methods: ['GET'])]
     public function courseOverview(int $kursId, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
@@ -164,7 +174,7 @@ class TeacherCoursesController extends AbstractController
                 ) t",
                 ['kid' => $kursId]
             );
-            // Fallback: wenn keine Bewertungen existieren, participationAvg bleibt 0/NULL.
+
             if ($participantsTotal === 0) {
                 $participationAvg = 0.0;
             } else {
@@ -210,7 +220,11 @@ class TeacherCoursesController extends AbstractController
         ]);
     }
 
-    #[Route('/faecher/{kursId<\\d+>}/benotungsarten', name: 'grading_types', methods: ['GET'])]
+    /**
+     * Benotungsarten (Legacy: /faecher/{kursId}/benotungsarten)
+     */
+    #[Route('/kurse/{kursId<\\d+>}/benotungsarten', name: 'grading_types', methods: ['GET'])]
+    #[Route('/faecher/{kursId<\\d+>}/benotungsarten', name: 'grading_types_legacy', methods: ['GET'])]
     public function gradingTypes(int $kursId, EntityManagerInterface $em): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
@@ -238,79 +252,75 @@ class TeacherCoursesController extends AbstractController
         return new JsonResponse($mapped);
     }
 
-    #[Route('/faecher/{kursId<\\d+>}/schueler', name: 'course_students', methods: ['GET'])]
-public function courseStudents(int $kursId, EntityManagerInterface $em): JsonResponse
-{
-    $lehrer = $this->resolveLehrer($em);
-    if (!$lehrer) {
-        return new JsonResponse(['error' => 'Unauthenticated'], 401);
+    /**
+     * Schüler eines Kurses (Legacy: /faecher/{kursId}/schueler)
+     */
+    #[Route('/kurse/{kursId<\\d+>}/schueler', name: 'course_students', methods: ['GET'])]
+    #[Route('/faecher/{kursId<\\d+>}/schueler', name: 'course_students_legacy', methods: ['GET'])]
+    public function courseStudents(int $kursId, EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $conn = $em->getConnection();
+
+        $courseOk = $conn->fetchOne(
+            "SELECT COUNT(*) FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
+        );
+        if ((int) $courseOk === 0) {
+            return new JsonResponse(['error' => 'Kurs nicht gefunden'], 404);
+        }
+
+        $rows = $conn->fetchAllAssociative(
+            "SELECT
+                s.id,
+                s.vorname,
+                s.nachname,
+                c.name AS klasse,
+                ROUND(AVG(n.note), 2) AS gesamtnote,
+                COUNT(n.note) AS anzahl_noten
+             FROM Kurs_Schueler ks
+             INNER JOIN Schueler s ON s.id = ks.schueler_id
+             LEFT JOIN Klassen c ON c.id = s.klasse_id
+             LEFT JOIN (
+                SELECT
+                  b.schueler_id,
+                  b.note
+                FROM Benotung b
+                INNER JOIN Kurse ku ON ku.fach_id = b.fach_id
+                WHERE ku.id = :kid
+                  AND b.lehrer_id = :lid
+
+                UNION ALL
+
+                SELECT
+                  ab.schueler_id,
+                  ab.note
+                FROM Aufgaben_Bewertung ab
+                INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
+                WHERE a.kurs_id = :kid
+                  AND ab.lehrer_id = :lid
+             ) n ON n.schueler_id = s.id
+             WHERE ks.kurs_id = :kid
+             GROUP BY s.id, s.vorname, s.nachname, c.name
+             ORDER BY s.nachname ASC, s.vorname ASC",
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
+        );
+
+        $mapped = array_map(static function (array $r): array {
+            return [
+                'id' => (int) $r['id'],
+                'vorname' => $r['vorname'],
+                'nachname' => $r['nachname'],
+                'klasse' => $r['klasse'],
+                'gesamtnote' => $r['gesamtnote'] !== null ? (float) $r['gesamtnote'] : null,
+                'anzahl_noten' => (int) $r['anzahl_noten'],
+            ];
+        }, $rows);
+
+        return new JsonResponse($mapped);
     }
-
-    $conn = $em->getConnection();
-
-    // Kurs gehört dem Lehrer?
-    $courseOk = $conn->fetchOne(
-        "SELECT COUNT(*) FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
-        ['kid' => $kursId, 'lid' => $lehrer->getId()]
-    );
-    if ((int) $courseOk === 0) {
-        return new JsonResponse(['error' => 'Kurs nicht gefunden'], 404);
-    }
-
-    // Gesamtnoten pro Schüler (für diesen Kurs):
-    // - Benotung: fachbezogen (Kurs -> fach_id) + nur Noten dieses Lehrers
-    // - Aufgaben_Bewertung: kursbezogen (Aufgaben -> kurs_id) + nur Noten dieses Lehrers
-    $rows = $conn->fetchAllAssociative(
-        "SELECT
-            s.id,
-            s.vorname,
-            s.nachname,
-            c.name AS klasse,
-            ROUND(AVG(n.note), 2) AS gesamtnote,
-            COUNT(n.note) AS anzahl_noten
-         FROM Kurs_Schueler ks
-         INNER JOIN Schueler s ON s.id = ks.schueler_id
-         LEFT JOIN Klassen c ON c.id = s.klasse_id
-         LEFT JOIN (
-            -- 1) Fachnoten (Benotung) passend zum Kursfach und diesem Lehrer
-            SELECT
-              b.schueler_id,
-              b.note
-            FROM Benotung b
-            INNER JOIN Kurse ku ON ku.fach_id = b.fach_id
-            WHERE ku.id = :kid
-              AND b.lehrer_id = :lid
-
-            UNION ALL
-
-            -- 2) Aufgabenbewertungen (kursbezogen) von diesem Lehrer
-            SELECT
-              ab.schueler_id,
-              ab.note
-            FROM Aufgaben_Bewertung ab
-            INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
-            WHERE a.kurs_id = :kid
-              AND ab.lehrer_id = :lid
-         ) n ON n.schueler_id = s.id
-         WHERE ks.kurs_id = :kid
-         GROUP BY s.id, s.vorname, s.nachname, c.name
-         ORDER BY s.nachname ASC, s.vorname ASC",
-        ['kid' => $kursId, 'lid' => $lehrer->getId()]
-    );
-
-    $mapped = array_map(static function (array $r): array {
-        return [
-            'id' => (int) $r['id'],
-            'vorname' => $r['vorname'],
-            'nachname' => $r['nachname'],
-            'klasse' => $r['klasse'],
-            'gesamtnote' => $r['gesamtnote'] !== null ? (float) $r['gesamtnote'] : null,
-            'anzahl_noten' => (int) $r['anzahl_noten'],
-        ];
-    }, $rows);
-
-    return new JsonResponse($mapped);
-}
-
-    
 }

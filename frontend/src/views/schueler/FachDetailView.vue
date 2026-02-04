@@ -6,7 +6,6 @@
 
     <!-- GRID: Links Werte, rechts Diagramm -->
     <div class="grid-container">
-      
       <!-- LEFT SIDE -->
       <div class="left-boxes">
         <div class="stat-card big">
@@ -23,9 +22,8 @@
       <!-- RIGHT SIDE – CHART -->
       <div class="chart-section">
         <h3>Notenverlauf</h3>
-        <canvas id="notenChart"></canvas>
+        <canvas ref="notenChartEl"></canvas>
       </div>
-
     </div>
 
     <!-- TABLE -->
@@ -34,8 +32,8 @@
         <thead>
           <tr>
             <th>Datum</th>
-            <th>Note</th>
             <th>Art</th>
+            <th>Note</th>
             <th>Gewichtung</th>
             <th>Kommentar</th>
           </tr>
@@ -48,8 +46,8 @@
 
           <tr v-for="note in noten" :key="note.id">
             <td>{{ note.datum }}</td>
-            <td>{{ note.note }}</td>
             <td>{{ note.typ_name }}</td>
+            <td>{{ note.note }}</td>
             <td>{{ note.gewichtung }}</td>
             <td>{{ note.kommentar || '-' }}</td>
           </tr>
@@ -60,77 +58,68 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import Chart from 'chart.js/auto'
-import axios from 'axios'
+import { ref, onMounted, nextTick, onBeforeUnmount } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import Chart from "chart.js/auto";
+import { apiClient } from "@/services/apiClient"; // ✅ WICHTIG: statt axios
 
-const route = useRoute()
-const router = useRouter()
-const kursId = route.params.id
+const route = useRoute();
+const router = useRouter();
+const kursId = route.params.id;
 
-const noten = ref([])
-const schuelerNotenstand = ref('-')
-const klassenschnitt = ref('-')
-const fachName = ref('Fachdetails')
-const dataLoaded = ref(false)
+const noten = ref([]);
+const schuelerNotenstand = ref("-");
+const klassenschnitt = ref("-");
+const fachName = ref("Fachdetails");
+const dataLoaded = ref(false);
 
-let chart = null
+const notenChartEl = ref(null);
+let chart = null;
 
-async function loadData() {
-  try {
-    const response = await axios.get(`/schueler/faecher/${kursId}/noten`)
-    const data = response.data
+function goBack() {
+  router.push("/schueler/faecher");
+}
 
-    noten.value = data.noten
-    schuelerNotenstand.value = data.schueler_notenstand
-    klassenschnitt.value = data.klassenschnitt
-
-  loadFachName()
-
-    dataLoaded.value = true
-    renderChart()
-  } catch (err) {
-    console.error('Fehler beim Laden der Fachdaten', err)
+function destroyChart() {
+  if (chart) {
+    chart.destroy();
+    chart = null;
   }
 }
 
-function goBack() {
-  router.push('/schueler/faecher')
-}
-
 function renderChart() {
-  const canvas = document.getElementById('notenChart')
-  if (!canvas) return
+  const canvas = notenChartEl.value;
+  if (!canvas) return;
 
-  if (chart) chart.destroy()
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  const ctx = canvas.getContext('2d')
+  destroyChart();
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300)
-  gradient.addColorStop(0, 'rgba(106,22,204,0.0)')
-  gradient.addColorStop(1, 'rgba(106,22,204,0.25)')
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, "rgba(106,22,204,0.0)");
+  gradient.addColorStop(1, "rgba(106,22,204,0.25)");
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
-      labels: noten.value.map(n => n.datum),
+      labels: noten.value.map((n) => n.datum),
       datasets: [
         {
-          label: 'Note',
-          data: noten.value.map(n => Number(n.note)),
-          borderColor: '#6a16cc',
+          label: "Note",
+          data: noten.value.map((n) => Number(n.note)),
+          borderColor: "#6a16cc",
           backgroundColor: gradient,
           tension: 0.35,
-          fill: {
-            target: 'start'
-          },
-          pointBackgroundColor: '#6a16cc',
-          pointRadius: 4
-        }
-      ]
+          fill: { target: "start" },
+          pointBackgroundColor: "#6a16cc",
+          pointRadius: 4,
+        },
+      ],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       scales: {
         y: {
           min: 1,
@@ -138,30 +127,60 @@ function renderChart() {
           reverse: true,
           ticks: {
             stepSize: 1,
-            callback: v => v
-          }
-        }
-      }
-    }
-  })
+            callback: (v) => v,
+          },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
 }
 
 async function loadFachName() {
   try {
-    const res = await axios.get(`/schueler/faecher`)
-    const fach = res.data.find(f => f.id == kursId)
-
-    fachName.value = fach?.fach?.name || 'Fachdetails'
+    // ✅ apiClient statt axios
+    const res = await apiClient.get("/schueler/faecher");
+    const fach = (res.data || []).find((f) => String(f.id) === String(kursId));
+    fachName.value = fach?.fach?.name || "Fachdetails";
   } catch (e) {
-    fachName.value = 'Fachdetails'
+    fachName.value = "Fachdetails";
   }
 }
 
+async function loadData() {
+  try {
+    // ✅ apiClient statt axios
+    const response = await apiClient.get(`/schueler/faecher/${kursId}/noten`);
+    const data = response.data;
 
-onMounted(() => {
-  loadData()
-  loadFachName()
-})
+    noten.value = data?.noten ?? [];
+    schuelerNotenstand.value = data?.schueler_notenstand ?? "-";
+    klassenschnitt.value = data?.klassenschnitt ?? "-";
+
+    dataLoaded.value = true;
+
+    await nextTick();
+    renderChart();
+  } catch (err) {
+    console.error("Fehler beim Laden der Fachdaten", err);
+    dataLoaded.value = false;
+    noten.value = [];
+    schuelerNotenstand.value = "-";
+    klassenschnitt.value = "-";
+    destroyChart();
+  }
+}
+
+onMounted(async () => {
+  await loadFachName();
+  await loadData();
+});
+
+onBeforeUnmount(() => {
+  destroyChart();
+});
 </script>
 
 <style scoped>
@@ -221,22 +240,16 @@ html, body {
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  /* Damit Chart Höhe hat */
+  min-height: 320px;
+}
+
+.chart-section canvas {
+  width: 100% !important;
+  height: 260px !important;
 }
 
 /* Table */
-.noten-table table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.noten-table th, .noten-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
 .noten-table {
   width: 100%;
   overflow-x: hidden;
@@ -245,7 +258,7 @@ html, body {
 .noten-table table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* 🔥 sorgt für perfekte Spalten-Ausrichtung */
+  table-layout: fixed;
   background: white;
   border-radius: 12px;
   overflow: hidden;
@@ -262,7 +275,6 @@ html, body {
   background: #fafafa;
   font-weight: 600;
 }
-
 
 .empty-row {
   text-align: center;

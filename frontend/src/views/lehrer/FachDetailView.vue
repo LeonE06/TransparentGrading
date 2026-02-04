@@ -199,7 +199,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
-import { Chart } from "chart.js/auto";
+import Chart from "chart.js/auto";
 import { ExternalLink, Trash2 } from "lucide-vue-next";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
