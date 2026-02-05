@@ -400,7 +400,7 @@ class TeacherAssessmentsController extends AbstractController
             'kommentar' => $data['kommentar'] ?? null,
         ]);
 
-        $this->parentNotificationService
+        $parentNotificationService
             ->checkAndNotify($schuelerId, $kursId);
 
         return new JsonResponse(['status' => 'ok'], 201);
