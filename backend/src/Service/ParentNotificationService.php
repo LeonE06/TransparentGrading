@@ -56,7 +56,7 @@ class ParentNotificationService
         l.nachname AS l_nachname,
         mu.email AS lehrer_email
     FROM Schueler s
-    INNER JOIN Einstellungen e ON e.id = s.id
+    INNER JOIN Einstellungen e ON e.id = s.ms365usr_id
     INNER JOIN Kurse k ON k.id = :kid
     INNER JOIN Faecher f ON f.id = k.fach_id
     INNER JOIN Lehrer l ON l.id = k.lehrer_id
@@ -67,6 +67,7 @@ class ParentNotificationService
             'sid' => $schuelerId,
             'kid' => $kursId
         ]);
+
 
         if (!$info || !$info['elternemail']) {
             return; // Keine Elternmail vorhanden
