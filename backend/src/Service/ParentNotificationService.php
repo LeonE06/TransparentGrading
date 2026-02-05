@@ -59,7 +59,7 @@ class ParentNotificationService
             INNER JOIN Kurse k ON k.id = :kid
             INNER JOIN Faecher f ON f.id = k.fach_id
             INNER JOIN Lehrer l ON l.id = k.lehrer_id
-            INNER JOIN Microsoft365User mu ON mu.id = l.ms365_user_id
+            INNER JOIN tbl_Microsoft365_User mu ON mu.id = l.ms365_user_id
             WHERE s.id = :sid
               AND e.elternaktivierung = 1
         ", [
