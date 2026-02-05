@@ -14,19 +14,13 @@ class ParentNotificationService
     ) {
     }
 
-    /**
-     * Prüft die Noten, berechnet Schnitt und sendet Mail.
-     * Gibt DEBUG-Infos zurück, damit man im Browser prüfen kann.
-     */
-    public function checkAndNotifyDebug(int $schuelerId, int $kursId): array
+    public function checkAndNotify(int $schuelerId, int $kursId): void
     {
-        $debug = [];
-
         // 1) Gesamtnote berechnen
-        $aufgaben = $this->getAufgabenNoten($schuelerId, $kursId);
-        $benotung = $this->getBenotungNoten($schuelerId, $kursId);
-
-        $rows = array_merge($aufgaben, $benotung);
+        $rows = array_merge(
+            $this->getAufgabenNoten($schuelerId, $kursId),
+            $this->getBenotungNoten($schuelerId, $kursId)
+        );
 
         $sum = 0.0;
         $weight = 0.0;
@@ -40,80 +34,63 @@ class ParentNotificationService
         }
 
         if ($weight === 0.0) {
-            $debug['error'] = 'Keine Noten vorhanden';
-            return $debug;
+            return;
         }
 
         $schnitt = round($sum / $weight, 2);
 
-        $debug['schnitt'] = $schnitt;
-        $debug['aufgaben'] = $aufgaben;
-        $debug['benotung'] = $benotung;
+        // 2) Schwelle für Benachrichtigung (z.B. Note >= 4.5)
+        if ($schnitt < 4.5) {
+            return;
+        }
 
-        // 2) Elterninfo laden
+        // 3) Elterninfo laden
         $info = $this->conn->fetchAssociative("
-            SELECT
-                s.vorname,
-                s.nachname,
-                e.elternemail,
-                k.name AS kurs,
-                f.name AS fach,
-                l.vorname AS l_vorname,
-                l.nachname AS l_nachname,
-                mu.email AS lehrer_email
-            FROM Schueler s
-            INNER JOIN Einstellungen e ON e.id = s.ms365usr_id
-            INNER JOIN Kurse k ON k.id = :kid
-            INNER JOIN Faecher f ON f.id = k.fach_id
-            INNER JOIN Lehrer l ON l.id = k.lehrer_id
-            INNER JOIN tbl_Microsoft365_User mu ON mu.ID = l.MS365Usr_ID
-            WHERE s.id = :sid
-              AND e.ElternAktivierung = 1
-        ", [
+    SELECT
+        s.vorname,
+        s.nachname,
+        e.elternemail,
+        k.name AS kurs,
+        f.name AS fach,
+        l.vorname AS l_vorname,
+        l.nachname AS l_nachname,
+        mu.email AS lehrer_email
+    FROM Schueler s
+    INNER JOIN Einstellungen e ON e.id = s.ms365usr_id
+    INNER JOIN Kurse k ON k.id = :kid
+    INNER JOIN Faecher f ON f.id = k.fach_id
+    INNER JOIN Lehrer l ON l.id = k.lehrer_id
+    INNER JOIN tbl_Microsoft365_User mu ON mu.ID = l.MS365Usr_ID
+    WHERE s.id = :sid
+      AND e.ElternAktivierung = 1
+", [
             'sid' => $schuelerId,
             'kid' => $kursId
         ]);
 
-        $debug['info'] = $info;
-
-        if (!$info) {
-            $debug['error'] = 'Keine Elterninformationen gefunden oder Eltern deaktiviert';
-            return $debug;
+        if (!$info || !$info['elternemail']) {
+            return; // Keine Elternmail vorhanden
         }
 
-        if (!$info['elternemail']) {
-            $debug['error'] = 'Keine Elternmail vorhanden';
-            return $debug;
-        }
+        // 4) Mail senden
+        $mail = (new Email())
+            ->from('1033@htl.rennweg.at')
+            ->replyTo($info['lehrer_email'])
+            ->to($info['elternemail'])
+            ->subject('Leistungsinformation – ' . $info['fach'])
+            ->text(sprintf(
+                "Sehr geehrte Erziehungsberechtigte,\n\n" .
+                "Ihr Kind %s %s steht aktuell im Fach %s auf der Note %.2f.\n\n" .
+                "Mit freundlichen Grüßen\n%s %s",
+                $info['vorname'],
+                $info['nachname'],
+                $info['fach'],
+                $schnitt,
+                $info['l_vorname'],
+                $info['l_nachname']
+            ));
 
-        // 3) Mail senden (optional: nur Debug, Mail wird nicht gesendet)
-        try {
-            $mail = (new Email())
-                ->from('1033@htl.rennweg.at')
-                ->replyTo($info['lehrer_email'])
-                ->to($info['elternemail'])
-                ->subject('Leistungsinformation – ' . $info['fach'])
-                ->text(sprintf(
-                    "Sehr geehrte Erziehungsberechtigte,\n\n" .
-                    "Ihr Kind %s %s steht aktuell im Fach %s auf der Note %.2f.\n\n" .
-                    "Mit freundlichen Grüßen\n%s %s",
-                    $info['vorname'],
-                    $info['nachname'],
-                    $info['fach'],
-                    $schnitt,
-                    $info['l_vorname'],
-                    $info['l_nachname']
-                ));
-
-            // Mail senden – auskommentieren, wenn nur Debug
-            // $this->mailer->send($mail);
-
-            $debug['mail'] = 'Mail erfolgreich vorbereitet (nicht gesendet im Debug-Modus)';
-        } catch (\Exception $e) {
-            $debug['mail_error'] = $e->getMessage();
-        }
-
-        return $debug;
+        $this->mailer->send($mail);
     }
 
     private function getAufgabenNoten(int $sid, int $kid): array
