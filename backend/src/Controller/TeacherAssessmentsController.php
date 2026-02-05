@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
+use App\Service\ParentNotificationService;
+
 #[Route('/api/lehrer', name: 'api_lehrer_assessments_')]
 class TeacherAssessmentsController extends AbstractController
 {
@@ -340,7 +342,7 @@ class TeacherAssessmentsController extends AbstractController
     // POST: Schülerleistung speichern (INSERT Aufgaben_Bewertung)
     // ------------------------------------------------------------
     #[Route('/leistungsfeststellungen/{id<\\d+>}/schuelerleistungen', name: 'create_student_result', methods: ['POST'])]
-    public function createStudentResult(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    public function createStudentResult(int $id, Request $request, EntityManagerInterface $em, ParentNotificationService $parentNotificationService): JsonResponse
     {
         $lehrer = $this->resolveLehrer($em);
         if (!$lehrer)
@@ -397,6 +399,9 @@ class TeacherAssessmentsController extends AbstractController
             'datum' => $datum,
             'kommentar' => $data['kommentar'] ?? null,
         ]);
+
+        $this->parentNotificationService
+            ->checkAndNotify($schuelerId, $kursId);
 
         return new JsonResponse(['status' => 'ok'], 201);
     }
