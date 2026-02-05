@@ -99,7 +99,7 @@ class StudentGradesController extends AbstractController
                 if ($lehrerEmail) {
                     $fachName = $kurs?->getFach()?->getName() ?? 'Fach';
 
-                    $mail = (new Email())
+                    $mail = (new Email()
                         ->from('1033@htl.rennweg.at')
                         ->replyTo($lehrerEmail)
                         ->to($elternEmail)
@@ -122,19 +122,6 @@ class StudentGradesController extends AbstractController
                                 $lehrer?->getVorname() ?? '',
                                 $lehrer?->getNachname() ?? ''
                             )
-                        );
-                        ->subject('Leistungsinformation zu ' . $fachName)
-                        ->text(sprintf(
-                            "Sehr geehrte Erziehungsberechtigte,\n\n" .
-                            "Ihr Kind %s %s steht aktuell in %s auf der Note %.2f.\n" .
-                            "Bitte setzen Sie sich mit mir in Verbindung, falls Sie Fragen haben.\n\n" .
-                            "Mit freundlichen Grüßen\n%s %s",
-                            $schueler->getVorname(),
-                            $schueler->getNachname(),
-                            $fachName,
-                            (float) $schuelerDurchschnitt,
-                            $lehrer?->getVorname() ?? '',
-                            $lehrer?->getNachname() ?? ''
                         ));
 
                     $mailer->send($mail);
@@ -158,8 +145,8 @@ class StudentGradesController extends AbstractController
         // ------------------------------------------------
         return new JsonResponse([
             'noten' => $noten,
-            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float)$schuelerDurchschnitt, 2) : null,
-            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float)$klassenDurchschnitt, 2) : null,
+            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float) $schuelerDurchschnitt, 2) : null,
+            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float) $klassenDurchschnitt, 2) : null,
         ]);
     }
 }
