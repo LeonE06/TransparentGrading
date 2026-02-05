@@ -129,6 +129,7 @@ class StudentGradesController extends AbstractController
             }
         }
 
+        
         // ------------------------------------------------
         // 3) Berechne Klassenschnitt
         // ------------------------------------------------
