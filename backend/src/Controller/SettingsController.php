@@ -149,7 +149,7 @@ class SettingsController extends AbstractController
 
         // Eltern-Aktivierung nur wenn über 18
         if ($isUeber18 && array_key_exists('elternaktivierung', $data)) {
-            $settings->setElternaktivierung($data['elternaktivierung']);
+            $settings->setElternaktivierung(1);
         }
 
         try {
