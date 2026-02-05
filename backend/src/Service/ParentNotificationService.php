@@ -55,7 +55,7 @@ class ParentNotificationService
                 l.nachname AS l_nachname,
                 mu.email AS lehrer_email
             FROM Schueler s
-            INNER JOIN Schueler_Einstellungen e ON e.schueler_id = s.id
+            INNER JOIN Einstellungen e ON e.schueler_id = s.id
             INNER JOIN Kurse k ON k.id = :kid
             INNER JOIN Faecher f ON f.id = k.fach_id
             INNER JOIN Lehrer l ON l.id = k.lehrer_id
