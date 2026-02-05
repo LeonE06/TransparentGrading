@@ -46,22 +46,22 @@ class ParentNotificationService
 
         // 3) Elterninfo laden
         $info = $this->conn->fetchAssociative("
-            SELECT
-                s.vorname, s.nachname,
-                e.elternemail,
-                k.name AS kurs,
-                f.name AS fach,
-                l.vorname AS l_vorname,
-                l.nachname AS l_nachname,
-                mu.email AS lehrer_email
-            FROM Schueler s
-            INNER JOIN Einstellungen e ON e.schueler_id = s.id
-            INNER JOIN Kurse k ON k.id = :kid
-            INNER JOIN Faecher f ON f.id = k.fach_id
-            INNER JOIN Lehrer l ON l.id = k.lehrer_id
-            INNER JOIN tbl_Microsoft365_User mu ON mu.id = l.ms365_user_id
-            WHERE s.id = :sid
-              AND e.elternaktivierung = 1
+        SELECT
+            s.vorname, s.nachname,
+            e.Elternemail,
+            k.name AS kurs,
+            f.name AS fach,
+            l.vorname AS l_vorname,
+            l.nachname AS l_nachname,
+            mu.Email AS lehrer_email
+        FROM Schueler s
+        INNER JOIN Einstellungen e ON e.schueler_id = s.id
+        INNER JOIN Kurse k ON k.id = :kid
+        INNER JOIN Faecher f ON f.id = k.fach_id
+        INNER JOIN Lehrer l ON l.id = k.lehrer_id
+        INNER JOIN tbl_Microsoft365_User mu ON mu.ID = l.MS365Usr_ID
+        WHERE s.id = :sid
+        AND e.ElternAktivierung = 1
         ", [
             'sid' => $schuelerId,
             'kid' => $kursId
