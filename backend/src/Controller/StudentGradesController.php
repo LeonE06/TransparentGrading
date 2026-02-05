@@ -99,7 +99,7 @@ class StudentGradesController extends AbstractController
                 if ($lehrerEmail) {
                     $fachName = $kurs?->getFach()?->getName() ?? 'Fach';
 
-                    $mail = (new Email())
+                    $mail = (new Email()
                         ->from('1033@htl.rennweg.at')
                         ->replyTo($lehrerEmail)
                         ->to($elternEmail)
@@ -122,7 +122,7 @@ class StudentGradesController extends AbstractController
                                 $lehrer?->getVorname() ?? '',
                                 $lehrer?->getNachname() ?? ''
                             )
-                        );
+                        ));
 
                     $mailer->send($mail);
                 }
@@ -145,8 +145,8 @@ class StudentGradesController extends AbstractController
         // ------------------------------------------------
         return new JsonResponse([
             'noten' => $noten,
-            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float)$schuelerDurchschnitt, 2) : null,
-            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float)$klassenDurchschnitt, 2) : null,
+            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float) $schuelerDurchschnitt, 2) : null,
+            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float) $klassenDurchschnitt, 2) : null,
         ]);
     }
 }
