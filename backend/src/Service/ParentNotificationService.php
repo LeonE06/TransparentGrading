@@ -68,8 +68,8 @@ class ParentNotificationService
             'kid' => $kursId
         ]);
 
-        dump($info);
-
+        echo json_encode($info);
+        
         if (!$info || !$info['elternemail']) {
             return; // Keine Elternmail vorhanden
         }
