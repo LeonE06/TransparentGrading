@@ -16,7 +16,7 @@
           <span>{{ msg.kurs_name }}</span>
         </div>
 
-        <div class="actions">
+        <div class="actions" v-if="msg.system !== 1">
           <button v-if="msg.gelesen == 0" @click="toggle(true)">
             ✔ als gelesen
           </button>
@@ -50,11 +50,15 @@ function formatDate(d) {
 }
 
 async function toggle(read) {
-  const url = read
-    ? `/schueler/nachrichten/${props.msg.id}/lesen`
-    : `/schueler/nachrichten/${props.msg.id}/ungelesen`
+  const token = localStorage.getItem("token")
 
-  await axios.put(url)
+  const url = read
+    ? `/api/schueler/nachrichten/${props.msg.id}/lesen`
+    : `/api/schueler/nachrichten/${props.msg.id}/ungelesen`
+
+  await axios.put(url, null, {
+    headers: { Authorization: `Bearer ${token}` }
+  })  
   props.reload()
 }
 
@@ -63,7 +67,13 @@ async function removeMsg() {
     return
   }
 
-  await axios.delete(`/schueler/nachrichten/${props.msg.id}`)
+  const token = localStorage.getItem("token")
+
+  await axios.delete(
+    `/api/schueler/nachrichten/${props.msg.id}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  
   props.reload()
 }
 </script>
