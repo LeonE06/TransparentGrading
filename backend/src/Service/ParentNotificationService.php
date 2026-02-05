@@ -67,10 +67,16 @@ class ParentNotificationService
             'sid' => $schuelerId,
             'kid' => $kursId
         ]);
-        
-        error_log('DEBUG $info: ' . json_encode($info));
 
-        
+        error_log('DEBUG Parent info: ' . json_encode($info));
+
+        if ($info && $info['elternemail']) {
+            error_log('DEBUG: Versuche Mail zu senden an ' . $info['elternemail']);
+        } else {
+            error_log('DEBUG: Keine Elternmail oder kein Info-Datensatz gefunden');
+        }
+
+
         if (!$info || !$info['elternemail']) {
             return; // Keine Elternmail vorhanden
         }
