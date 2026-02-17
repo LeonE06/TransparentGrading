@@ -72,25 +72,37 @@ class ParentNotificationService
             return; // Keine Elternmail vorhanden
         }
 
-        // 4) Mail senden
-        $mail = (new Email())
-            ->from('1033@htl.rennweg.at')
-            ->replyTo($info['lehrer_email'])
-            ->to($info['elternemail'])
-            ->subject('Leistungsinformation – ' . $info['fach'])
-            ->text(sprintf(
-                "Sehr geehrte Erziehungsberechtigte,\n\n" .
-                "Ihr Kind %s %s steht aktuell im Fach %s auf der Note %.2f.\n\n" .
-                "Mit freundlichen Grüßen\n%s %s",
-                $info['vorname'],
-                $info['nachname'],
-                $info['fach'],
-                $schnitt,
-                $info['l_vorname'],
-                $info['l_nachname']
-            ));
+           // 4) Mail senden (mit Try-Catch, damit Request nicht blockiert)
+           try {
+            $mail = (new Email())
+                ->from('1033@htl.rennweg.at')
+                ->replyTo($info['lehrer_email'])
+                ->to($info['elternemail'])
+                ->subject('Leistungsinformation – ' . $info['fach'])
+                ->text(sprintf(
+                    "Sehr geehrte Erziehungsberechtigte,\n\n" .
+                    "Ihr Kind %s %s steht aktuell im Fach %s auf der Note %.2f.\n\n" .
+                    "Mit freundlichen Grüßen\n%s %s",
+                    $info['vorname'],
+                    $info['nachname'],
+                    $info['fach'],
+                    $schnitt,
+                    $info['l_vorname'],
+                    $info['l_nachname']
+                ));
 
-        $this->mailer->send($mail);
+            $this->mailer->send($mail);
+        } catch (\Exception $e) {
+            // Log den Fehler, aber wirf keine Exception
+            // Der Request kann trotzdem erfolgreich zurückgegeben werden
+            error_log(sprintf(
+                "Mail-Versendung fehlgeschlagen für Schüler ID %d, Kurs ID %d: %s",
+                $schuelerId,
+                $kursId,
+                $e->getMessage()
+            ));
+            // Optional: Du könntest auch Symfony's Logger verwenden, falls du einen hast
+        }
     }
 
     private function getAufgabenNoten(int $sid, int $kid): array
