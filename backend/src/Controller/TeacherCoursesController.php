@@ -158,19 +158,6 @@ class TeacherCoursesController extends AbstractController
         $em->persist($kurs);
         $em->flush();
 
-        if ($klasse) {
-            $em->getConnection()->executeStatement(
-                "INSERT INTO Kurs_Schueler (kurs_id, schueler_id)
-                 SELECT :kursId, s.id
-                 FROM Schueler s
-                 WHERE s.klasse_id = :klasseId",
-                [
-                    'kursId' => $kurs->getId(),
-                    'klasseId' => $klasse->getId(),
-                ]
-            );
-        }
-
         return new JsonResponse([
             'id' => $kurs->getId(),
             'name' => $kurs->getName(),
