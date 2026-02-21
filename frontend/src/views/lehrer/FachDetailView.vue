@@ -514,7 +514,7 @@ async function submitCreateAssessment() {
 
 .search {
   width: 420px;
-  max-width: 48vw;
+  max-width: 100%;
   border-radius: 999px;
   padding: 0.55rem 1rem;
   background: transparent;
@@ -665,5 +665,32 @@ html:not(.dark) .input {
 
 html:not(.dark) .scheme-select {
   background: rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .head-actions {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .overview {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .course-title {
+    font-size: 1.5rem;
+  }
 }
 </style>

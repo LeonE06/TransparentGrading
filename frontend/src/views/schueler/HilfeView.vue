@@ -396,4 +396,34 @@ a {color: var(--primary)}
     color: var(--white);
     border: none;
 }
+
+@media (max-width: 768px) {
+  .klassen-view {
+    padding: 1rem;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .klassen-view {
+    padding: 0.75rem;
+  }
+
+  .container {
+    overflow-x: hidden;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}
 </style>

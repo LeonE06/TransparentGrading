@@ -1,5 +1,7 @@
 <template>
-  <nav class="navbar">
+  <div class="navbar-wrapper">
+    <div class="sidebar-overlay" :class="{ open }" @click="$emit('close')" aria-hidden="true"></div>
+    <nav class="navbar" :class="{ open }">
     <img v-if="!isDark" src="/Logo_Transparent_Grading.png" alt="Logo Transparent Grading" class="logo">
     <img v-else src="/Logo_Transparent_Grading_Dark.png" alt="Logo Transparent Grading Dark" class="logo">
     <router-link to="/schueler/Faecher" class="nav-item" active-class="active">
@@ -81,11 +83,17 @@
       Logout
     </router-link>
   </nav>
+  </div>
 </template>
 
 <script setup>
+defineProps({
+  open: { type: Boolean, default: false }
+})
+defineEmits(['close'])
+
 import { useTheme } from '@/composables/useTheme.js'
-const { isDark, toggleTheme } = useTheme()
+const { isDark } = useTheme()
 </script>
 
 <style scoped>
@@ -144,5 +152,45 @@ const { isDark, toggleTheme } = useTheme()
     linear-gradient(to right, var(--primary), var(--secondary)) border-box;
   border: 1.5px solid transparent;
   border-radius: 10px;
+}
+
+.navbar-wrapper {
+  position: relative;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .navbar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .navbar.open {
+    transform: translateX(0);
+  }
+
+  .logo {
+    width: 160px;
+  }
 }
 </style>

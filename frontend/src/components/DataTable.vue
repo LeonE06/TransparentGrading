@@ -38,7 +38,9 @@ defineProps({
 <style scoped>
 .table-wrap {
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: hidden;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
 }
@@ -49,6 +51,7 @@ html:not(.dark) .table-wrap {
 
 .table {
   width: 100%;
+  min-width: 500px;
   border-collapse: collapse;
 }
 

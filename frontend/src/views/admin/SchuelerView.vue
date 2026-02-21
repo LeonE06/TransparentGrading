@@ -189,8 +189,10 @@ onMounted(loadStudents)
 /* Toolbar */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 2.2rem;
 }
 
@@ -346,5 +348,28 @@ svg path {
   font-weight: 600;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(106, 22, 204, 0.25);
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    min-width: 0;
+  }
+
+  .student-list {
+    overflow-x: auto;
+  }
+
+  .student-table {
+    min-width: 500px;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
 }
 </style>

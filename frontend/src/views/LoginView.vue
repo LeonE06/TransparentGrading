@@ -98,9 +98,10 @@ span {
 
 .login-container {
   max-width: 400px;
-  margin: 60px auto;
+  width: 90%;
+  margin: 2rem auto;
   text-align: center;
-  padding: 40px;
+  padding: 1.5rem 1.25rem;
   background:
     linear-gradient(var(--first-background-color) 0 0) padding-box,
     linear-gradient(to right, var(--primary), var(--secondary)) border-box;
@@ -111,7 +112,17 @@ span {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  height: 60vh;
+  gap: 1.5rem;
+  min-height: auto;
+  height: auto;
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    margin: 1rem auto;
+    padding: 1.25rem;
+    width: 95%;
+  }
 }
 
 .info-box {

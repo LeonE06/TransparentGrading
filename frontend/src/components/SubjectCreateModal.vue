@@ -204,4 +204,19 @@ input, select {
   margin: 0;
   font-weight: 600;
 }
+
+@media (max-width: 480px) {
+  .modal {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+  }
+}
 </style>
