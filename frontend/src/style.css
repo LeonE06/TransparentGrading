@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200..900&display=swap');
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   --first-background-color: #f9f9f9;
   --second-background-color: #EAEAEA;
@@ -53,8 +59,31 @@ body {
 }
 
 #app {
-  max-width: 100%;
+  max-width: 100vw;
   margin: 0;
   padding: 0;
   color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Alle View-Container auf Mobile/Tablet begrenzen */
+@media (max-width: 1024px) {
+  .content-inner > *,
+  .page,
+  .klassen-view,
+  .faecher-view,
+  .fach-detail-view {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Inputs und Suchfelder nicht überlaufen lassen */
+  .content-inner input[type="text"],
+  .content-inner input[type="search"],
+  .content-inner .search,
+  .content-inner .search-input,
+  .content-inner .search-input-dark {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 }
