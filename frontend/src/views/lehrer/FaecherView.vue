@@ -16,9 +16,7 @@
           <option value="name">Sortiert A - Z</option>
           <option value="klasse">Sortiert nach Klasse</option>
         </select>
-<button class="btn primary" title="Noch nicht implementiert (DB-Feld fehlt)">
-  Neues Fach erstellen
-</button>
+        <button class="btn primary" @click="openCreateModal">Neues Fach erstellen</button>
       </div>
     </div>
 
@@ -43,6 +41,51 @@
         <button class="kebab" type="button" title="Optionen" @click.stop>⋮</button>
       </article>
     </div>
+
+    <div v-if="showCreateModal" class="modal-backdrop" @click.self="closeCreateModal">
+      <div class="modal">
+        <header class="modal-head">
+          <h2>Neuen Kurs anlegen</h2>
+          <button class="modal-close" @click="closeCreateModal" aria-label="Schließen">×</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Fach *</label>
+            <select v-model="form.fachId" class="select">
+              <option :value="''">Bitte wählen</option>
+              <option v-for="f in subjects" :key="f.id" :value="String(f.id)">
+                {{ f.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label>Kursname</label>
+            <input v-model.trim="form.kursName" type="text" class="input" placeholder="z.B. 2024/25 Mathematik 7b" />
+          </div>
+
+          <div class="form-row">
+            <label>Klasse (optional)</label>
+            <select v-model="form.klasseId" class="select">
+              <option :value="''">Keine</option>
+              <option v-for="k in classes" :key="k.id" :value="String(k.id)">
+                {{ k.name }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="createError" class="form-error">{{ createError }}</div>
+        </div>
+
+        <footer class="modal-actions">
+          <button class="btn" @click="closeCreateModal" :disabled="creating">Abbrechen</button>
+          <button class="btn primary" @click="submitCreate" :disabled="creating">
+            {{ creating ? 'Speichere…' : 'Erstellen' }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -56,6 +99,17 @@ const router = useRouter()
 const courses = ref([])
 const loading = ref(false)
 const error = ref('')
+const classes = ref([])
+const subjects = ref([])
+
+const showCreateModal = ref(false)
+const creating = ref(false)
+const createError = ref('')
+const form = ref({
+  fachId: '',
+  kursName: '',
+  klasseId: '',
+})
 
 const filterMode = ref('all')
 const sortMode = ref('name')
@@ -67,6 +121,44 @@ async function getMyCoursesHardcoded() {
   if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
 
   const res = await fetch(`${API_BASE}/lehrer/faecher`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
+  }
+
+  const data = await res.json()
+  return data || []
+}
+
+async function getMyClasses() {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
+
+  const res = await fetch(`${API_BASE}/lehrer/klassen`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
+  }
+
+  const data = await res.json()
+  return data || []
+}
+
+async function getMySubjects() {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
+
+  const res = await fetch(`${API_BASE}/lehrer/faecher-liste`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -93,6 +185,20 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  try {
+    classes.value = await getMyClasses()
+  } catch (e) {
+    console.error(e)
+    classes.value = []
+  }
+
+  try {
+    subjects.value = await getMySubjects()
+  } catch (e) {
+    console.error(e)
+    subjects.value = []
+  }
 })
 
 const filteredCourses = computed(() => {
@@ -116,6 +222,62 @@ function schemeNameForCourse(courseId) {
 
 function openDetail(id) {
   router.push(`/lehrer/faecher/${id}`)
+}
+
+function openCreateModal() {
+  createError.value = ''
+  form.value = { fachId: '', kursName: '', klasseId: '' }
+  showCreateModal.value = true
+}
+
+function closeCreateModal() {
+  if (creating.value) return
+  showCreateModal.value = false
+}
+
+async function submitCreate() {
+  createError.value = ''
+  if (!form.value.fachId) {
+    createError.value = 'Bitte ein Fach auswählen.'
+    return
+  }
+
+  const token = localStorage.getItem('token')
+  if (!token) {
+    createError.value = 'Du bist nicht eingeloggt (Token fehlt).'
+    return
+  }
+
+  creating.value = true
+  try {
+    const payload = {
+      fachId: Number(form.value.fachId),
+      kursName: form.value.kursName || undefined,
+      klasseId: form.value.klasseId ? Number(form.value.klasseId) : undefined,
+    }
+
+    const res = await fetch(`${API_BASE}/lehrer/faecher`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
+    }
+
+    showCreateModal.value = false
+    courses.value = await getMyCoursesHardcoded()
+  } catch (e) {
+    console.error(e)
+    createError.value = e?.message || 'Unbekannter Fehler'
+  } finally {
+    creating.value = false
+  }
 }
 </script>
 
@@ -243,15 +405,68 @@ function openDetail(id) {
   color: var(--muted);
 }
 
-.icon-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  z-index: 50;
+}
+
+.modal {
+  width: min(560px, 100%);
+  background: #0f1118;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem 0.5rem;
+}
+
+.modal-body {
+  padding: 0.5rem 1.25rem 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.modal-actions {
+  padding: 0 1.25rem 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.modal-close {
   border: none;
   background: transparent;
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.input {
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.form-error {
+  color: #ff9ea8;
+  font-size: 0.9rem;
 }
 
 .empty {
@@ -270,5 +485,17 @@ function openDetail(id) {
   justify-content: center;
   font-size: 18px;
   line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .right {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style>
