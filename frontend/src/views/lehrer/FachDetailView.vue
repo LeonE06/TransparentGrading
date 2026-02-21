@@ -674,7 +674,12 @@ html:not(.dark) .scheme-select {
   }
 
   .head-actions {
+    flex-direction: column;
     flex-wrap: wrap;
+  }
+
+  .head-actions .btn {
+    width: 100%;
   }
 
   .search {
@@ -691,6 +696,13 @@ html:not(.dark) .scheme-select {
 
   .course-title {
     font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .head-actions .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 </style>
