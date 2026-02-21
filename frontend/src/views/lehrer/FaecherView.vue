@@ -182,7 +182,7 @@ function openDetail(id) {
   border-radius: 999px;
   padding: 0.65rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(144, 125, 255, 0.95);
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
   color: #fff;
   font-weight: 650;
 }
