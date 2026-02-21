@@ -444,7 +444,7 @@ async function submitCreate() {
 
 .search {
   width: 360px;
-  max-width: 48vw;
+  max-width: 100%;
   border-radius: 999px;
   padding: 0.55rem 1rem;
   background: transparent;
@@ -513,5 +513,43 @@ html:not(.dark) .input {
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
   line-height: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .page {
+    max-width: 100%;
+  }
+
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

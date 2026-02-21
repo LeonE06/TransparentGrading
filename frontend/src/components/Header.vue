@@ -96,10 +96,13 @@ onMounted(async () => {
 <style>
 .header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
   gap: 0.8rem;
   padding-right: 2rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .icon-btn {
@@ -150,6 +153,24 @@ onMounted(async () => {
 
   .header {
     padding-right: 0.5rem;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding-right: 0.25rem;
+    gap: 0.5rem;
+  }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .profile {
+    width: 36px;
+    height: 36px;
   }
 }
 

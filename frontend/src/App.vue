@@ -12,7 +12,9 @@
         :show-hamburger="!!currentNavbar"
         @toggle-sidebar="sidebarOpen = !sidebarOpen"
       />
-      <router-view />
+      <div class="content-inner">
+        <router-view />
+      </div>
     </main>
   </div>
 </template>
@@ -51,18 +53,36 @@ const currentNavbar = computed(() => {
 .content {
   margin-left: var(--content-margin);
   padding: 1.5rem;
+  padding-left: 100px;
   background-color: var(--first-background-color);
   min-height: 100vh;
   width: 75vw;
-  padding-left: 100px;
+  max-width: calc(100vw - var(--content-margin));
 }
 
 @media (max-width: 1024px) {
   .content {
     margin-left: 0;
     width: 100%;
+    max-width: 100vw;
+    padding: 1rem;
     padding-left: 1rem;
     padding-right: 1rem;
+    overflow-x: hidden;
+    min-width: 0;
   }
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 0.75rem;
+  }
+}
+
+.content-inner {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 </style>
