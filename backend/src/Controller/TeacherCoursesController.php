@@ -3,11 +3,15 @@
 namespace App\Controller;
 
 use App\Entity\Benotungsarten;
+use App\Entity\Faecher;
+use App\Entity\Klassen;
+use App\Entity\Kurse;
 use App\Entity\Lehrer;
 use App\Entity\Microsoft365User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api/lehrer', name: 'api_lehrer_')]
@@ -70,6 +74,98 @@ class TeacherCoursesController extends AbstractController
         }, $rows);
 
         return new JsonResponse($mapped);
+    }
+
+    /**
+     * Liste der Fächer des Lehrers (Distinct aus Kursen)
+     */
+    #[Route('/faecher-liste', name: 'subjects_list', methods: ['GET'])]
+    public function mySubjects(EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $rows = $em->getConnection()->fetchAllAssociative(
+            "SELECT DISTINCT f.id, f.name
+             FROM Kurse k
+             INNER JOIN Faecher f ON f.id = k.fach_id
+             WHERE k.lehrer_id = :lid
+             ORDER BY f.name ASC",
+            ['lid' => $lehrer->getId()]
+        );
+
+        return new JsonResponse($rows);
+    }
+
+    /**
+     * Kurs/Fach anlegen (Legacy: /faecher)
+     */
+    #[Route('/kurse', name: 'courses_create', methods: ['POST'])]
+    #[Route('/faecher', name: 'courses_create_legacy', methods: ['POST'])]
+    public function createCourse(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $data = json_decode($request->getContent(), true) ?: [];
+
+        $fachId = $data['fachId'] ?? null;
+        $fachName = trim((string) ($data['fachName'] ?? $data['fach'] ?? ''));
+        $kursName = trim((string) ($data['kursName'] ?? $data['name'] ?? ''));
+        $klasseId = $data['klasseId'] ?? null;
+
+        if ($fachId === null && $fachName === '') {
+            return new JsonResponse(['error' => 'fachName oder fachId sind Pflichtfelder'], 400);
+        }
+
+        $fach = null;
+        if ($fachId !== null && $fachId !== '') {
+            $fach = $em->getRepository(Faecher::class)->find((int) $fachId);
+            if (!$fach) {
+                return new JsonResponse(['error' => 'Ungültige fachId'], 400);
+            }
+        } else {
+            $fach = $em->getRepository(Faecher::class)->findOneBy(['name' => $fachName]);
+            if (!$fach) {
+                $fach = new Faecher();
+                $fach->setName($fachName);
+                $em->persist($fach);
+            }
+        }
+
+        $klasse = null;
+        if ($klasseId !== null && $klasseId !== '') {
+            $klasse = $em->getRepository(Klassen::class)->find((int) $klasseId);
+            if (!$klasse) {
+                return new JsonResponse(['error' => 'Ungültige klasseId'], 400);
+            }
+        }
+
+        if ($kursName === '') {
+            $kursName = $fach->getName();
+        }
+
+        $kurs = new Kurse();
+        $kurs->setName($kursName);
+        $kurs->setFach($fach);
+        $kurs->setLehrer($lehrer);
+        $kurs->setKlasse($klasse);
+
+        $em->persist($kurs);
+        $em->flush();
+
+        return new JsonResponse([
+            'id' => $kurs->getId(),
+            'name' => $kurs->getName(),
+            'fachId' => $fach->getId(),
+            'fachName' => $fach->getName(),
+            'klasseId' => $klasse ? $klasse->getId() : null,
+            'klasseName' => $klasse ? $klasse->getName() : null,
+        ], 201);
     }
 
     /**
