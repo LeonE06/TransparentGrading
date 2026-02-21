@@ -29,8 +29,8 @@
         <div class="thumb" aria-hidden="true"></div>
 
         <div class="meta">
-          <div class="jahr">{{ c.jahrgang || '—' }}</div>
-          <div class="name">{{ c.fach || c.title || '—' }}</div>
+          <div class="jahr">{{ c.fach || c.title || '—' }}</div>
+          <div class="name">{{ c.name }}</div>
           <div class="klasse">{{ c.klasse || '—' }}</div>
 
           <div class="schema-badge">
