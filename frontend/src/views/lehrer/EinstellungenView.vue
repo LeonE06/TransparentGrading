@@ -413,11 +413,13 @@ pre {
 
 .scheme-panel {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.2rem;
   align-items: flex-start;
 }
 .scheme-list {
   width: 300px;
+  min-width: 0;
   padding: 1rem;
 }
 .scheme-list .header {
@@ -456,5 +458,74 @@ pre {
 }
 .actions-inline button {
   margin-left: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .lehrer-view {
+    padding: 1rem;
+  }
+
+  .scheme-panel {
+    flex-direction: column;
+  }
+
+  .scheme-list {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .scheme-editor {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .category-item {
+    grid-template-columns: 1fr;
+  }
+
+  .grade-bands-header,
+  .grade-bands-row {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lehrer-view {
+    padding: 0.75rem;
+  }
+
+  .grade-bands-header,
+  .grade-bands-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .grade-bands-row .btn {
+    grid-column: 1 / -1;
+  }
+
+  .scheme-list li {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .actions-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .actions-inline button {
+    margin-left: 0;
+  }
 }
 </style>

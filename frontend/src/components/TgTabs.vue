@@ -27,12 +27,15 @@ defineEmits(['update:modelValue'])
 <style scoped>
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
   padding: 0.75rem;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tab {
@@ -42,6 +45,8 @@ defineEmits(['update:modelValue'])
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab.active {
@@ -53,6 +58,37 @@ defineEmits(['update:modelValue'])
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .tabs-right {
+    margin-left: 0;
+    flex-basis: 100%;
+    order: 10;
+  }
+
+  .tabs-right :deep(input),
+  .tabs-right :deep(.search) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
 }
 </style>
 
