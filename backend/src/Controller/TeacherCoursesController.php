@@ -158,12 +158,16 @@ class TeacherCoursesController extends AbstractController
         $em->persist($kurs);
         $em->flush();
 
+        $studentsAdded = 0;
         if ($klasse) {
-            $em->getConnection()->executeStatement(
+            $studentsAdded = $em->getConnection()->executeStatement(
                 "INSERT INTO Kurs_Schueler (kurs_id, schueler_id)
                  SELECT :kursId, s.id
                  FROM Schueler s
-                 WHERE s.klasse_id = :klasseId",
+                 LEFT JOIN Kurs_Schueler ks
+                   ON ks.kurs_id = :kursId AND ks.schueler_id = s.id
+                 WHERE s.klasse_id = :klasseId
+                   AND ks.schueler_id IS NULL",
                 [
                     'kursId' => $kurs->getId(),
                     'klasseId' => $klasse->getId(),
@@ -178,6 +182,7 @@ class TeacherCoursesController extends AbstractController
             'fachName' => $fach->getName(),
             'klasseId' => $klasse ? $klasse->getId() : null,
             'klasseName' => $klasse ? $klasse->getName() : null,
+            'studentsAdded' => $studentsAdded,
         ], 201);
     }
 
