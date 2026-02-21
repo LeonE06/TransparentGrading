@@ -205,8 +205,10 @@ onMounted(() => {
 /* Toolbar */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 2.2rem;
 }
 
@@ -340,5 +342,31 @@ ul {
 
 .delete-btn:hover {
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .left-controls,
+  .right-controls {
+    justify-content: center;
+  }
+
+  .btn {
+    min-width: 0;
+  }
+
+  .class-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .class-info {
+    flex: 1;
+    min-width: 0;
+  }
 }
 </style>

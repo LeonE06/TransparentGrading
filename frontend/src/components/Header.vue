@@ -1,5 +1,18 @@
 <template>
   <div class="header">
+    <button
+      v-if="showHamburger"
+      class="hamburger icon-btn"
+      @click="$emit('toggle-sidebar')"
+      aria-label="Menü öffnen"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 12H21" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" />
+        <path d="M3 6H21" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" />
+        <path d="M3 18H21" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" />
+      </svg>
+    </button>
+
     <button class="icon-btn" @click="toggleTheme" :title="isDark ? 'Lightmode' : 'Darkmode'">
       <svg v-if="isDark" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -40,6 +53,11 @@
 import { onMounted, ref } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 import { getTeacherSettings, updateTeacherSettings } from '@/services/teacherData'
+
+defineProps({
+  showHamburger: { type: Boolean, default: false }
+})
+defineEmits(['toggle-sidebar'])
 
 const { isDark, toggleTheme, loadFromServer } = useTheme()
 const language = ref('Deutsch')
@@ -118,5 +136,26 @@ onMounted(async () => {
   font-size: 0.9rem;
   outline: none;
   cursor: pointer;
+}
+
+.hamburger {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .hamburger {
+    display: grid;
+    margin-right: auto;
+  }
+
+  .header {
+    padding-right: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lang {
+    display: none;
+  }
 }
 </style>

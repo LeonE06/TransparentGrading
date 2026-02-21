@@ -138,6 +138,7 @@ function openDetail(id) {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -270,5 +271,29 @@ function openDetail(id) {
   justify-content: center;
   font-size: 18px;
   line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .right {
+    flex-wrap: wrap;
+  }
+
+  .course {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .thumb {
+    width: 64px;
+    height: 64px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
 }
 </style>

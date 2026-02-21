@@ -84,5 +84,26 @@ html:not(.dark) .modal {
   gap: 0.75rem;
   padding: 0 1.25rem 1.25rem;
 }
+
+@media (max-width: 480px) {
+  .overlay {
+    padding: 1rem;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .modal {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions > * {
+    width: 100%;
+  }
+}
 </style>
 

@@ -263,6 +263,7 @@ onMounted(() => {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: .7rem;
   margin-bottom: 1.2rem;
 }
@@ -355,5 +356,32 @@ onMounted(() => {
 
 .context-item:hover {
   background: #efefef;
+}
+
+@media (max-width: 480px) {
+  .toolbar .btn {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .subject-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .subject-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fach-image {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
 }
 </style>
