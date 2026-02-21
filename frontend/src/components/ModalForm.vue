@@ -39,7 +39,7 @@ defineEmits(['close'])
 .modal {
   width: min(920px, 100%);
   border-radius: 16px;
-  background: rgba(43, 39, 48, 0.92);
+  background-color: var(--first-background-color);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
