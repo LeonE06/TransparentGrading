@@ -18,6 +18,16 @@
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
   background-color: var(--first-background-color);
+
+  /* Breakpoints (für Referenz, Media Queries nutzen diese Werte) */
+  --bp-mobile: 480px;
+  --bp-tablet: 768px;
+  --bp-desktop: 1024px;
+  --bp-wide: 1280px;
+  
+  /* Layout */
+  --sidebar-width: 300px;
+  --content-margin: 240px;
 }
 
 html.dark {
@@ -35,6 +45,11 @@ html.dark {
   --shadow: rgba(77, 73, 92, 1);
   --disabled: rgba(77, 73, 92, 0.5);
   --disabled-text: rgba(234, 234, 234, 0.5);
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 #app {

@@ -200,4 +200,22 @@ select {
   border: none;
 }
 
+@media (max-width: 480px) {
+  .modal {
+    max-width: 95%;
+    margin: 1rem;
+    padding: 1.25rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .cancel-btn,
+  .save-btn {
+    min-width: 100%;
+  }
+}
 </style>

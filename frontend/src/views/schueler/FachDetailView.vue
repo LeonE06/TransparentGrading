@@ -252,7 +252,8 @@ html, body {
 /* Table */
 .noten-table {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .noten-table table {
@@ -280,5 +281,23 @@ html, body {
   text-align: center;
   padding: 2rem;
   color: #999;
+}
+
+@media (max-width: 768px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  .fach-title {
+    font-size: 1.5rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .noten-table table {
+    min-width: 500px;
+  }
 }
 </style>

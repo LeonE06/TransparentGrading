@@ -143,8 +143,10 @@ onMounted(() => {
 /* Toolbar */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 2.2rem;
 }
 
@@ -264,5 +266,24 @@ svg path {
 
 .delete-btn:hover {
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    min-width: 0;
+  }
+
+  .teacher-list {
+    overflow-x: auto;
+  }
+
+  .teacher-table {
+    min-width: 500px;
+  }
 }
 </style>

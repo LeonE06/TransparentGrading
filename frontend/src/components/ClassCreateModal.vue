@@ -307,4 +307,29 @@ svg path {
   background: #a8b5ff;
   cursor: not-allowed;
 }
+
+@media (max-width: 480px) {
+  .modal {
+    max-width: 95%;
+    margin: 1rem;
+    padding: 1.25rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .cancel,
+  .create {
+    min-width: 100%;
+  }
+
+  .search-input,
+  .search-input-dark,
+  input {
+    width: 100%;
+  }
+}
 </style>
