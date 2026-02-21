@@ -7,8 +7,10 @@
     <div class="toolbar">
       <div class="pill-group">
         <button class="pill" :class="{ active: filterMode === 'all' }" @click="filterMode = 'all'">Alle</button>
-        <button class="pill" :class="{ active: filterMode === 'visible' }" @click="filterMode = 'visible'">Eingeblendete</button>
-        <button class="pill" :class="{ active: filterMode === 'hidden' }" @click="filterMode = 'hidden'">Ausgeblendete</button>
+        <button class="pill" :class="{ active: filterMode === 'visible' }"
+          @click="filterMode = 'visible'">Eingeblendete</button>
+        <button class="pill" :class="{ active: filterMode === 'hidden' }"
+          @click="filterMode = 'hidden'">Ausgeblendete</button>
       </div>
 
       <div class="right">
@@ -42,50 +44,43 @@
       </article>
     </div>
 
-    <div v-if="showCreateModal" class="modal-backdrop" @click.self="closeCreateModal">
-      <div class="modal">
-        <header class="modal-head">
-          <h2>Neuen Kurs anlegen</h2>
-          <button class="modal-close" @click="closeCreateModal" aria-label="Schließen">×</button>
-        </header>
+    <ModalForm :open="showCreateModal" title="Neuen Kurs anlegen" @close="closeCreateModal">
+      <div class="form">
+        <label class="field">
+          <span class="field-label">Fach *</span>
+          <select v-model="form.fachId" class="input">
+            <option :value="''">Bitte wählen</option>
+            <option v-for="f in subjects" :key="f.id" :value="String(f.id)">
+              {{ f.name }}
+            </option>
+          </select>
+        </label>
 
-        <div class="modal-body">
-          <div class="form-row">
-            <label>Fach *</label>
-            <select v-model="form.fachId" class="select">
-              <option :value="''">Bitte wählen</option>
-              <option v-for="f in subjects" :key="f.id" :value="String(f.id)">
-                {{ f.name }}
-              </option>
-            </select>
-          </div>
+        <label class="field">
+          <span class="field-label">Kursname</span>
+          <input v-model.trim="form.kursName" type="text" class="input" placeholder="z.B. 2024/25 Mathematik 7b" />
+        </label>
 
-          <div class="form-row">
-            <label>Kursname</label>
-            <input v-model.trim="form.kursName" type="text" class="input" placeholder="z.B. 2024/25 Mathematik 7b" />
-          </div>
+        <label class="field">
+          <span class="field-label">Klasse (optional)</span>
+          <select v-model="form.klasseId" class="input">
+            <option :value="''">Keine</option>
+            <option v-for="k in classes" :key="k.id" :value="String(k.id)">
+              {{ k.name }}
+            </option>
+          </select>
+        </label>
 
-          <div class="form-row">
-            <label>Klasse (optional)</label>
-            <select v-model="form.klasseId" class="select">
-              <option :value="''">Keine</option>
-              <option v-for="k in classes" :key="k.id" :value="String(k.id)">
-                {{ k.name }}
-              </option>
-            </select>
-          </div>
-
-          <div v-if="createError" class="form-error">{{ createError }}</div>
-        </div>
-
-        <footer class="modal-actions">
-          <button class="btn" @click="closeCreateModal" :disabled="creating">Abbrechen</button>
-          <button class="btn primary" @click="submitCreate" :disabled="creating">
-            {{ creating ? 'Speichere…' : 'Erstellen' }}
-          </button>
-        </footer>
+        <div v-if="createError" class="form-error">{{ createError }}</div>
       </div>
-    </div>
+
+      <template #actions>
+        <button class="btn ghost" type="button" @click="closeCreateModal" :disabled="creating">Abbrechen</button>
+        <button class="btn primary" type="button" @click="submitCreate" :disabled="creating">
+          {{ creating ? 'Speichere…' : 'Erstellen' }}
+        </button>
+      </template>
+    </ModalForm>
   </section>
 </template>
 
@@ -93,6 +88,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import grading from '@/services/grading'
+import ModalForm from '@/components/ModalForm.vue'
 
 const router = useRouter()
 
@@ -405,50 +401,43 @@ async function submitCreate() {
   color: var(--muted);
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-  z-index: 50;
+.btn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
 }
 
-.modal {
-  width: min(560px, 100%);
-  background: #0f1118;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-}
-
-.modal-head {
+.form {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem 0.5rem;
-}
-
-.modal-body {
-  padding: 0.5rem 1.25rem 1rem;
-  display: grid;
+  flex-direction: column;
   gap: 0.9rem;
 }
 
-.modal-actions {
-  padding: 0 1.25rem 1.25rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
+.field {
+  display: grid;
+  gap: 0.35rem;
 }
 
-.modal-close {
-  border: none;
-  background: transparent;
+.field-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.input {
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
-  font-size: 1.4rem;
-  cursor: pointer;
+  outline: none;
+}
+
+html:not(.dark) .input {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.form-error {
+  color: #ff9ea8;
+  font-size: 0.9rem;
 }
 
 .form-row {
@@ -464,20 +453,16 @@ async function submitCreate() {
   color: var(--text);
 }
 
-.form-error {
-  color: #ff9ea8;
-  font-size: 0.9rem;
-}
-
 .empty {
   padding: 2rem 0;
   color: var(--muted);
 }
+
 .kebab {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   background: transparent;
   cursor: pointer;
   display: inline-flex;
