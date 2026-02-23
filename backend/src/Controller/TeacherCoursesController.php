@@ -211,18 +211,18 @@ class TeacherCoursesController extends AbstractController
         $conn->beginTransaction();
         try {
             $conn->executeStatement(
-                "DELETE ns
-                 FROM Nachrichten_Status ns
-                 INNER JOIN Nachrichten n ON n.id = ns.nachricht_id
-                 WHERE n.kurs_id = :kid",
+                "DELETE FROM Nachrichten_Status
+                 WHERE nachricht_id IN (
+                    SELECT id FROM Nachrichten WHERE kurs_id = :kid
+                 )",
                 ['kid' => $kursId]
             );
 
             $conn->executeStatement(
-                "DELETE ab
-                 FROM Aufgaben_Bewertung ab
-                 INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
-                 WHERE a.kurs_id = :kid",
+                "DELETE FROM Aufgaben_Bewertung
+                 WHERE aufgabe_id IN (
+                    SELECT id FROM Aufgaben WHERE kurs_id = :kid
+                 )",
                 ['kid' => $kursId]
             );
 
