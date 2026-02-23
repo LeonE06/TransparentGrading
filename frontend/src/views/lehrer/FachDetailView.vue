@@ -13,6 +13,9 @@
         <button class="btn primary ghost" @click="goToAssessments">
           neue Schülerleistung erstellen
         </button>
+        <button class="btn danger" @click="removeCourse">
+          Kurs löschen
+        </button>
       </div>
     </header>
 
@@ -206,6 +209,7 @@ import ModalForm from "@/components/ModalForm.vue";
 import TgTabs from "@/components/TgTabs.vue";
 import {
   createAssessment,
+  deleteCourse,
   deleteAssessment,
   getAssessmentsForCourse,
   getCourseDetail,
@@ -412,6 +416,19 @@ async function removeAssessment(id) {
   }
 }
 
+async function removeCourse() {
+  const courseName = course.value?.name || "diesen Kurs";
+  if (!confirm(`Kurs \"${courseName}\" wirklich löschen?`)) return;
+
+  try {
+    await deleteCourse(kursId.value);
+    router.push("/lehrer/faecher");
+  } catch (e) {
+    alert("Kurs konnte nicht gelöscht werden.");
+    console.warn(e);
+  }
+}
+
 // --- Modal create assessment ---
 const createOpen = ref(false);
 const createSaving = ref(false);
@@ -506,6 +523,12 @@ async function submitCreateAssessment() {
 .btn.ghost {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+}
+
+.btn.danger {
+  background: rgba(204, 45, 45, 0.92);
+  color: #fff;
+  border-color: rgba(204, 45, 45, 0.92);
 }
 
 .panel {

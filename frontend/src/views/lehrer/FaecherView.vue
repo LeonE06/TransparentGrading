@@ -39,6 +39,9 @@
         </div>
 
         <button class="kebab" type="button" title="Optionen" @click.stop>⋮</button>
+        <button class="btn danger" @click="removeCourse">
+          Kurs löschen
+        </button>
       </article>
     </div>
 
