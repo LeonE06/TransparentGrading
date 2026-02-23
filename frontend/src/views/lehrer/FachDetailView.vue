@@ -424,7 +424,8 @@ async function removeCourse() {
     await deleteCourse(kursId.value);
     router.push("/lehrer/faecher");
   } catch (e) {
-    alert("Kurs konnte nicht gelöscht werden.");
+    const apiError = e?.response?.data?.error;
+    alert(apiError ? `Kurs konnte nicht gelöscht werden: ${apiError}` : "Kurs konnte nicht gelöscht werden.");
     console.warn(e);
   }
 }
