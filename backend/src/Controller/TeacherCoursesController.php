@@ -77,7 +77,9 @@ class TeacherCoursesController extends AbstractController
     }
 
     /**
-     * Liste der Fächer des Lehrers (Distinct aus Kursen)
+     * Liste der Fächer des Lehrers.
+     * Für den ersten Kurs werden Fächer aus Lehrer.fach genutzt,
+     * bestehende Kurs-Fächer werden ergänzend berücksichtigt.
      */
     #[Route('/faecher-liste', name: 'subjects_list', methods: ['GET'])]
     public function mySubjects(EntityManagerInterface $em): JsonResponse
@@ -87,13 +89,46 @@ class TeacherCoursesController extends AbstractController
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
-        $rows = $em->getConnection()->fetchAllAssociative(
-            "SELECT DISTINCT f.id, f.name
+        $conn = $em->getConnection();
+        $subjectNames = [];
+
+        $rawSubject = trim((string) ($lehrer->getFach() ?? ''));
+        if ($rawSubject !== '') {
+            $tokens = preg_split('/[,;|]+/', $rawSubject) ?: [];
+            foreach ($tokens as $token) {
+                $name = trim($token);
+                if ($name !== '') {
+                    $subjectNames[] = mb_strtolower($name);
+                }
+            }
+        }
+
+        $courseSubjectNames = $conn->fetchFirstColumn(
+            "SELECT DISTINCT f.name
              FROM Kurse k
              INNER JOIN Faecher f ON f.id = k.fach_id
-             WHERE k.lehrer_id = :lid
-             ORDER BY f.name ASC",
+             WHERE k.lehrer_id = :lid",
             ['lid' => $lehrer->getId()]
+        );
+        foreach ($courseSubjectNames as $name) {
+            $n = trim((string) $name);
+            if ($n !== '') {
+                $subjectNames[] = mb_strtolower($n);
+            }
+        }
+
+        $subjectNames = array_values(array_unique($subjectNames));
+        if ($subjectNames === []) {
+            return new JsonResponse([]);
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($subjectNames), '?'));
+        $rows = $conn->fetchAllAssociative(
+            "SELECT f.id, f.name
+             FROM Faecher f
+             WHERE LOWER(f.name) IN ($placeholders)
+             ORDER BY f.name ASC",
+            $subjectNames
         );
 
         return new JsonResponse($rows);
