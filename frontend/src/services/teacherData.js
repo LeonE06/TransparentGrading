@@ -10,6 +10,11 @@ export async function getCourseDetail(kursId) {
   return res.data
 }
 
+export async function deleteCourse(kursId) {
+  const res = await apiClient.delete(`/lehrer/faecher/${kursId}`)
+  return res.data
+}
+
 export async function getCourseOverview(kursId) {
   const res = await apiClient.get(`/lehrer/faecher/${kursId}/uebersicht`)
   return res.data

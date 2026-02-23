@@ -187,6 +187,76 @@ class TeacherCoursesController extends AbstractController
     }
 
     /**
+     * Kurs löschen (Legacy: /faecher/{kursId})
+     */
+    #[Route('/kurse/{kursId<\\d+>}', name: 'courses_delete', methods: ['DELETE'])]
+    #[Route('/faecher/{kursId<\\d+>}', name: 'courses_delete_legacy', methods: ['DELETE'])]
+    public function deleteCourse(int $kursId, EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $conn = $em->getConnection();
+
+        $courseOk = $conn->fetchOne(
+            "SELECT COUNT(*) FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
+        );
+        if ((int) $courseOk === 0) {
+            return new JsonResponse(['error' => 'Kurs nicht gefunden'], 404);
+        }
+
+        $conn->beginTransaction();
+        try {
+            $conn->executeStatement(
+                "DELETE FROM Nachrichten_Status
+                 WHERE nachricht_id IN (
+                    SELECT id FROM Nachrichten WHERE kurs_id = :kid
+                 )",
+                ['kid' => $kursId]
+            );
+
+            $conn->executeStatement(
+                "DELETE FROM Aufgaben_Bewertung
+                 WHERE aufgabe_id IN (
+                    SELECT id FROM Aufgaben WHERE kurs_id = :kid
+                 )",
+                ['kid' => $kursId]
+            );
+
+            $conn->executeStatement(
+                "DELETE FROM Aufgaben WHERE kurs_id = :kid",
+                ['kid' => $kursId]
+            );
+            $conn->executeStatement(
+                "DELETE FROM Kurs_Schueler WHERE kurs_id = :kid",
+                ['kid' => $kursId]
+            );
+            $conn->executeStatement(
+                "DELETE FROM Kurs_Einstellungen WHERE kurs_id = :kid",
+                ['kid' => $kursId]
+            );
+            $conn->executeStatement(
+                "DELETE FROM Nachrichten WHERE kurs_id = :kid",
+                ['kid' => $kursId]
+            );
+            $conn->executeStatement(
+                "DELETE FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
+                ['kid' => $kursId, 'lid' => $lehrer->getId()]
+            );
+
+            $conn->commit();
+        } catch (\Throwable $e) {
+            $conn->rollBack();
+            throw $e;
+        }
+
+        return new JsonResponse(['status' => 'ok']);
+    }
+
+    /**
      * Kurs-Detail (Legacy: /faecher/{kursId})
      */
     #[Route('/kurse/{kursId<\\d+>}', name: 'course_detail', methods: ['GET'])]
