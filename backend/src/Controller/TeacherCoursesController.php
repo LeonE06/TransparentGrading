@@ -135,6 +135,56 @@ class TeacherCoursesController extends AbstractController
     }
 
     /**
+     * Schülersuche für Kurserstellung.
+     */
+    #[Route('/schueler/suche', name: 'students_search', methods: ['GET'])]
+    public function searchStudents(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $query = trim((string) $request->query->get('q', ''));
+        if (mb_strlen($query) < 2) {
+            return new JsonResponse([]);
+        }
+
+        $limit = (int) $request->query->get('limit', 20);
+        $limit = max(1, min($limit, 50));
+        $term = '%' . mb_strtolower($query) . '%';
+
+        $rows = $em->getConnection()->fetchAllAssociative(
+            "SELECT
+                s.id,
+                s.vorname,
+                s.nachname,
+                c.name AS klasse
+             FROM Schueler s
+             LEFT JOIN Klassen c ON c.id = s.klasse_id
+             WHERE LOWER(COALESCE(s.vorname, '')) LIKE :term
+                OR LOWER(COALESCE(s.nachname, '')) LIKE :term
+                OR LOWER(CONCAT(COALESCE(s.vorname, ''), ' ', COALESCE(s.nachname, ''))) LIKE :term
+                OR LOWER(CONCAT(COALESCE(s.nachname, ''), ' ', COALESCE(s.vorname, ''))) LIKE :term
+             ORDER BY s.nachname ASC, s.vorname ASC
+             LIMIT :limit",
+            ['term' => $term, 'limit' => $limit],
+            ['limit' => \PDO::PARAM_INT]
+        );
+
+        $mapped = array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'vorname' => $row['vorname'],
+                'nachname' => $row['nachname'],
+                'klasse' => $row['klasse'],
+            ];
+        }, $rows);
+
+        return new JsonResponse($mapped);
+    }
+
+    /**
      * Kurs/Fach anlegen (Legacy: /faecher)
      */
     #[Route('/kurse', name: 'courses_create', methods: ['POST'])]
@@ -152,6 +202,15 @@ class TeacherCoursesController extends AbstractController
         $fachName = trim((string) ($data['fachName'] ?? $data['fach'] ?? ''));
         $kursName = trim((string) ($data['kursName'] ?? $data['name'] ?? ''));
         $klasseId = $data['klasseId'] ?? null;
+        $studentIds = $data['studentIds'] ?? [];
+
+        if (!is_array($studentIds)) {
+            return new JsonResponse(['error' => 'studentIds muss ein Array sein'], 400);
+        }
+        $studentIds = array_values(array_unique(array_filter(array_map(
+            static fn ($id): int => (int) $id,
+            $studentIds
+        ), static fn (int $id): bool => $id > 0)));
 
         if ($fachId === null && $fachName === '') {
             return new JsonResponse(['error' => 'fachName oder fachId sind Pflichtfelder'], 400);
@@ -193,9 +252,9 @@ class TeacherCoursesController extends AbstractController
         $em->persist($kurs);
         $em->flush();
 
-        $studentsAdded = 0;
+        $classStudentsAdded = 0;
         if ($klasse) {
-            $studentsAdded = $em->getConnection()->executeStatement(
+            $classStudentsAdded = $em->getConnection()->executeStatement(
                 "INSERT INTO Kurs_Schueler (kurs_id, schueler_id)
                  SELECT :kursId, s.id
                  FROM Schueler s
@@ -210,6 +269,23 @@ class TeacherCoursesController extends AbstractController
             );
         }
 
+        $manualStudentsAdded = 0;
+        if ($studentIds !== []) {
+            $placeholders = implode(', ', array_fill(0, count($studentIds), '?'));
+            $manualStudentsAdded = $em->getConnection()->executeStatement(
+                "INSERT INTO Kurs_Schueler (kurs_id, schueler_id)
+                 SELECT ?, s.id
+                 FROM Schueler s
+                 LEFT JOIN Kurs_Schueler ks
+                   ON ks.kurs_id = ? AND ks.schueler_id = s.id
+                 WHERE s.id IN ($placeholders)
+                   AND ks.schueler_id IS NULL",
+                array_merge([$kurs->getId(), $kurs->getId()], $studentIds)
+            );
+        }
+
+        $studentsAdded = $classStudentsAdded + $manualStudentsAdded;
+
         return new JsonResponse([
             'id' => $kurs->getId(),
             'name' => $kurs->getName(),
@@ -218,6 +294,8 @@ class TeacherCoursesController extends AbstractController
             'klasseId' => $klasse ? $klasse->getId() : null,
             'klasseName' => $klasse ? $klasse->getName() : null,
             'studentsAdded' => $studentsAdded,
+            'studentsAddedFromClass' => $classStudentsAdded,
+            'studentsAddedIndividually' => $manualStudentsAdded,
         ], 201);
     }
 

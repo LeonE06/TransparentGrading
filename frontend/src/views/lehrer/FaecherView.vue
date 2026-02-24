@@ -71,6 +71,51 @@
           </select>
         </label>
 
+        <label class="field">
+          <span class="field-label">Einzelne Schüler hinzufügen (optional)</span>
+          <input
+            v-model.trim="studentSearchQuery"
+            type="text"
+            class="input"
+            :placeholder="`Mindestens ${MIN_STUDENT_QUERY_LENGTH} Buchstaben eingeben…`"
+          />
+          <small class="field-help">
+            Es werden erst Treffer angezeigt, wenn genug Buchstaben eingegeben wurden.
+          </small>
+        </label>
+
+        <div v-if="studentSearchQuery.trim().length >= MIN_STUDENT_QUERY_LENGTH" class="student-search-results">
+          <div v-if="studentSearchLoading" class="student-search-state">Suche läuft…</div>
+          <div v-else-if="studentSearchError" class="student-search-error">{{ studentSearchError }}</div>
+          <div v-else-if="studentSearchResults.length === 0" class="student-search-state">Keine Treffer.</div>
+          <button
+            v-for="student in studentSearchResults"
+            :key="student.id"
+            type="button"
+            class="student-result-item"
+            @click="addSelectedStudent(student)"
+          >
+            <span>{{ student.vorname }} {{ student.nachname }}</span>
+            <small>{{ student.klasse || 'Ohne Klasse' }}</small>
+          </button>
+        </div>
+
+        <div v-if="selectedStudents.length > 0" class="selected-students">
+          <div class="field-label">Ausgewählte Schüler</div>
+          <div class="selected-students-list">
+            <button
+              v-for="student in selectedStudents"
+              :key="student.id"
+              type="button"
+              class="selected-student-chip"
+              @click="removeSelectedStudent(student.id)"
+            >
+              <span>{{ formatStudentLabel(student) }}</span>
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+        </div>
+
         <div v-if="createError" class="form-error">{{ createError }}</div>
       </div>
 
@@ -85,7 +130,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import grading from '@/services/grading'
 import ModalForm from '@/components/ModalForm.vue'
@@ -107,6 +152,14 @@ const form = ref({
   kursName: '',
   klasseId: '',
 })
+const MIN_STUDENT_QUERY_LENGTH = 2
+const studentSearchQuery = ref('')
+const studentSearchResults = ref([])
+const studentSearchLoading = ref(false)
+const studentSearchError = ref('')
+const selectedStudents = ref([])
+let studentSearchTimer = null
+let studentSearchRequestId = 0
 
 const filterMode = ref('all')
 const sortMode = ref('name')
@@ -180,6 +233,7 @@ function openDetail(id) {
 function openCreateModal() {
   createError.value = ''
   form.value = { fachId: '', kursName: '', klasseId: '' }
+  resetStudentSearch()
   showCreateModal.value = true
 }
 
@@ -187,7 +241,118 @@ function closeCreateModal() {
   if (creating.value) return
   showCreateModal.value = false
 }
-//sachen
+
+function formatStudentLabel(student) {
+  const klasse = student.klasse ? ` (${student.klasse})` : ''
+  return `${student.vorname} ${student.nachname}${klasse}`
+}
+
+function resetStudentSearch() {
+  if (studentSearchTimer) {
+    clearTimeout(studentSearchTimer)
+    studentSearchTimer = null
+  }
+  studentSearchRequestId += 1
+  studentSearchQuery.value = ''
+  studentSearchResults.value = []
+  studentSearchLoading.value = false
+  studentSearchError.value = ''
+  selectedStudents.value = []
+}
+
+function addSelectedStudent(student) {
+  const id = Number(student.id)
+  if (selectedStudents.value.some((item) => Number(item.id) === id)) return
+  selectedStudents.value.push({
+    id,
+    vorname: student.vorname || '',
+    nachname: student.nachname || '',
+    klasse: student.klasse || '',
+  })
+  studentSearchQuery.value = ''
+  studentSearchResults.value = []
+  studentSearchError.value = ''
+}
+
+function removeSelectedStudent(studentId) {
+  const id = Number(studentId)
+  selectedStudents.value = selectedStudents.value.filter((item) => Number(item.id) !== id)
+}
+
+async function searchStudents(query) {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    studentSearchError.value = 'Du bist nicht eingeloggt (Token fehlt).'
+    return
+  }
+
+  const requestId = ++studentSearchRequestId
+  studentSearchLoading.value = true
+  studentSearchError.value = ''
+
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      limit: '20',
+    })
+    const res = await fetch(`${API_BASE}/lehrer/schueler/suche?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
+    }
+
+    const data = (await res.json()) || []
+    if (requestId !== studentSearchRequestId) return
+
+    const selectedIds = new Set(selectedStudents.value.map((item) => Number(item.id)))
+    studentSearchResults.value = data.filter((student) => !selectedIds.has(Number(student.id)))
+  } catch (e) {
+    if (requestId !== studentSearchRequestId) return
+    console.error(e)
+    studentSearchError.value = e?.message || 'Schüler konnten nicht geladen werden.'
+    studentSearchResults.value = []
+  } finally {
+    if (requestId === studentSearchRequestId) {
+      studentSearchLoading.value = false
+    }
+  }
+}
+
+watch(
+  () => studentSearchQuery.value,
+  (value) => {
+    if (studentSearchTimer) {
+      clearTimeout(studentSearchTimer)
+      studentSearchTimer = null
+    }
+
+    const query = value.trim()
+    if (query.length < MIN_STUDENT_QUERY_LENGTH) {
+      studentSearchRequestId += 1
+      studentSearchLoading.value = false
+      studentSearchError.value = ''
+      studentSearchResults.value = []
+      return
+    }
+
+    studentSearchTimer = setTimeout(() => {
+      searchStudents(query)
+    }, 300)
+  }
+)
+
+onBeforeUnmount(() => {
+  if (studentSearchTimer) {
+    clearTimeout(studentSearchTimer)
+    studentSearchTimer = null
+  }
+})
+
 async function submitCreate() {
   createError.value = ''
   if (!form.value.fachId) {
@@ -201,6 +366,7 @@ async function submitCreate() {
       fachId: Number(form.value.fachId),
       kursName: form.value.kursName || undefined,
       klasseId: form.value.klasseId ? Number(form.value.klasseId) : undefined,
+      studentIds: selectedStudents.value.map((student) => Number(student.id)),
     }
     await apiClient.post('/lehrer/faecher', payload)
 
@@ -361,6 +527,11 @@ async function submitCreate() {
   font-size: 0.85rem;
 }
 
+.field-help {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .input {
   border-radius: 10px;
   padding: 0.65rem 0.85rem;
@@ -381,6 +552,70 @@ html:not(.dark) .input {
 
 .form-row {
   display: grid;
+  gap: 0.35rem;
+}
+
+.student-search-results {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.student-search-state {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.2rem 0.25rem;
+}
+
+.student-search-error {
+  color: #ff9ea8;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.25rem;
+}
+
+.student-result-item {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.student-result-item small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.selected-students {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.selected-students-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.selected-student-chip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
   gap: 0.35rem;
 }
 
