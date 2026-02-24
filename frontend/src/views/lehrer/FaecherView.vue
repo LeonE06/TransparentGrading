@@ -134,6 +134,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import grading from '@/services/grading'
 import ModalForm from '@/components/ModalForm.vue'
+import { apiClient } from '@/services/apiClient'
 
 const router = useRouter()
 
@@ -163,63 +164,19 @@ let studentSearchRequestId = 0
 const filterMode = ref('all')
 const sortMode = ref('name')
 
-const API_BASE = 'https://transparentgrading.onrender.com/api'
-
 async function getMyCoursesHardcoded() {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
-
-  const res = await fetch(`${API_BASE}/lehrer/faecher`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
-  }
-
-  const data = await res.json()
-  return data || []
+  const res = await apiClient.get('/lehrer/faecher')
+  return res.data || []
 }
 
 async function getMyClasses() {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
-
-  const res = await fetch(`${API_BASE}/lehrer/klassen`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
-  }
-
-  const data = await res.json()
-  return data || []
+  const res = await apiClient.get('/lehrer/klassen')
+  return res.data || []
 }
 
 async function getMySubjects() {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Du bist nicht eingeloggt (Token fehlt).')
-
-  const res = await fetch(`${API_BASE}/lehrer/faecher-liste`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
-  }
-
-  const data = await res.json()
-  return data || []
+  const res = await apiClient.get('/lehrer/faecher-liste')
+  return res.data || []
 }
 
 onMounted(async () => {
@@ -403,12 +360,6 @@ async function submitCreate() {
     return
   }
 
-  const token = localStorage.getItem('token')
-  if (!token) {
-    createError.value = 'Du bist nicht eingeloggt (Token fehlt).'
-    return
-  }
-
   creating.value = true
   try {
     const payload = {
@@ -417,26 +368,14 @@ async function submitCreate() {
       klasseId: form.value.klasseId ? Number(form.value.klasseId) : undefined,
       studentIds: selectedStudents.value.map((student) => Number(student.id)),
     }
-
-    const res = await fetch(`${API_BASE}/lehrer/faecher`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
-    }
+    await apiClient.post('/lehrer/faecher', payload)
 
     showCreateModal.value = false
     courses.value = await getMyCoursesHardcoded()
   } catch (e) {
     console.error(e)
-    createError.value = e?.message || 'Unbekannter Fehler'
+    const apiError = e?.response?.data?.error
+    createError.value = apiError || e?.message || 'Unbekannter Fehler'
   } finally {
     creating.value = false
   }
