@@ -390,15 +390,36 @@ class TeacherAssessmentsController extends AbstractController
             $datum = null; // DB default nimmt current_timestamp()
         }
 
-        $conn->insert('Aufgaben_Bewertung', [
-            'aufgabe_id' => $id,
-            'schueler_id' => $schuelerId,
-            'lehrer_id' => $lehrer->getId(),
-            'punkte' => $punkte,
-            'note' => $note,
-            'datum' => $datum,
-            'kommentar' => $data['kommentar'] ?? null,
-        ]);
+        $kommentar = $data['kommentar'] ?? null;
+        $existingRow = $conn->fetchAssociative(
+            "SELECT id, datum
+             FROM Aufgaben_Bewertung
+             WHERE aufgabe_id = :aid AND schueler_id = :sid
+             LIMIT 1",
+            ['aid' => $id, 'sid' => $schuelerId]
+        );
+
+        if ($existingRow !== false) {
+            $conn->update('Aufgaben_Bewertung', [
+                'lehrer_id' => $lehrer->getId(),
+                'punkte' => $punkte,
+                'note' => $note,
+                'datum' => $datum ?? $existingRow['datum'],
+                'kommentar' => $kommentar,
+            ], [
+                'id' => (int) $existingRow['id'],
+            ]);
+        } else {
+            $conn->insert('Aufgaben_Bewertung', [
+                'aufgabe_id' => $id,
+                'schueler_id' => $schuelerId,
+                'lehrer_id' => $lehrer->getId(),
+                'punkte' => $punkte,
+                'note' => $note,
+                'datum' => $datum,
+                'kommentar' => $kommentar,
+            ]);
+        }
 
         $parentNotificationService
             ->checkAndNotify($schuelerId, $kursId);
