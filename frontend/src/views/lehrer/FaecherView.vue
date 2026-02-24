@@ -280,33 +280,18 @@ function removeSelectedStudent(studentId) {
 }
 
 async function searchStudents(query) {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    studentSearchError.value = 'Du bist nicht eingeloggt (Token fehlt).'
-    return
-  }
-
   const requestId = ++studentSearchRequestId
   studentSearchLoading.value = true
   studentSearchError.value = ''
 
   try {
-    const params = new URLSearchParams({
-      q: query,
-      limit: '20',
-    })
-    const res = await fetch(`${API_BASE}/lehrer/schueler/suche?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const res = await apiClient.get('/lehrer/schueler/suche', {
+      params: {
+        q: query,
+        limit: 20,
       },
     })
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}${txt ? ` – ${txt}` : ''}`)
-    }
-
-    const data = (await res.json()) || []
+    const data = res?.data || []
     if (requestId !== studentSearchRequestId) return
 
     const selectedIds = new Set(selectedStudents.value.map((item) => Number(item.id)))
@@ -314,7 +299,8 @@ async function searchStudents(query) {
   } catch (e) {
     if (requestId !== studentSearchRequestId) return
     console.error(e)
-    studentSearchError.value = e?.message || 'Schüler konnten nicht geladen werden.'
+    const apiError = e?.response?.data?.error
+    studentSearchError.value = apiError || e?.message || 'Schüler konnten nicht geladen werden.'
     studentSearchResults.value = []
   } finally {
     if (requestId === studentSearchRequestId) {
