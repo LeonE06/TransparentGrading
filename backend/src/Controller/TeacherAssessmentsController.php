@@ -274,7 +274,8 @@ class TeacherAssessmentsController extends AbstractController
                 s.nachname,
                 ab.punkte,
                 ab.note,
-                ab.datum
+                ab.datum,
+                ab.kommentar
              FROM Aufgaben_Bewertung ab
              INNER JOIN Schueler s ON s.id = ab.schueler_id
              WHERE ab.aufgabe_id = :aid
@@ -291,6 +292,7 @@ class TeacherAssessmentsController extends AbstractController
                 'punkte' => $r['punkte'] !== null ? (int) $r['punkte'] : null,
                 'note' => $r['note'] !== null ? (float) $r['note'] : null,
                 'datum' => $r['datum'],
+                'kommentar' => $r['kommentar'],
             ];
         }, $rows);
 
