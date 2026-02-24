@@ -13,10 +13,31 @@
           {{ detail?.datum ? formatDate(detail.datum) : "" }}
         </div>
       </div>
-      <button class="btn primary" @click="openCreate">
-        Neue Schülerleistung erstellen
-      </button>
+      <div class="head-actions">
+        <button class="btn ghost" type="button" @click="downloadCsvTemplate">
+          CSV-Vorlage herunterladen
+        </button>
+        <button
+          class="btn ghost"
+          type="button"
+          :disabled="importing"
+          @click="openCsvImport"
+        >
+          {{ importing ? "CSV wird importiert…" : "CSV importieren" }}
+        </button>
+        <button class="btn primary" type="button" @click="openCreate">
+          Neue Schülerleistung erstellen
+        </button>
+      </div>
     </header>
+
+    <input
+      ref="csvFileInput"
+      type="file"
+      accept=".csv,text/csv"
+      class="sr-only"
+      @change="handleCsvImport"
+    />
 
     <div v-if="loading" class="empty">Lade …</div>
     <div v-else-if="error" class="empty">Fehler: {{ error }}</div>
@@ -190,7 +211,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
 import grading from "@/services/grading";
@@ -201,7 +222,6 @@ import {
 } from "@/services/teacherData";
 
 const route = useRoute();
-const router = useRouter();
 
 const id = computed(() => route.params.id);
 
@@ -209,6 +229,8 @@ const loading = ref(false);
 const error = ref("");
 const detail = ref(null);
 const students = ref([]);
+const csvFileInput = ref(null);
+const importing = ref(false);
 
 const search = ref("");
 const columns = [
@@ -255,6 +277,294 @@ function formatDate(d) {
 function formatGrade(v) {
   if (v == null) return "—";
   return Number(v).toFixed(1).replace(".", ",");
+}
+
+function formatCsvDate(value) {
+  if (!value) return "";
+  const text = String(value);
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[3]}.${isoMatch[2]}.${isoMatch[1]}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  if (text.includes('"') || text.includes(";") || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function csvNumber(value) {
+  if (value == null || value === "") return "";
+  return String(value).replace(".", ",");
+}
+
+function openCsvImport() {
+  if (importing.value) return;
+  csvFileInput.value?.click();
+}
+
+function downloadCsvTemplate() {
+  if (!students.value.length) {
+    alert("Keine Schüler*innen im Kurs gefunden.");
+    return;
+  }
+
+  const existingRows = detail.value?.schuelerleistungen || [];
+  const existingByStudentId = new Map(
+    existingRows.map((row) => [Number(row.schuelerId), row]),
+  );
+
+  const header = [
+    "Vorname",
+    "Nachname",
+    "Leistung(Punkten)",
+    "Note",
+    "Datum",
+    "Kommentar",
+  ];
+
+  const rows = students.value.map((student) => {
+    const existing = existingByStudentId.get(Number(student.id));
+    return [
+      student.vorname || "",
+      student.nachname || "",
+      existing?.punkte ?? "",
+      csvNumber(existing?.note),
+      formatCsvDate(existing?.datum || detail.value?.datum),
+      existing?.kommentar || "",
+    ];
+  });
+
+  const csvContent =
+    "\uFEFF" +
+    [header, ...rows]
+      .map((row) => row.map((value) => csvCell(value)).join(";"))
+      .join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = `leistungsfeststellung_${id.value}_vorlage.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(href);
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function parseCsv(text) {
+  const src = String(text || "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+
+  const firstLine = src.split("\n")[0] || "";
+  const delimiter = firstLine.includes(";") ? ";" : ",";
+
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < src.length; i += 1) {
+    const ch = src[i];
+
+    if (ch === '"') {
+      if (inQuotes && src[i + 1] === '"') {
+        cell += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === delimiter && !inQuotes) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if (ch === "\n" && !inQuotes) {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += ch;
+  }
+
+  row.push(cell);
+  rows.push(row);
+
+  return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
+}
+
+function resolveCsvColumns(headerRow) {
+  const headers = headerRow.map((value) =>
+    normalizeText(value).replace(/[()]/g, ""),
+  );
+  const findIndex = (candidates) =>
+    headers.findIndex((header) =>
+      candidates.some((candidate) => header.includes(candidate)),
+    );
+
+  return {
+    vorname: findIndex(["vorname", "first name"]),
+    nachname: findIndex(["nachname", "last name"]),
+    punkte: findIndex(["leistung", "punkte", "punkten", "points"]),
+    note: findIndex(["note", "grade"]),
+    datum: findIndex(["datum", "date"]),
+    kommentar: findIndex(["kommentar", "comment"]),
+  };
+}
+
+function parseOptionalNumber(raw, lineNumber, label) {
+  const text = String(raw || "").trim();
+  if (!text) return null;
+  const parsed = Number(text.replace(",", "."));
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Zeile ${lineNumber}: Ungültiger Wert in "${label}"`);
+  }
+  return parsed;
+}
+
+function parseOptionalDate(raw, lineNumber) {
+  const text = String(raw || "").trim();
+  if (!text) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text;
+  }
+
+  const m = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (!m) {
+    throw new Error(
+      `Zeile ${lineNumber}: Datum muss YYYY-MM-DD oder DD.MM.YYYY sein`,
+    );
+  }
+
+  const day = String(Number(m[1])).padStart(2, "0");
+  const month = String(Number(m[2])).padStart(2, "0");
+  const year = m[3];
+  return `${year}-${month}-${day}`;
+}
+
+async function handleCsvImport(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  importing.value = true;
+  try {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    if (rows.length < 2) {
+      throw new Error("CSV enthält keine Datenzeilen.");
+    }
+
+    const columns = resolveCsvColumns(rows[0]);
+    if (columns.vorname < 0 || columns.nachname < 0) {
+      throw new Error("CSV benötigt mindestens die Spalten Vorname und Nachname.");
+    }
+
+    const studentsByName = new Map();
+    for (const student of students.value) {
+      const key = `${normalizeText(student.vorname)}|${normalizeText(student.nachname)}`;
+      const list = studentsByName.get(key) || [];
+      list.push(student);
+      studentsByName.set(key, list);
+    }
+
+    let imported = 0;
+    const issues = [];
+
+    for (let i = 1; i < rows.length; i += 1) {
+      const row = rows[i];
+      const lineNumber = i + 1;
+
+      const vorname = String(row[columns.vorname] || "").trim();
+      const nachname = String(row[columns.nachname] || "").trim();
+      const rowHasContent = row.some((value) => String(value || "").trim() !== "");
+      if (!rowHasContent) continue;
+
+      if (!vorname || !nachname) {
+        issues.push(`Zeile ${lineNumber}: Vorname/Nachname fehlt.`);
+        continue;
+      }
+
+      const key = `${normalizeText(vorname)}|${normalizeText(nachname)}`;
+      const matches = studentsByName.get(key) || [];
+      if (matches.length === 0) {
+        issues.push(`Zeile ${lineNumber}: ${vorname} ${nachname} nicht im Kurs.`);
+        continue;
+      }
+      if (matches.length > 1) {
+        issues.push(`Zeile ${lineNumber}: ${vorname} ${nachname} ist nicht eindeutig.`);
+        continue;
+      }
+
+      try {
+        const punkteRaw = columns.punkte >= 0 ? row[columns.punkte] : "";
+        const noteRaw = columns.note >= 0 ? row[columns.note] : "";
+        const datumRaw = columns.datum >= 0 ? row[columns.datum] : "";
+        const kommentarRaw = columns.kommentar >= 0 ? row[columns.kommentar] : "";
+
+        const punkte = parseOptionalNumber(punkteRaw, lineNumber, "Leistung(Punkten)");
+        const note = parseOptionalNumber(noteRaw, lineNumber, "Note");
+        const datum = parseOptionalDate(datumRaw, lineNumber);
+        const kommentar = String(kommentarRaw || "").trim() || null;
+
+        await createStudentResult(id.value, {
+          schuelerId: matches[0].id,
+          punkte: punkte != null ? Math.round(punkte) : null,
+          note,
+          datum,
+          kommentar,
+        });
+        imported += 1;
+      } catch (importError) {
+        const apiError = importError?.response?.data?.error;
+        issues.push(
+          `Zeile ${lineNumber}: ${apiError || importError?.message || "Import fehlgeschlagen"}`,
+        );
+      }
+    }
+
+    await load();
+
+    let message = `${imported} Schülerleistungen importiert.`;
+    if (issues.length > 0) {
+      const preview = issues.slice(0, 8).join("\n");
+      const more = issues.length > 8 ? `\n... +${issues.length - 8} weitere` : "";
+      message += `\n\nProbleme:\n${preview}${more}`;
+    }
+    alert(message);
+  } catch (e) {
+    alert(e?.message || "CSV konnte nicht importiert werden.");
+  } finally {
+    importing.value = false;
+    if (event?.target) {
+      event.target.value = "";
+    }
+  }
 }
 
 async function load() {
@@ -375,6 +685,14 @@ async function submitCreate() {
   margin-bottom: 1rem;
 }
 
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .title-wrap {
   display: grid;
   gap: 0.2rem;
@@ -403,6 +721,18 @@ async function submitCreate() {
 .btn.ghost {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .kpis {
@@ -523,6 +853,14 @@ html:not(.dark) .input {
   .head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .head-actions {
+    justify-content: stretch;
+  }
+
+  .head-actions .btn {
+    width: 100%;
   }
 
   .table-head {
