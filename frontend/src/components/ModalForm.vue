@@ -85,6 +85,11 @@ html:not(.dark) .modal {
   padding: 0 1.25rem 1.25rem;
 }
 
+select option {
+  background-color: var(--second-background-color);
+  color: var(--text);
+}
+
 @media (max-width: 480px) {
   .overlay {
     padding: 1rem;
