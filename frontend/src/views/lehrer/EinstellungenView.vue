@@ -387,6 +387,7 @@ function removeGradeBand(idx) {
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  color: var(--text)
 }
 
 .btn:hover {
