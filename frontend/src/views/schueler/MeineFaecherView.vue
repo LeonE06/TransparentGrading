@@ -255,6 +255,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
 .title {
   font-size: 2rem;
   margin-bottom: 1.5rem;
@@ -292,6 +293,7 @@ onMounted(() => {
   margin-bottom: 1rem;
   border: 1px solid #bbb;
   border-radius: 8px;
+  background-color: var(--search-background);
 }
 
 .subject-list {
@@ -360,6 +362,10 @@ onMounted(() => {
   padding: 10px 16px;
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.class-name {
+  margin-left: 10px;
 }
 
 
