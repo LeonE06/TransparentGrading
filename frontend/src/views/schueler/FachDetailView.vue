@@ -195,7 +195,7 @@ html, body {
 .back-btn {
   background: none;
   border: none;
-  color: #6a16cc;
+  color: var(--primary);
   cursor: pointer;
   font-size: 1rem;
   margin-bottom: 1.5rem;
@@ -222,9 +222,8 @@ html, body {
 }
 
 .stat-card.big {
-  background: white;
+  background: var(--second-background-color);
   border-radius: 16px;
-  padding: 1.5rem;
   border: 2px solid #e0d6f8;
   text-align: center;
 }
@@ -236,7 +235,7 @@ html, body {
 }
 
 .chart-section {
-  background: white;
+  background: var(--second-background-color);
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
@@ -260,7 +259,7 @@ html, body {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  background: white;
+  background: var(--first-background-color);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -273,7 +272,7 @@ html, body {
 }
 
 .noten-table th {
-  background: #fafafa;
+  background: var(--second-background-color);
   font-weight: 600;
 }
 
