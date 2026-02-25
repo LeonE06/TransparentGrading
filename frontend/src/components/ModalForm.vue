@@ -85,7 +85,8 @@ html:not(.dark) .modal {
   padding: 0 1.25rem 1.25rem;
 }
 
-select option {
+:deep(select),
+:deep(select option) {
   background-color: var(--second-background-color);
   color: var(--text);
 }
@@ -106,9 +107,8 @@ select option {
     flex-direction: column;
   }
 
-  .modal-actions > * {
+  .modal-actions>* {
     width: 100%;
   }
 }
 </style>
-
