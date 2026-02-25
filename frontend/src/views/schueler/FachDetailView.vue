@@ -96,6 +96,11 @@ function renderChart() {
 
   destroyChart();
 
+  // 🔥 CSS Variablen richtig auslesen
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--text").trim();
+  const secondBg = styles.getPropertyValue("--second-background-color").trim();
+
   const gradient = ctx.createLinearGradient(0, 0, 0, 300);
   gradient.addColorStop(0, "rgba(106,22,204,0.0)");
   gradient.addColorStop(1, "rgba(106,22,204,0.25)");
@@ -108,11 +113,11 @@ function renderChart() {
         {
           label: "Note",
           data: noten.value.map((n) => Number(n.note)),
-          borderColor: "#6a16cc",
+          borderColor: textColor,          // ✅ jetzt korrekt
           backgroundColor: gradient,
           tension: 0.35,
           fill: { target: "start" },
-          pointBackgroundColor: "#6a16cc",
+          pointBackgroundColor: secondBg,  // ✅ jetzt korrekt
           pointRadius: 4,
         },
       ],
@@ -126,10 +131,18 @@ function renderChart() {
           max: 5,
           reverse: true,
           ticks: {
+            color: textColor,  // 🔥 wichtig für Darkmode
             stepSize: 1,
-            callback: (v) => v,
           },
+          grid: {
+            color: "rgba(255,255,255,0.1)" // optional anpassen
+          }
         },
+        x: {
+          ticks: {
+            color: textColor
+          }
+        }
       },
       plugins: {
         legend: { display: false },
@@ -184,7 +197,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-html, body {
+html,
+body {
   overflow-x: hidden;
 }
 
@@ -238,7 +252,7 @@ html, body {
   background: var(--second-background-color);
   padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   /* Damit Chart Höhe hat */
   min-height: 320px;
 }
