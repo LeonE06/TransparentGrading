@@ -54,7 +54,6 @@ class MicrosoftUserService
 
         // Schüler-Mail (4 Ziffern) → Lehrer
 if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    
     $this->ensureSchueler($existingUser, $vorname, $nachname);
     return 'Schueler';
 }
