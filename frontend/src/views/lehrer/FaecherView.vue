@@ -40,7 +40,15 @@
           </div>
         </div>
 
-        <button class="kebab" type="button" title="Optionen" @click.stop>⋮</button>
+        <button class="kebab" type="button" title="Optionen" @click.stop="toggleMenu(c.id)">
+          ⋮
+        </button>
+
+        <div v-if="openMenuFor === c.id" class="course-menu" @click.stop>
+          <button @click="toggleVisibility(c)">
+            {{ c.visible ? 'Ausblenden' : 'Einblenden' }}
+          </button>
+        </div>
       </article>
     </div>
 
@@ -150,6 +158,8 @@ let studentSearchRequestId = 0
 const filterMode = ref('all')
 const sortMode = ref('name')
 
+const openMenuFor = ref(null)
+
 async function getMyCoursesHardcoded() {
   const res = await apiClient.get('/lehrer/faecher')
   return res.data || []
@@ -169,7 +179,12 @@ onMounted(async () => {
   loading.value = true
   error.value = ''
   try {
-    courses.value = await getMyCoursesHardcoded()
+    const data = await getMyCoursesHardcoded()
+
+    courses.value = data.map(c => ({
+      ...c,
+      visible: true
+    }))
   } catch (e) {
     console.error(e)
     error.value = e?.message || 'Unbekannter Fehler'
@@ -194,17 +209,38 @@ onMounted(async () => {
 })
 
 const filteredCourses = computed(() => {
-  // visibility ist aktuell nicht in DB → filtert (noch) nicht, UI bleibt aber.
-  return courses.value || []
+  if (filterMode.value === 'visible') {
+    return courses.value.filter(c => c.visible)
+  }
+
+  if (filterMode.value === 'hidden') {
+    return courses.value.filter(c => !c.visible)
+  }
+
+  return courses.value
 })
 
 const sortedCourses = computed(() => {
   const list = [...filteredCourses.value]
+
   if (sortMode.value === 'klasse') {
-    list.sort((a, b) => String(a.klasse || '').localeCompare(String(b.klasse || '')))
+    list.sort((a, b) =>
+      String(a.klasse || '').localeCompare(
+        String(b.klasse || ''),
+        'de',
+        { numeric: true }
+      )
+    )
   } else {
-    list.sort((a, b) => String(a.fach || a.title || '').localeCompare(String(b.fach || b.title || '')))
+    list.sort((a, b) =>
+      String(a.fach || a.title || '').localeCompare(
+        String(b.fach || b.title || ''),
+        'de',
+        { sensitivity: 'base' }
+      )
+    )
   }
+
   return list
 })
 
@@ -293,6 +329,15 @@ async function searchStudents(query) {
       studentSearchLoading.value = false
     }
   }
+}
+
+function toggleMenu(id) {
+  openMenuFor.value = openMenuFor.value === id ? null : id
+}
+
+function toggleVisibility(course) {
+  course.visible = !course.visible
+  openMenuFor.value = null
 }
 
 watch(
@@ -623,6 +668,38 @@ html:not(.dark) .input {
   font-size: 18px;
   line-height: 1;
   color: var(--text);
+}
+
+.course {
+  position: relative;
+}
+
+.course-menu {
+  position: absolute;
+  top: 48px;
+  right: 8px;
+  background: var(--second-background-color);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0.4rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.course-menu button {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.course-menu button:hover {
+  background: rgba(144,125,255,0.15);
 }
 
 @media (max-width: 720px) {
