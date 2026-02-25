@@ -270,7 +270,7 @@ onMounted(() => {
 }
 
 .btn {
-  border: 1px solid var(----aczent-color);
+  border: 1px solid var(--aczent-color);
   padding: 10px 18px;
   border-radius: 20px;
   cursor: pointer;
@@ -291,9 +291,10 @@ onMounted(() => {
   width: 100%;
   padding: .8rem;
   margin-bottom: 1rem;
-  border: 1px solid #bbb;
+  border: 1px solid var(--aczent-color);
   border-radius: 8px;
   background-color: var(--search-background);
+  color: var(--aczent-color);
 }
 
 .subject-list {
