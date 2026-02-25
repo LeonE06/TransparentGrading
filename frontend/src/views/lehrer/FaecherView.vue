@@ -412,8 +412,9 @@ async function submitCreate() {
   outline: none;
 }
 
+
 .select option {
-  background-color: var(--background-color);
+  background-color: var(--second-background-color);
   color: var(--text);
 }
 
