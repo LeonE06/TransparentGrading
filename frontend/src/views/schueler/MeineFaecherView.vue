@@ -269,15 +269,21 @@ onMounted(() => {
 }
 
 .btn {
-  border: 1px solid #ccc;
+  border: 1px solid var(----aczent-color);
   padding: 10px 18px;
   border-radius: 20px;
   cursor: pointer;
+  background-color: var(--first-background-color);
+  color: var(--text);
 }
 
 .btn.active {
-  background: #111;
-  color: #fff;
+  background:
+    linear-gradient(var(--first-background-color) 0 0) padding-box,
+    linear-gradient(to right, var(--primary), var(--secondary)) border-box;
+  border: 1.5px solid transparent;
+  color: var(--text);
+
 }
 
 .search-input {
@@ -311,7 +317,8 @@ onMounted(() => {
 .fach-image {
   width: 50px;
   height: 50px;
-  background: #efefef;
+  background: var(--second-background-color);
+  color: --text;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,12 +347,13 @@ onMounted(() => {
   position: absolute;
   right: 0;
   top: 28px;
-  background: #fff;
+  background: var(--second-background-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
   min-width: 160px;
   z-index: 999;
+  color:var(--text);
 }
 
 .context-item {
@@ -354,9 +362,6 @@ onMounted(() => {
   transition: background 0.15s;
 }
 
-.context-item:hover {
-  background: #efefef;
-}
 
 @media (max-width: 480px) {
   .toolbar .btn {
