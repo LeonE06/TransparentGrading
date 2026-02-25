@@ -73,12 +73,8 @@
 
         <label class="field">
           <span class="field-label">Einzelne Schüler hinzufügen (optional)</span>
-          <input
-            v-model.trim="studentSearchQuery"
-            type="text"
-            class="input"
-            :placeholder="`Mindestens ${MIN_STUDENT_QUERY_LENGTH} Buchstaben eingeben…`"
-          />
+          <input v-model.trim="studentSearchQuery" type="text" class="input"
+            :placeholder="`Mindestens ${MIN_STUDENT_QUERY_LENGTH} Buchstaben eingeben…`" />
           <small class="field-help">
             Es werden erst Treffer angezeigt, wenn genug Buchstaben eingegeben wurden.
           </small>
@@ -88,13 +84,8 @@
           <div v-if="studentSearchLoading" class="student-search-state">Suche läuft…</div>
           <div v-else-if="studentSearchError" class="student-search-error">{{ studentSearchError }}</div>
           <div v-else-if="studentSearchResults.length === 0" class="student-search-state">Keine Treffer.</div>
-          <button
-            v-for="student in studentSearchResults"
-            :key="student.id"
-            type="button"
-            class="student-result-item"
-            @click="addSelectedStudent(student)"
-          >
+          <button v-for="student in studentSearchResults" :key="student.id" type="button" class="student-result-item"
+            @click="addSelectedStudent(student)">
             <span>{{ student.vorname }} {{ student.nachname }}</span>
             <small>{{ student.klasse || 'Ohne Klasse' }}</small>
           </button>
@@ -103,13 +94,8 @@
         <div v-if="selectedStudents.length > 0" class="selected-students">
           <div class="field-label">Ausgewählte Schüler</div>
           <div class="selected-students-list">
-            <button
-              v-for="student in selectedStudents"
-              :key="student.id"
-              type="button"
-              class="selected-student-chip"
-              @click="removeSelectedStudent(student.id)"
-            >
+            <button v-for="student in selectedStudents" :key="student.id" type="button" class="selected-student-chip"
+              @click="removeSelectedStudent(student.id)">
               <span>{{ formatStudentLabel(student) }}</span>
               <span aria-hidden="true">×</span>
             </button>
@@ -426,11 +412,16 @@ async function submitCreate() {
   outline: none;
 }
 
+.select option {
+  background-color: var(--background-color);
+  color: var(--text);
+}
+
 .btn {
   border-radius: 999px;
   padding: 0.65rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(144, 125, 255, 0.95);
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
   color: #fff;
   font-weight: 650;
 }
@@ -455,7 +446,7 @@ async function submitCreate() {
   padding: 0.9rem;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--second-background-color);
   cursor: pointer;
 }
 
@@ -622,7 +613,7 @@ html:not(.dark) .input {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--second-background-color);
   background: transparent;
   cursor: pointer;
   display: inline-flex;
@@ -630,6 +621,7 @@ html:not(.dark) .input {
   justify-content: center;
   font-size: 18px;
   line-height: 1;
+  color: var(--text);
 }
 
 @media (max-width: 720px) {
