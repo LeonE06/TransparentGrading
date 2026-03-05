@@ -12,6 +12,23 @@ use Symfony\Component\HttpFoundation\Request;
 #[Route('/api/teachers', name: 'api_teachers_')]
 class TeacherController extends AbstractController
 {
+
+    #[Route('/mail-test')]
+    public function mailTest(MailerInterface $mailer)
+    {
+        $mail = (new Email())
+            ->from('1033@htl.rennweg.at')
+            ->to('lara@ehart.eu')
+            ->subject('Test')
+            ->text('Test Mail');
+
+        $mailer->send($mail);
+
+        return new Response('Mail gesendet');
+    }
+
+
+
     /**
      * 🔹 GET /api/teachers/view
      * Holt alle Lehrer*innen aus der View "view_lehrer_uebersicht"

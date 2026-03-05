@@ -19,17 +19,4 @@ class DefaultController
         ]);
     }
 
-    #[Route('/mail-test')]
-    public function mailTest(MailerInterface $mailer)
-    {
-        $mail = (new Email())
-            ->from('1033@htl.rennweg.at')
-            ->to('lara@ehart.eu')
-            ->subject('Test')
-            ->text('Test Mail');
-
-        $mailer->send($mail);
-
-        return new Response('Mail gesendet');
-    }
 }
