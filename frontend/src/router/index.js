@@ -93,10 +93,6 @@ router.beforeEach((to, from, next) => {
     return next("/login");
   }
 
-  // Admin-Routen Schutz
-  if (to.meta.role === 'Admin' && role !== 'Admin') {
-    return next("/login"); // Umleitung zum Login, wenn der Benutzer kein Admin ist
-  }
 
   next();
 });
