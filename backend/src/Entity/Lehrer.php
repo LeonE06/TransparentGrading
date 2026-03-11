@@ -32,8 +32,8 @@ class Lehrer
     private Collection $kurse;
 
     // Hinzufügen der `is_admin`-Eigenschaft
-    #[ORM\Column(type: "boolean", options: ["default" => "false"])]  // Setze den Standardwert auf FALSE
-    private bool $is_admin = false;
+    #[ORM\Column(type: "boolean", options: ["default" => "false"])] 
+private bool $is_admin = false;
 
     // ----- Getter & Setter -----
 
