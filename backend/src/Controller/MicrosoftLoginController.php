@@ -65,26 +65,26 @@ class MicrosoftLoginController extends AbstractController
             $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
 
             // Echte Login-Adresse beeinflusst Rolle
-$email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';
+            $email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';
+            $local = explode('@', strtolower($email))[0];
 
-$local = explode('@', strtolower($email))[0];
+            // Falls Hauptadresse kein Schüler → Proxy-Aliase prüfen
+            if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {
+                foreach ($graphUser['proxyAddresses'] as $address) {
+                    $address = strtolower(str_replace('smtp:', '', $address));
+                    $localAlias = explode('@', $address)[0];
 
-// Falls Hauptadresse kein Schüler → Proxy-Aliase prüfen
-if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {
-    foreach ($graphUser['proxyAddresses'] as $address) {
-        $address = strtolower(str_replace('smtp:', '', $address));
-        $localAlias = explode('@', $address)[0];
+                    if (preg_match('/^[0-9]{4}$/', $localAlias)) {
+                        $email = $address;
+                        break;
+                    }
+                }
+            }
 
-        if (preg_match('/^[0-9]{4}$/', $localAlias)) {
-            $email = $address;
-            break;
-        }
-    }
-}
             $vorname  = $graphUser['givenName'] ?? '';
-$nachname = $graphUser['surname'] ?? '';
+            $nachname = $graphUser['surname'] ?? '';
 
-    $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+            $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
             // JWT bauen
             $payload = [
@@ -95,7 +95,7 @@ $nachname = $graphUser['surname'] ?? '';
 
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 
-            // Redirect ins Frontend
+            // Redirect ins Frontend mit dem Token
             $frontendUrl = $_ENV['FRONTEND_URL'];
 
             return $this->redirect($frontendUrl . '/auth/callback?token=' . $jwt);
