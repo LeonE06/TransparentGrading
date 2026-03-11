@@ -76,29 +76,31 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import * as jwt_decode from 'jwt-decode'; // Import everything as a namespace
+import { useDark } from '@vueuse/core'; // Use @vueuse/core for theme handling
+import * as jwt_decode from 'jwt-decode'; // Correct import for jwt-decode
 
-const { isDark } = useTheme()
-const isAdmin = ref(false); // Variable, die den Admin-Status speichert
+const isDark = useDark(); // Toggle between light and dark mode
+const isAdmin = ref(false); // Variable to store admin status
 
-// Beim Laden der Seite den Admin-Status prüfen
+// Check the admin status when the page loads
 onMounted(() => {
   checkIfAdmin();
 });
 
-// Funktion, um den Admin-Status aus dem Token zu prüfen
+// Function to check if the user is an admin based on the token
 function checkIfAdmin() {
   const token = localStorage.getItem("token");
   if (token) {
     try {
-      const decodedToken = jwt_decode(token); // Dekodiere das Token
-      isAdmin.value = decodedToken.is_admin || false; // Setzt den Admin-Status
+      const decodedToken = jwt_decode(token); // Decode the token
+      isAdmin.value = decodedToken.is_admin || false; // Set the admin status
     } catch (error) {
-      console.error("Fehler beim Dekodieren des Tokens:", error);
+      console.error("Error decoding the token:", error);
     }
   }
 }
 </script>
+
 <style scoped>
 .svg_nav {
     margin-right: 25px;
@@ -128,8 +130,6 @@ function checkIfAdmin() {
     align-items: center;
     padding: 1rem;
     border-right: var(--second-background-color) 2.5px solid;
-
-
 }
 
 .nav-item {
