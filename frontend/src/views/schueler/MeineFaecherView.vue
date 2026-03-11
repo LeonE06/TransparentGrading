@@ -42,12 +42,12 @@
         </div>
 
         <div class="actions">
-          <span class="bell" @click.stop="toggleNotif(fach.kurs_id)">
+          <button type="button" class="icon-btn bell" @click.stop="toggleNotif(fach.kurs_id)">
             <span v-if="fach.notif_enabled == 1">🔔</span>
             <span v-else>🔕</span>
-          </span>
+          </button>
 
-          <span class="menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</span>
+          <button type="button" class="icon-btn menu" @click.stop="toggleMenu(fach.kurs_id)">⋮</button>
 
           <div v-if="openMenuId === fach.kurs_id" class="context-menu">
             <div class="context-item" v-if="fach.sichtbar == 1" @click="toggleVisibility(fach.kurs_id)">👁 Fach
@@ -91,6 +91,18 @@ const apiBase = import.meta.env.VITE_API_URL || ''
 // Wenn Dev → direkt über Proxy `/api`
 // Wenn Prod → volle URL, aber ohne zusätzliches /api doppeln
 const apiPrefix = isDev ? '' : `${apiBase}/api`
+
+function stableSortSubjects(list = []) {
+  return [...list].sort((a, b) => {
+    const fach = String(a.fach_name || '').localeCompare(String(b.fach_name || ''), 'de')
+    if (fach !== 0) return fach
+
+    const klasse = String(a.klasse_name || '').localeCompare(String(b.klasse_name || ''), 'de')
+    if (klasse !== 0) return klasse
+
+    return Number(a.kurs_id || 0) - Number(b.kurs_id || 0)
+  })
+}
 
 // Funktion zum Berechnen des Alters
 function calculateAge(birthDate) {
@@ -173,7 +185,7 @@ async function loadSubjects() {
         Authorization: `Bearer ${token}`
       }
     });
-    subjects.value = res.data;
+    subjects.value = stableSortSubjects(res.data || []);
   } catch (error) {
     console.error("Fehler beim Laden der Fächer:", error);
   }
@@ -226,9 +238,7 @@ const visibleSubjects = computed(() => {
     );
 
   if (sortByName.value)
-    list = [...list].sort((a, b) =>
-      a.fach_name.localeCompare(b.fach_name)
-    );
+    list = stableSortSubjects(list);
 
   return list;
 });
@@ -336,10 +346,24 @@ onMounted(() => {
   gap: 15px;
 }
 
-.bell,
-.menu {
-  cursor: pointer;
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
   font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .off {
@@ -349,7 +373,7 @@ onMounted(() => {
 .context-menu {
   position: absolute;
   right: 0;
-  top: 28px;
+  bottom: calc(100% + 8px);
   background: var(--second-background-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
