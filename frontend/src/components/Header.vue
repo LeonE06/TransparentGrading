@@ -208,7 +208,7 @@ function goTo(path) {
 
 function goToProfile() {
   if (isStudent.value) {
-    goTo('/schueler/einstellungen')
+    goTo('/schueler/profil')
     return
   }
   goTo('/lehrer/einstellungen')
