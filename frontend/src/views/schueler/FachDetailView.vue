@@ -294,7 +294,11 @@ async function loadFachName() {
     // ✅ apiClient statt axios
     const res = await apiClient.get("/schueler/faecher");
     const fach = (res.data || []).find((f) => String(f.id) === String(kursId));
-    fachName.value = fach?.fach?.name || "Fachdetails";
+    fachName.value =
+      fach?.fach?.name ||
+      fach?.fach_name ||
+      fach?.name ||
+      "Fachdetails";
   } catch (e) {
     fachName.value = "Fachdetails";
   }
