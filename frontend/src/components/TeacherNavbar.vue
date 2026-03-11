@@ -76,7 +76,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import jwt_decode from 'jwt-decode'; // Importiere jwt-decode
+import { jwt_decode } from 'jwt-decode'; // Neuer benannter Import
 
 const { isDark } = useTheme()
 const isAdmin = ref(false); // Variable, die den Admin-Status speichert
