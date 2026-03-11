@@ -16,6 +16,32 @@ use Symfony\Component\Mime\Email;
 #[Route('/api')]
 class StudentGradesController extends AbstractController
 {
+    private function calculateWeightedAverage(array $rows): ?float
+    {
+        $weightedSum = 0.0;
+        $totalWeight = 0.0;
+
+        foreach ($rows as $row) {
+            if (!isset($row['note']) || $row['note'] === null) {
+                continue;
+            }
+
+            $weight = isset($row['gewichtung']) ? (float) $row['gewichtung'] : 0.0;
+            if ($weight <= 0.0) {
+                continue;
+            }
+
+            $weightedSum += (float) $row['note'] * $weight;
+            $totalWeight += $weight;
+        }
+
+        if ($totalWeight <= 0.0) {
+            return null;
+        }
+
+        return $weightedSum / $totalWeight;
+    }
+
     private function getCurrentSchueler(EntityManagerInterface $em): ?Schueler
     {
         $user = $this->getUser();
@@ -53,18 +79,34 @@ class StudentGradesController extends AbstractController
         // 1) Hole alle Noten zu diesem Fach/Kurs
         // ------------------------------------------------
         $noten = $em->getConnection()->executeQuery("
-            SELECT 
-                b.id,
-                b.datum,
+            SELECT
+                CONCAT('benotung-', b.id) AS id,
+                DATE_FORMAT(b.datum, '%Y-%m-%d') AS datum,
                 b.note,
                 ba.name AS typ_name,
-                ba.gewichtung,
+                COALESCE(ba.gewichtung, 0) AS gewichtung,
                 b.kommentar
             FROM Benotung b
             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
             WHERE b.schueler_id = :sid
               AND b.fach_id = (SELECT fach_id FROM Kurse WHERE id = :kid)
-            ORDER BY b.datum ASC
+
+            UNION ALL
+
+            SELECT
+                CONCAT('aufgabe-', ab.id) AS id,
+                DATE_FORMAT(COALESCE(ab.datum, a.faelligkeit), '%Y-%m-%d') AS datum,
+                ab.note,
+                COALESCE(ba.name, a.titel) AS typ_name,
+                COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung,
+                COALESCE(ab.kommentar, a.kommentar, a.titel) AS kommentar
+            FROM Aufgaben_Bewertung ab
+            INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
+            LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
+            WHERE ab.schueler_id = :sid
+              AND a.kurs_id = :kid
+
+            ORDER BY datum ASC
         ", [
             'sid' => $schueler->getId(),
             'kid' => $kursId
@@ -73,34 +115,40 @@ class StudentGradesController extends AbstractController
         // ------------------------------------------------
         // 2) Berechne Schüler-Durchschnitt
         // ------------------------------------------------
-        $schuelerDurchschnitt = $em->getConnection()->executeQuery("
-            SELECT AVG(note) AS avg
-            FROM Benotung
-            WHERE schueler_id = :sid
-              AND fach_id = (SELECT fach_id FROM Kurse WHERE id = :kid)
-        ", [
-            'sid' => $schueler->getId(),
-            'kid' => $kursId
-        ])->fetchOne();
+        $schuelerDurchschnitt = $this->calculateWeightedAverage($noten);
 
         // ------------------------------------------------
         // 3) Berechne Klassenschnitt
         // ------------------------------------------------
-        $klassenDurchschnitt = $em->getConnection()->executeQuery("
-            SELECT AVG(b.note) AS avg
+        $klassenNoten = $em->getConnection()->executeQuery("
+            SELECT
+                b.note,
+                COALESCE(ba.gewichtung, 0) AS gewichtung
             FROM Benotung b
+            LEFT JOIN Benotungsarten ba ON ba.id = b.typ
             WHERE b.fach_id = (SELECT fach_id FROM Kurse WHERE id = :kid)
+
+            UNION ALL
+
+            SELECT
+                ab.note,
+                COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung
+            FROM Aufgaben_Bewertung ab
+            INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
+            LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
+            WHERE a.kurs_id = :kid
         ", [
             'kid' => $kursId
-        ])->fetchOne();
+        ])->fetchAllAssociative();
+        $klassenDurchschnitt = $this->calculateWeightedAverage($klassenNoten);
 
         // ------------------------------------------------
         // 4) JSON Rückgabe
         // ------------------------------------------------
         return new JsonResponse([
             'noten' => $noten,
-            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round((float) $schuelerDurchschnitt, 2) : null,
-            'klassenschnitt' => $klassenDurchschnitt !== null ? round((float) $klassenDurchschnitt, 2) : null,
+            'schueler_notenstand' => $schuelerDurchschnitt !== null ? round($schuelerDurchschnitt, 2) : null,
+            'klassenschnitt' => $klassenDurchschnitt !== null ? round($klassenDurchschnitt, 2) : null,
         ]);
     }
 }

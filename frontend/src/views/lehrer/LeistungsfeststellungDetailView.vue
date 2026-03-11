@@ -167,6 +167,14 @@
           <label class="field">
             <span class="field-label">Note</span>
             <input
+              v-if="detail?.maxPunkte != null"
+              :value="autoCalculatedNoteDisplay"
+              class="input"
+              type="text"
+              readonly
+            />
+            <input
+              v-else
               v-model.number="createForm.note"
               class="input"
               type="number"
@@ -174,6 +182,9 @@
               max="5"
               step="0.1"
             />
+            <span v-if="detail?.maxPunkte != null" class="field-help">
+              Wird automatisch aus Punkten und Bewertungsschema berechnet.
+            </span>
           </label>
 
           <label class="field">
@@ -529,13 +540,19 @@ async function handleCsvImport(event) {
 
         const punkte = parseOptionalNumber(punkteRaw, lineNumber, "Leistung(Punkten)");
         const note = parseOptionalNumber(noteRaw, lineNumber, "Note");
+        const derivedNote = note ?? calculateNoteFromPoints(punkte);
+        if (derivedNote == null) {
+          throw new Error(
+            `Zeile ${lineNumber}: Note fehlt und konnte nicht aus den Punkten berechnet werden`,
+          );
+        }
         const datum = parseOptionalDate(datumRaw, lineNumber);
         const kommentar = String(kommentarRaw || "").trim() || null;
 
         await createStudentResult(id.value, {
           schuelerId: matches[0].id,
           punkte: punkte != null ? Math.round(punkte) : null,
-          note,
+          note: derivedNote,
           datum,
           kommentar,
         });
@@ -594,6 +611,9 @@ watch(id, load);
 // --------------------
 const schemes = ref([]);
 const courseSchemeId = ref("default");
+const activeCourseScheme = computed(
+  () => grading.getActiveSchemeForCourse?.(kursId.value)?.scheme || grading.loadScheme(),
+);
 
 function syncCourseSchemeUi() {
   schemes.value = grading.loadAllSchemes();
@@ -611,6 +631,24 @@ function saveCourseScheme() {
   grading.setActiveSchemeIdForCourse(kid, courseSchemeId.value);
 }
 
+function calculateNoteFromPoints(points) {
+  const maxPoints = Number(detail.value?.maxPunkte);
+  if (!Number.isFinite(maxPoints) || maxPoints <= 0) return null;
+  if (points == null || points === "") return null;
+
+  const numericPoints = Number(points);
+  if (!Number.isFinite(numericPoints)) return null;
+
+  const scheme = activeCourseScheme.value || {};
+  const bands =
+    Array.isArray(scheme.gradeBands) && scheme.gradeBands.length > 0
+      ? scheme.gradeBands
+      : undefined;
+  const percentage = Math.max(0, Math.min(100, (numericPoints / maxPoints) * 100));
+
+  return grading.percentageToGrade(percentage, bands);
+}
+
 // --------------------
 // ✅ Modal Schülerleistung
 // --------------------
@@ -624,6 +662,10 @@ const createForm = ref({
   datum: new Date().toISOString().slice(0, 10),
   kommentar: "",
 });
+const autoCalculatedNote = computed(() => calculateNoteFromPoints(createForm.value.punkte));
+const autoCalculatedNoteDisplay = computed(() =>
+  autoCalculatedNote.value != null ? formatGrade(autoCalculatedNote.value) : "—",
+);
 
 function openCreate() {
   syncCourseSchemeUi(); // ✅ damit es immer aktuell ist
@@ -633,11 +675,23 @@ function openCreate() {
 function closeCreate() {
   createOpen.value = false;
   saving.value = false;
+  createForm.value = {
+    schuelerId: "",
+    punkte: null,
+    note: null,
+    datum: new Date().toISOString().slice(0, 10),
+    kommentar: "",
+  };
 }
 
 async function submitCreate() {
-  if (!createForm.value.schuelerId || createForm.value.note == null) {
-    alert("Bitte Schüler*in und Note ausfüllen.");
+  const noteForSubmission =
+    detail.value?.maxPunkte != null
+      ? autoCalculatedNote.value
+      : createForm.value.note;
+
+  if (!createForm.value.schuelerId || noteForSubmission == null) {
+    alert("Bitte Schüler*in und eine gültige Leistung erfassen.");
     return;
   }
 
@@ -646,7 +700,7 @@ async function submitCreate() {
     await createStudentResult(id.value, {
       schuelerId: createForm.value.schuelerId,
       punkte: createForm.value.punkte,
-      note: createForm.value.note,
+      note: noteForSubmission,
       datum: createForm.value.datum,
       kommentar: createForm.value.kommentar,
     });
@@ -801,6 +855,11 @@ async function submitCreate() {
 }
 
 .field-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.field-help {
   color: var(--muted);
   font-size: 0.85rem;
 }

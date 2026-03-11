@@ -17,6 +17,37 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/lehrer', name: 'api_lehrer_')]
 class TeacherCoursesController extends AbstractController
 {
+    private function calculateWeightedAverage(array $rows): ?float
+    {
+        $weightedSum = 0.0;
+        $totalWeight = 0.0;
+
+        foreach ($rows as $row) {
+            $note = isset($row['note']) ? (float) $row['note'] : null;
+            $weight = isset($row['gewichtung']) ? (float) $row['gewichtung'] : 0.0;
+
+            if ($note === null || $weight <= 0) {
+                continue;
+            }
+
+            $weightedSum += $note * $weight;
+            $totalWeight += $weight;
+        }
+
+        if ($totalWeight <= 0.0) {
+            return null;
+        }
+
+        return $weightedSum / $totalWeight;
+    }
+
+    private function calculateNotePercentage(float $note): float
+    {
+        $percentage = 100 - (($note - 1) / 4) * 100;
+
+        return max(0, min(100, $percentage));
+    }
+
     private function resolveLehrer(EntityManagerInterface $em): ?Lehrer
     {
         $jwtUser = $this->getUser();
@@ -439,19 +470,32 @@ class TeacherCoursesController extends AbstractController
             ['kid' => $kursId]
         );
 
-        $avgNote = $conn->fetchOne(
-            "SELECT AVG(ab.note) AS avg_note
+        $weightedRows = $conn->fetchAllAssociative(
+            "SELECT
+                ab.note,
+                COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung
              FROM Aufgaben a
              LEFT JOIN Aufgaben_Bewertung ab ON ab.aufgabe_id = a.id
-             WHERE a.kurs_id = :kid",
-            ['kid' => $kursId]
+             LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
+             WHERE a.kurs_id = :kid
+
+             UNION ALL
+
+             SELECT
+                b.note,
+                COALESCE(ba.gewichtung, 0) AS gewichtung
+             FROM Benotung b
+             INNER JOIN Kurse ku ON ku.fach_id = b.fach_id
+             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
+             WHERE ku.id = :kid
+               AND b.lehrer_id = :lid",
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
         );
-        $avgNote = $avgNote !== null ? (float) $avgNote : null;
+        $avgNote = $this->calculateWeightedAverage($weightedRows);
 
         $avgPct = null;
         if ($avgNote !== null) {
-            $avgPct = 100 - (($avgNote - 1) / 4) * 100;
-            $avgPct = max(0, min(100, $avgPct));
+            $avgPct = $this->calculateNotePercentage($avgNote);
         }
 
         $assessmentsCount = (int) $conn->fetchOne(
@@ -492,22 +536,47 @@ class TeacherCoursesController extends AbstractController
         $trendRows = $conn->fetchAllAssociative(
             "SELECT
                 DATE_FORMAT(COALESCE(ab.datum, a.faelligkeit), '%Y-%m') AS ym,
-                AVG(ab.note) AS avg_note
+                ab.note,
+                COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung
              FROM Aufgaben a
              LEFT JOIN Aufgaben_Bewertung ab ON ab.aufgabe_id = a.id
+             LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
              WHERE a.kurs_id = :kid
                AND COALESCE(ab.datum, a.faelligkeit) IS NOT NULL
-             GROUP BY ym
+
+             UNION ALL
+
+             SELECT
+                DATE_FORMAT(b.datum, '%Y-%m') AS ym,
+                b.note,
+                COALESCE(ba.gewichtung, 0) AS gewichtung
+             FROM Benotung b
+             INNER JOIN Kurse ku ON ku.fach_id = b.fach_id
+             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
+             WHERE ku.id = :kid
+               AND b.lehrer_id = :lid
+               AND b.datum IS NOT NULL
              ORDER BY ym ASC",
-            ['kid' => $kursId]
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
         );
 
-        $trend = array_map(static function (array $r): array {
-            return [
-                'ym' => $r['ym'],
-                'avgNote' => $r['avg_note'] !== null ? round((float) $r['avg_note'], 2) : null,
+        $trendBuckets = [];
+        foreach ($trendRows as $row) {
+            if (empty($row['ym'])) {
+                continue;
+            }
+            $trendBuckets[$row['ym']][] = $row;
+        }
+
+        ksort($trendBuckets);
+
+        $trend = [];
+        foreach ($trendBuckets as $ym => $rows) {
+            $trend[] = [
+                'ym' => $ym,
+                'avgNote' => ($avg = $this->calculateWeightedAverage($rows)) !== null ? round($avg, 2) : null,
             ];
-        }, $trendRows);
+        }
 
         return new JsonResponse([
             'klassenschnitt' => $avgNote !== null ? round($avgNote, 2) : null,
@@ -577,7 +646,23 @@ class TeacherCoursesController extends AbstractController
                 s.vorname,
                 s.nachname,
                 c.name AS klasse,
-                ROUND(AVG(n.note), 2) AS gesamtnote,
+                ROUND(
+                    SUM(
+                        CASE
+                            WHEN n.note IS NOT NULL AND n.gewichtung > 0 THEN n.note * n.gewichtung
+                            ELSE 0
+                        END
+                    ) / NULLIF(
+                        SUM(
+                            CASE
+                                WHEN n.note IS NOT NULL AND n.gewichtung > 0 THEN n.gewichtung
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    ),
+                    2
+                ) AS gesamtnote,
                 COUNT(n.note) AS anzahl_noten
              FROM Kurs_Schueler ks
              INNER JOIN Schueler s ON s.id = ks.schueler_id
@@ -585,9 +670,11 @@ class TeacherCoursesController extends AbstractController
              LEFT JOIN (
                 SELECT
                   b.schueler_id,
-                  b.note
+                  b.note,
+                  COALESCE(ba.gewichtung, 0) AS gewichtung
                 FROM Benotung b
                 INNER JOIN Kurse ku ON ku.fach_id = b.fach_id
+                LEFT JOIN Benotungsarten ba ON ba.id = b.typ
                 WHERE ku.id = :kid
                   AND b.lehrer_id = :lid
 
@@ -595,9 +682,11 @@ class TeacherCoursesController extends AbstractController
 
                 SELECT
                   ab.schueler_id,
-                  ab.note
+                  ab.note,
+                  COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung
                 FROM Aufgaben_Bewertung ab
                 INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
+                LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
                 WHERE a.kurs_id = :kid
                   AND ab.lehrer_id = :lid
              ) n ON n.schueler_id = s.id
