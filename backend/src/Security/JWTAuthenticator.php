@@ -21,34 +21,34 @@ class JWTAuthenticator extends AbstractAuthenticator
     }
 
     public function authenticate(Request $request): Passport
-{
-    $token = $request->cookies->get('auth_token');
+    {
+        $token = $request->cookies->get('auth_token');
 
-    if (!$token) {
-        throw new AuthenticationException("Kein Token vorhanden");
-    }
-
-    try {
-        $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));
-
-        $email = $decoded->email ?? null;
-        $role = $decoded->role ?? 'Unbekannt';
-        $isAdmin = $decoded->is_admin ?? false;  // Hier wird der Admin-Status extrahiert
-
-        if (!$email) {
-            throw new AuthenticationException("Ungültiges Token: Keine Email enthalten");
+        if (!$token) {
+            throw new AuthenticationException("Kein Token vorhanden");
         }
 
-        return new SelfValidatingPassport(
-            new UserBadge($email, function () use ($email, $role, $isAdmin) {
-                return new JWTUser($email, $role, $isAdmin);  // Übergebe den Admin-Status an den User
-            })
-        );
+        try {
+            $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));
 
-    } catch (\Throwable $e) {
-        throw new AuthenticationException("Ungültiges Token: " . $e->getMessage());
+            $email = $decoded->email ?? null;
+            $role = $decoded->role ?? 'Unbekannt';
+
+            if (!$email) {
+                throw new AuthenticationException("Ungültiges Token: Keine Email enthalten");
+            }
+
+            return new SelfValidatingPassport(
+                new UserBadge($email, function () use ($email, $role) {
+                    return new JWTUser($email, $role);
+                })
+            );
+
+        } catch (\Throwable $e) {
+            throw new AuthenticationException("Ungültiges Token: " . $e->getMessage());
+        }
     }
-}
+
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
         return new Response("Unauthorized: " . $exception->getMessage(), Response::HTTP_UNAUTHORIZED);

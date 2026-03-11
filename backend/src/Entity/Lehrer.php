@@ -21,9 +21,6 @@ class Lehrer
     #[ORM\Column(length: 100)]
     private string $nachname;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $fach = NULL;
-
     #[ORM\ManyToOne(targetEntity: Microsoft365User::class)]
     #[ORM\JoinColumn(name: "ms365usr_id", referencedColumnName: "id", nullable: false)]
     private ?Microsoft365User $ms365User = NULL;
@@ -31,15 +28,19 @@ class Lehrer
     #[ORM\OneToMany(mappedBy: 'lehrer', targetEntity: Kurse::class)]
     private Collection $kurse;
 
+    #[ORM\OneToMany(mappedBy: 'lehrer', targetEntity: LehrerFach::class, orphanRemoval: true)]
+    private Collection $lehrerFaecher;
+
     // Hinzufügen der `is_admin`-Eigenschaft
-    #[ORM\Column(type: "boolean", options: ["default" => "false"])]  // Setze den Standardwert auf FALSE
-    private bool $is_admin = false;
+    #[ORM\Column(type: "boolean", options: ["default" => "false"])] 
+private bool $is_admin = false;
 
     // ----- Getter & Setter -----
 
     public function __construct()
     {
         $this->kurse = new ArrayCollection();
+        $this->lehrerFaecher = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -69,17 +70,6 @@ class Lehrer
         return $this;
     }
 
-    public function getFach(): ?string
-    {
-        return $this->fach;
-    }
-
-    public function setFach(?string $fach): self
-    {
-        $this->fach = $fach;
-        return $this;
-    }
-
     public function getMs365User(): ?Microsoft365User
     {
         return $this->ms365User;
@@ -94,6 +84,32 @@ class Lehrer
     public function getKurse(): Collection
     {
         return $this->kurse;
+    }
+
+    public function getLehrerFaecher(): Collection
+    {
+        return $this->lehrerFaecher;
+    }
+
+    public function addLehrerFach(LehrerFach $lehrerFach): self
+    {
+        if (!$this->lehrerFaecher->contains($lehrerFach)) {
+            $this->lehrerFaecher->add($lehrerFach);
+            $lehrerFach->setLehrer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeLehrerFach(LehrerFach $lehrerFach): self
+    {
+        if ($this->lehrerFaecher->removeElement($lehrerFach)) {
+            if ($lehrerFach->getLehrer() === $this) {
+                $lehrerFach->setLehrer(null);
+            }
+        }
+
+        return $this;
     }
 
     // Getter & Setter für `is_admin`

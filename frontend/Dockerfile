@@ -10,6 +10,9 @@ RUN npm ci || npm install
 # 📦 Installiere zusätzlich @vueuse/core
 RUN npm install @vueuse/core
 
+# ✅ Installiere jwt-decode
+RUN npm install jwt-decode
+
 # ---------- 💻 Development ----------
 FROM base AS dev
 ENV NODE_ENV=development

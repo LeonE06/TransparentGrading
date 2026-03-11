@@ -19,10 +19,10 @@ function getRoleFromToken() {
 
     const payload = JSON.parse(jsonPayload);
 
-    // Role direkt
+    // 1) wenn du role direkt hast
     if (payload.role) return payload.role;
 
-    // Wenn Rolle als Array
+    // 2) wenn du roles Array hast (Symfony/JWT üblich)
     const roles = payload.roles || payload.roleS || payload.authorities;
     if (Array.isArray(roles)) {
       if (roles.includes("ROLE_ADMIN")) return "Admin";
@@ -93,9 +93,9 @@ router.beforeEach((to, from, next) => {
     return next("/login");
   }
 
-  // Admin-Routen Schutz
-  if (to.meta.role === 'Admin' && role !== 'Admin') {
-    return next("/login"); // Umleitung zum Login, wenn der Benutzer kein Admin ist
+  // Falsche Rolle?
+  if (to.meta.role && to.meta.role !== role) {
+    return next("/login");
   }
 
   next();
