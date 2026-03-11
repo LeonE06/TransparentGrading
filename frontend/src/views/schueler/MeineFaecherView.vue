@@ -2,18 +2,6 @@
   <div class="faecher-view">
     <h1 class="title">Meine Fächer</h1>
 
-    <!-- Neuer Bereich für den Namen -->
-    <div v-if="studentName" class="student-name">
-      Hallo, {{ studentName }}!
-      <span v-if="isOver18" class="age-badge">✓ 18+</span>
-      <span v-else-if="geburtsdatum" class="age-badge">-18</span>
-
-      <!-- Eltern-Email anzeigen, falls vorhanden -->
-      <div v-if="elternEmail" class="eltern-email">
-        Eltern-Email: {{ elternEmail }}
-      </div>
-    </div>
-
     <!-- Modal anzeigen, wenn kein Geburtsdatum vorhanden ist -->
     <AddGeburtsdatumModal v-if="showGeburtsdatumModal" @close="showGeburtsdatumModal = false"
       @updated="handleStudentUpdated" />
@@ -75,7 +63,6 @@ const subjects = ref([]);
 const tab = ref("alle");
 const sortByName = ref(false);
 
-const studentName = ref(""); // Neuer State für den Namen
 const geburtsdatum = ref(null); // Neuer State für das Geburtsdatum
 const elternEmail = ref(null); // Neuer State für die Eltern-Email
 const showGeburtsdatumModal = ref(false); // State für Modal-Sichtbarkeit
@@ -137,7 +124,6 @@ async function loadCurrentStudent() {
       }
     });
     const student = res.data;
-    studentName.value = `${student.vorname} ${student.nachname}`;
     geburtsdatum.value = student.geburtsdatum;
 
     // Eltern-Email speichern (robust prüfen)
