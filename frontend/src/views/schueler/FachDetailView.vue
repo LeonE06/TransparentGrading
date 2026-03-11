@@ -237,6 +237,17 @@ function renderChart() {
   const styles = getComputedStyle(document.documentElement);
   const textColor = styles.getPropertyValue("--text").trim();
   const secondBg = styles.getPropertyValue("--second-background-color").trim();
+  const primaryColor = styles.getPropertyValue("--primary").trim() || "#6a16cc";
+  const mutedGrid = textColor ? `${textColor}22` : "rgba(0, 0, 0, 0.12)";
+
+  const chartPoints = noten.value.map((n, index) => ({
+    x: index + 1,
+    y: Number(n.note),
+    datum: formatDisplayDate(n.datum),
+    typ: n.typ_name || "—",
+    kommentar: n.kommentar || "—",
+    gewichtung: n.gewichtung ?? "—",
+  }));
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 300);
   gradient.addColorStop(0, "rgba(106,22,204,0.0)");
@@ -245,44 +256,105 @@ function renderChart() {
   chart = new Chart(ctx, {
     type: "line",
     data: {
-      labels: noten.value.map((n) => n.datum),
       datasets: [
         {
           label: "Note",
-          data: noten.value.map((n) => Number(n.note)),
-          borderColor: textColor,          // ✅ jetzt korrekt
+          data: chartPoints,
+          borderColor: primaryColor,
           backgroundColor: gradient,
-          tension: 0.35,
+          tension: 0.25,
           fill: { target: "start" },
-          pointBackgroundColor: secondBg,  // ✅ jetzt korrekt
-          pointRadius: 4,
+          pointBackgroundColor: secondBg,
+          pointBorderColor: primaryColor,
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+          pointHitRadius: 20,
+          borderWidth: 3,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 8,
+          right: 12,
+          bottom: 4,
+          left: 8,
+        },
+      },
+      interaction: {
+        mode: "nearest",
+        intersect: false,
+      },
       scales: {
         y: {
           min: 1,
           max: 5,
           reverse: true,
           ticks: {
-            color: textColor,  // 🔥 wichtig für Darkmode
+            color: textColor,
             stepSize: 1,
+            padding: 10,
+            font: {
+              size: 13,
+            },
           },
           grid: {
-            color: textColor // optional anpassen
-          }
+            color: mutedGrid,
+          },
+          border: {
+            color: mutedGrid,
+          },
         },
         x: {
+          type: "linear",
+          min: 1,
+          max: Math.max(chartPoints.length, 1),
           ticks: {
-            color: textColor
-          }
-        }
+            color: textColor,
+            padding: 10,
+            stepSize: 1,
+            autoSkip: false,
+            maxRotation: 0,
+            minRotation: 0,
+            font: {
+              size: 12,
+            },
+            callback: (value) => {
+              const point = chartPoints.find((entry) => entry.x === Number(value));
+              return point ? point.datum : "";
+            },
+          },
+          grid: {
+            color: mutedGrid,
+            drawTicks: false,
+          },
+          border: {
+            color: mutedGrid,
+          },
+        },
       },
       plugins: {
         legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111827",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          displayColors: false,
+          padding: 12,
+          callbacks: {
+            title: (items) => items[0]?.raw?.datum || "Note",
+            label: (context) => `Note: ${context.raw?.y ?? "—"}`,
+            afterLabel: (context) => [
+              `Art: ${context.raw?.typ ?? "—"}`,
+              `Gewichtung: ${context.raw?.gewichtung ?? "—"}`,
+              `Kommentar: ${context.raw?.kommentar ?? "—"}`,
+            ],
+          },
+        },
       },
     },
   });
@@ -441,7 +513,7 @@ body {
 
 .chart-section canvas {
   width: 100% !important;
-  height: 260px !important;
+  height: 320px !important;
 }
 
 /* Table */
