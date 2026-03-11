@@ -183,7 +183,6 @@ function exportPdf() {
         <h1>Notenexport ${escapeHtml(fachName.value || "Fach")}</h1>
         <div class="meta">
           <div><strong>Schüler:in:</strong> ${escapeHtml(schuelerName.value || "—")}</div>
-          <div><strong>Fach:</strong> ${escapeHtml(fachName.value || "Fach")}</div>
           <div>Erstellt am ${escapeHtml(new Date().toLocaleDateString("de-DE"))}</div>
         </div>
         <div class="stats">
