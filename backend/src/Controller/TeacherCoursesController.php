@@ -7,6 +7,7 @@ use App\Entity\Faecher;
 use App\Entity\Klassen;
 use App\Entity\Kurse;
 use App\Entity\Lehrer;
+use App\Entity\LehrerFach;
 use App\Entity\Microsoft365User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,6 +18,18 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/lehrer', name: 'api_lehrer_')]
 class TeacherCoursesController extends AbstractController
 {
+    private function syncSubjectAssignments(EntityManagerInterface $em, Lehrer $lehrer): void
+    {
+        $em->getConnection()->executeStatement(
+            "INSERT IGNORE INTO lehrer_fach (leher_id, fach_id)
+             SELECT DISTINCT k.lehrer_id, k.fach_id
+             FROM Kurse k
+             WHERE k.lehrer_id = :lid
+               AND k.fach_id IS NOT NULL",
+            ['lid' => $lehrer->getId()]
+        );
+    }
+
     private function resolveLehrer(EntityManagerInterface $em): ?Lehrer
     {
         $jwtUser = $this->getUser();
@@ -77,9 +90,7 @@ class TeacherCoursesController extends AbstractController
     }
 
     /**
-     * Liste der Fächer des Lehrers.
-     * Für den ersten Kurs werden Fächer aus Lehrer.fach genutzt,
-     * bestehende Kurs-Fächer werden ergänzend berücksichtigt.
+     * Liste der Fächer des Lehrers über die Join-Tabelle lehrer_fach.
      */
     #[Route('/faecher-liste', name: 'subjects_list', methods: ['GET'])]
     public function mySubjects(EntityManagerInterface $em): JsonResponse
@@ -89,47 +100,16 @@ class TeacherCoursesController extends AbstractController
             return new JsonResponse(['error' => 'Unauthenticated'], 401);
         }
 
-        $conn = $em->getConnection();
-        $subjectNames = [];
+        // Legacy-Kurse werden beim ersten Zugriff in die Join-Tabelle übernommen.
+        $this->syncSubjectAssignments($em, $lehrer);
 
-        $rawSubject = trim((string) ($lehrer->getFach() ?? ''));
-        if ($rawSubject !== '') {
-            $tokens = preg_split('/[,;|]+/', $rawSubject) ?: [];
-            foreach ($tokens as $token) {
-                $name = trim($token);
-                if ($name !== '') {
-                    $subjectNames[] = mb_strtolower($name);
-                }
-            }
-        }
-
-        $courseSubjectNames = $conn->fetchFirstColumn(
-            "SELECT DISTINCT f.name
-             FROM Kurse k
-             INNER JOIN Faecher f ON f.id = k.fach_id
-             WHERE k.lehrer_id = :lid",
-            ['lid' => $lehrer->getId()]
-        );
-        foreach ($courseSubjectNames as $name) {
-            $n = trim((string) $name);
-            if ($n !== '') {
-                $subjectNames[] = mb_strtolower($n);
-            }
-        }
-
-        $subjectNames = array_values(array_unique($subjectNames));
-        if ($subjectNames === []) {
-            return new JsonResponse([]);
-        }
-
-        $placeholders = implode(', ', array_fill(0, count($subjectNames), '?'));
-        $rows = $conn->fetchAllAssociative(
-            "SELECT f.id, f.name
-             FROM Faecher f
-             WHERE LOWER(f.name) IN ($placeholders)
-             ORDER BY f.name ASC",
-            $subjectNames
-        );
+        $subjects = $em->getRepository(Faecher::class)->findForLehrer($lehrer);
+        $rows = array_map(static function (Faecher $fach): array {
+            return [
+                'id' => $fach->getId(),
+                'name' => $fach->getName(),
+            ];
+        }, $subjects);
 
         return new JsonResponse($rows);
     }
@@ -241,6 +221,20 @@ class TeacherCoursesController extends AbstractController
 
         if ($kursName === '') {
             $kursName = $fach->getName();
+        }
+
+        $lehrerFach = null;
+        if ($fach->getId() !== null) {
+            $lehrerFach = $em->getRepository(LehrerFach::class)->findOneBy([
+                'lehrer' => $lehrer,
+                'fach' => $fach,
+            ]);
+        }
+        if (!$lehrerFach) {
+            $lehrerFach = new LehrerFach();
+            $lehrerFach->setLehrer($lehrer);
+            $lehrerFach->setFach($fach);
+            $em->persist($lehrerFach);
         }
 
         $kurs = new Kurse();
