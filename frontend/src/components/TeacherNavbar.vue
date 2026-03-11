@@ -18,6 +18,11 @@
             Meine Fächer
         </router-link>
 
+        <!-- Admin Link: Only visible if isAdmin is true -->
+        <router-link v-if="isAdmin" to="/admin/klassen" class="nav-item" active-class="active">
+            Admin Bereich
+        </router-link>
+
         <router-link to="/lehrer/moodboard" class="nav-item" active-class="active">
             <svg class="svg_nav" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -69,19 +74,35 @@
   </div>
 </template>
 
-
 <script setup>
-defineProps({
-  open: { type: Boolean, default: false }
-})
-defineEmits(['close'])
+import { ref, onMounted } from 'vue';
+import { useDark } from '@vueuse/core'; // Use @vueuse/core for theme handling
+import * as jwt_decode from 'jwt-decode'; // Correct import for jwt-decode
 
-import { useTheme } from '@/composables/useTheme.js'
+const isDark = useDark(); // Toggle between light and dark mode
+const isAdmin = ref(false); // Variable to store admin status
 
-const { isDark } = useTheme()
+// Check the admin status when the page loads
+onMounted(() => {
+  checkIfAdmin();
+});
+
+// Function to check if the user is an admin based on the token
+function checkIfAdmin() {
+  const token = localStorage.getItem("token");
+  if (token) {
+    try {
+      const decodedToken = jwt_decode(token); // Decode the token
+      isAdmin.value = decodedToken.is_admin || false; // Set the admin status
+    } catch (error) {
+      console.error("Error decoding the token:", error);
+    }
+  }
+}
 </script>
 
 <style scoped>
+/* Your existing styles here */
 .svg_nav {
     margin-right: 25px;
     margin-left: 25px;
@@ -110,8 +131,6 @@ const { isDark } = useTheme()
     align-items: center;
     padding: 1rem;
     border-right: var(--second-background-color) 2.5px solid;
-
-
 }
 
 .nav-item {
