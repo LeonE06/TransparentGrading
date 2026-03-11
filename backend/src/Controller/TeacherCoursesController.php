@@ -47,6 +47,8 @@ class TeacherCoursesController extends AbstractController
         $percentage = 100 - (($note - 1) / 4) * 100;
 
         return max(0, min(100, $percentage));
+    }
+    
     private function syncSubjectAssignments(EntityManagerInterface $em, Lehrer $lehrer): void
     {
         $em->getConnection()->executeStatement(
