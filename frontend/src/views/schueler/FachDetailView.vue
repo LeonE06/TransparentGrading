@@ -2,7 +2,17 @@
   <div class="fach-detail-view">
     <button class="back-btn" @click="goBack">← Zurück</button>
 
-    <h1 class="fach-title">Fachdaten – {{ fachName }}</h1>
+    <div class="title-row">
+      <h1 class="fach-title">Fachdaten – {{ fachName }}</h1>
+      <div class="export-actions">
+        <button class="export-btn" type="button" @click="downloadCsv">
+          CSV exportieren
+        </button>
+        <button class="export-btn primary" type="button" @click="exportPdf">
+          PDF exportieren
+        </button>
+      </div>
+    </div>
 
     <!-- GRID: Links Werte, rechts Diagramm -->
     <div class="grid-container">
@@ -45,7 +55,7 @@
           </tr>
 
           <tr v-for="note in noten" :key="note.id">
-            <td>{{ note.datum }}</td>
+            <td>{{ formatDisplayDate(note.datum) }}</td>
             <td>{{ note.typ_name }}</td>
             <td>{{ note.note }}</td>
             <td>{{ note.gewichtung }}</td>
@@ -76,8 +86,131 @@ const dataLoaded = ref(false);
 const notenChartEl = ref(null);
 let chart = null;
 
+function formatDisplayDate(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("de-DE");
+  } catch {
+    return value;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  if (text.includes('"') || text.includes(";") || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
 function goBack() {
   router.push("/schueler/faecher");
+}
+
+function downloadCsv() {
+  const rows = [
+    ["Datum", "Art", "Note", "Gewichtung", "Kommentar"],
+    ...noten.value.map((note) => [
+      formatDisplayDate(note.datum),
+      note.typ_name || "",
+      note.note ?? "",
+      note.gewichtung ?? "",
+      note.kommentar || "",
+    ]),
+  ];
+
+  const csvContent =
+    "\uFEFF" + rows.map((row) => row.map((cell) => csvCell(cell)).join(";")).join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = `noten_${String(fachName.value || "fach").replace(/\s+/g, "_")}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(href);
+}
+
+function exportPdf() {
+  const printWindow = window.open("", "_blank", "width=960,height=720");
+  if (!printWindow) {
+    console.warn("PDF-Export konnte nicht gestartet werden.");
+    return;
+  }
+
+  const rows = noten.value.map((note) => `
+      <tr>
+        <td>${escapeHtml(formatDisplayDate(note.datum))}</td>
+        <td>${escapeHtml(note.typ_name || "—")}</td>
+        <td>${escapeHtml(note.note ?? "—")}</td>
+        <td>${escapeHtml(note.gewichtung ?? "—")}</td>
+        <td>${escapeHtml(note.kommentar || "—")}</td>
+      </tr>
+    `).join("");
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="de">
+      <head>
+        <meta charset="utf-8" />
+        <title>Notenexport ${escapeHtml(fachName.value)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 32px; color: #1f2937; }
+          h1 { margin: 0 0 8px; font-size: 28px; }
+          .meta { margin-bottom: 24px; color: #4b5563; }
+          .stats { display: flex; gap: 16px; margin-bottom: 24px; }
+          .stat { padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 12px; min-width: 160px; }
+          .stat-label { font-size: 12px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+          .stat-value { font-size: 24px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+          th { font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+        <h1>Notenexport ${escapeHtml(fachName.value || "Fach")}</h1>
+        <div class="meta">Erstellt am ${escapeHtml(new Date().toLocaleDateString("de-DE"))}</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Notenstand</div>
+            <div class="stat-value">${escapeHtml(schuelerNotenstand.value ?? "—")}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Klassenschnitt</div>
+            <div class="stat-value">${escapeHtml(klassenschnitt.value ?? "—")}</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Art</th>
+              <th>Note</th>
+              <th>Gewichtung</th>
+              <th>Kommentar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="5">Keine Einträge vorhanden</td></tr>'}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 
 function destroyChart() {
@@ -206,6 +339,14 @@ body {
   padding: 2rem;
 }
 
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
 .back-btn {
   background: none;
   border: none;
@@ -218,7 +359,28 @@ body {
 .fach-title {
   font-size: 2rem;
   font-weight: 600;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
+}
+
+.export-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.export-btn {
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--second-background-color);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.export-btn.primary {
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  color: #fff;
 }
 
 /* GRID – left stats + right chart */
@@ -297,6 +459,19 @@ body {
 }
 
 @media (max-width: 768px) {
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-actions {
+    width: 100%;
+  }
+
+  .export-btn {
+    flex: 1 1 100%;
+  }
+
   .grid-container {
     grid-template-columns: 1fr;
   }
