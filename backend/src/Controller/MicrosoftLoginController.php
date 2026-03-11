@@ -84,20 +84,28 @@ class MicrosoftLoginController extends AbstractController
             $vorname  = $graphUser['givenName'] ?? '';
             $nachname = $graphUser['surname'] ?? '';
 
+            // Determine the role (and admin status)
             $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
+            $isAdmin = false;  // Assuming you have some logic to determine if this user is an admin
 
-            // JWT bauen
+            // You can customize the admin condition based on your business rules
+            if ($role === 'Admin' || $this->userService->isAdmin($email)) {
+                $isAdmin = true;  // Set isAdmin to true if they are an admin
+            }
+
+            // JWT payload
             $payload = [
                 'email' => $email,
                 'role'  => $role,
-                'exp'   => time() + 3600, // 1 Stunde gültig
+                'is_admin' => $isAdmin,  // Include the is_admin flag in the payload
+                'exp'   => time() + 3600, // 1 hour expiration
             ];
 
+            // Encode the JWT
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
 
-            // Redirect ins Frontend mit dem Token
+            // Redirect to frontend with the token
             $frontendUrl = $_ENV['FRONTEND_URL'];
-
             return $this->redirect($frontendUrl . '/auth/callback?token=' . $jwt);
         } catch (\Throwable $e) {
             return new Response('Fehler: ' . $e->getMessage(), 500);
