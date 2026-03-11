@@ -81,6 +81,7 @@ const noten = ref([]);
 const schuelerNotenstand = ref("-");
 const klassenschnitt = ref("-");
 const fachName = ref("Fachdetails");
+const schuelerName = ref("Schüler:in");
 const dataLoaded = ref(false);
 
 const notenChartEl = ref(null);
@@ -180,7 +181,11 @@ function exportPdf() {
       </head>
       <body>
         <h1>Notenexport ${escapeHtml(fachName.value || "Fach")}</h1>
-        <div class="meta">Erstellt am ${escapeHtml(new Date().toLocaleDateString("de-DE"))}</div>
+        <div class="meta">
+          <div><strong>Schüler:in:</strong> ${escapeHtml(schuelerName.value || "—")}</div>
+          <div><strong>Fach:</strong> ${escapeHtml(fachName.value || "Fach")}</div>
+          <div>Erstellt am ${escapeHtml(new Date().toLocaleDateString("de-DE"))}</div>
+        </div>
         <div class="stats">
           <div class="stat">
             <div class="stat-label">Notenstand</div>
@@ -295,6 +300,17 @@ async function loadFachName() {
   }
 }
 
+async function loadSchuelerName() {
+  try {
+    const res = await apiClient.get("/schueler/me");
+    const student = res.data || {};
+    const fullName = [student.vorname, student.nachname].filter(Boolean).join(" ").trim();
+    schuelerName.value = fullName || "Schüler:in";
+  } catch (e) {
+    schuelerName.value = "Schüler:in";
+  }
+}
+
 async function loadData() {
   try {
     // ✅ apiClient statt axios
@@ -320,6 +336,7 @@ async function loadData() {
 }
 
 onMounted(async () => {
+  await loadSchuelerName();
   await loadFachName();
   await loadData();
 });
