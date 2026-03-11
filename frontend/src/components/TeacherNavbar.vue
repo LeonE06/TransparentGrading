@@ -76,7 +76,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useTheme } from '@/composables/useTheme.js'
+import jwt_decode from 'jwt-decode'; // Importiere jwt-decode
 
 const { isDark } = useTheme()
 const isAdmin = ref(false); // Variable, die den Admin-Status speichert
@@ -91,7 +91,7 @@ function checkIfAdmin() {
   const token = localStorage.getItem("token");
   if (token) {
     try {
-      const decodedToken = jwt_decode(token);
+      const decodedToken = jwt_decode(token); // Dekodiere das Token
       isAdmin.value = decodedToken.is_admin || false; // Setzt den Admin-Status
     } catch (error) {
       console.error("Fehler beim Dekodieren des Tokens:", error);
