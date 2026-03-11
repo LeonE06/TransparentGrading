@@ -32,7 +32,10 @@
       <!-- RIGHT SIDE – CHART -->
       <div class="chart-section">
         <h3>Notenverlauf</h3>
-        <canvas ref="notenChartEl"></canvas>
+        <canvas v-if="hasChartData" ref="notenChartEl"></canvas>
+        <div v-else class="chart-empty">
+          Noch nicht genug Noten für einen Verlauf vorhanden.
+        </div>
       </div>
     </div>
 
@@ -44,6 +47,7 @@
             <th>Datum</th>
             <th>Art</th>
             <th>Note</th>
+            <th>Leistung</th>
             <th>Gewichtung</th>
             <th>Kommentar</th>
           </tr>
@@ -51,13 +55,14 @@
 
         <tbody>
           <tr v-if="noten.length === 0">
-            <td colspan="5" class="empty-row">Keine Einträge vorhanden</td>
+            <td colspan="6" class="empty-row">Keine Einträge vorhanden</td>
           </tr>
 
           <tr v-for="note in noten" :key="note.id">
             <td>{{ formatDisplayDate(note.datum) }}</td>
             <td>{{ note.typ_name }}</td>
             <td>{{ note.note }}</td>
+            <td>{{ formatLeistung(note) }}</td>
             <td>{{ note.gewichtung }}</td>
             <td>{{ note.kommentar || '-' }}</td>
           </tr>
@@ -68,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount } from "vue";
+import { computed, ref, onMounted, nextTick, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chart from "chart.js/auto";
 import { apiClient } from "@/services/apiClient"; // ✅ WICHTIG: statt axios
@@ -86,6 +91,10 @@ const dataLoaded = ref(false);
 
 const notenChartEl = ref(null);
 let chart = null;
+
+const hasChartData = computed(() =>
+  noten.value.some((note) => Number.isFinite(Number(note?.note)))
+);
 
 function formatDisplayDate(value) {
   if (!value) return "—";
@@ -113,17 +122,31 @@ function csvCell(value) {
   return text;
 }
 
+function formatLeistung(note) {
+  if (note?.punkte != null && note?.max_punkte != null) {
+    const prozent = note?.prozent != null ? ` (${String(note.prozent).replace(".", ",")}%)` : "";
+    return `${note.punkte}/${note.max_punkte} Pkt.${prozent}`;
+  }
+
+  if (note?.prozent != null) {
+    return `${String(note.prozent).replace(".", ",")}%`;
+  }
+
+  return "—";
+}
+
 function goBack() {
   router.push("/schueler/faecher");
 }
 
 function downloadCsv() {
   const rows = [
-    ["Datum", "Art", "Note", "Gewichtung", "Kommentar"],
+    ["Datum", "Art", "Note", "Leistung", "Gewichtung", "Kommentar"],
     ...noten.value.map((note) => [
       formatDisplayDate(note.datum),
       note.typ_name || "",
       note.note ?? "",
+      formatLeistung(note),
       note.gewichtung ?? "",
       note.kommentar || "",
     ]),
@@ -155,6 +178,7 @@ function exportPdf() {
         <td>${escapeHtml(formatDisplayDate(note.datum))}</td>
         <td>${escapeHtml(note.typ_name || "—")}</td>
         <td>${escapeHtml(note.note ?? "—")}</td>
+        <td>${escapeHtml(formatLeistung(note))}</td>
         <td>${escapeHtml(note.gewichtung ?? "—")}</td>
         <td>${escapeHtml(note.kommentar || "—")}</td>
       </tr>
@@ -201,12 +225,13 @@ function exportPdf() {
               <th>Datum</th>
               <th>Art</th>
               <th>Note</th>
+              <th>Leistung</th>
               <th>Gewichtung</th>
               <th>Kommentar</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="5">Keine Einträge vorhanden</td></tr>'}
+            ${rows || '<tr><td colspan="6">Keine Einträge vorhanden</td></tr>'}
           </tbody>
         </table>
       </body>
@@ -247,7 +272,12 @@ function renderChart() {
     typ: n.typ_name || "—",
     kommentar: n.kommentar || "—",
     gewichtung: n.gewichtung ?? "—",
-  }));
+  })).filter((point) => Number.isFinite(point.y));
+
+  if (chartPoints.length === 0) {
+    destroyChart();
+    return;
+  }
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 300);
   gradient.addColorStop(0, "rgba(106,22,204,0.0)");
@@ -311,8 +341,8 @@ function renderChart() {
         },
         x: {
           type: "linear",
-          min: 1,
-          max: Math.max(chartPoints.length, 1),
+          min: 0.5,
+          max: Math.max(chartPoints.length + 0.5, 1.5),
           ticks: {
             color: textColor,
             padding: 10,
@@ -516,6 +546,17 @@ body {
   height: 320px !important;
 }
 
+.chart-empty {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 1rem;
+  padding: 1rem;
+}
+
 /* Table */
 .noten-table {
   width: 100%;
@@ -537,6 +578,7 @@ body {
   padding: 1rem;
   text-align: left;
   border-bottom: 1px solid #eee;
+  vertical-align: top;
 }
 
 .noten-table th {
@@ -577,7 +619,7 @@ body {
   }
 
   .noten-table table {
-    min-width: 500px;
+    min-width: 760px;
   }
 }
 </style>

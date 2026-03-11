@@ -85,7 +85,10 @@ class StudentGradesController extends AbstractController
                 b.note,
                 ba.name AS typ_name,
                 COALESCE(ba.gewichtung, 0) AS gewichtung,
-                b.kommentar
+                b.kommentar,
+                NULL AS punkte,
+                NULL AS max_punkte,
+                NULL AS prozent
             FROM Benotung b
             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
             WHERE b.schueler_id = :sid
@@ -99,7 +102,14 @@ class StudentGradesController extends AbstractController
                 ab.note,
                 COALESCE(ba.name, a.titel) AS typ_name,
                 COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung,
-                COALESCE(ab.kommentar, a.kommentar, a.titel) AS kommentar
+                COALESCE(ab.kommentar, a.kommentar, a.titel) AS kommentar,
+                ab.punkte,
+                a.max_punkte,
+                CASE
+                    WHEN ab.punkte IS NOT NULL AND a.max_punkte IS NOT NULL AND a.max_punkte > 0
+                        THEN ROUND((ab.punkte / a.max_punkte) * 100, 1)
+                    ELSE NULL
+                END AS prozent
             FROM Aufgaben_Bewertung ab
             INNER JOIN Aufgaben a ON a.id = ab.aufgabe_id
             LEFT JOIN Benotungsarten ba ON ba.id = a.benotungsart_id
