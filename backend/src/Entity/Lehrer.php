@@ -1,6 +1,5 @@
-<?php
-
 namespace App\Entity;
+
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Repository\LehrerRepository;
@@ -31,12 +30,16 @@ class Lehrer
     #[ORM\OneToMany(mappedBy: 'lehrer', targetEntity: Kurse::class)]
     private Collection $kurse;
 
+    // Hinzufügen der `is_admin`-Eigenschaft
+    #[ORM\Column(type: "boolean", options: ["default" => "false"])]  // Setze den Standardwert auf FALSE
+    private bool $is_admin = false;
+
     // ----- Getter & Setter -----
 
     public function __construct()
-{
-    $this->kurse = new ArrayCollection();
-}
+    {
+        $this->kurse = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -87,8 +90,20 @@ class Lehrer
         return $this;
     }
 
-public function getKurse(): Collection
-{
-    return $this->kurse;
-}
+    public function getKurse(): Collection
+    {
+        return $this->kurse;
+    }
+
+    // Getter & Setter für `is_admin`
+    public function getIsAdmin(): bool
+    {
+        return $this->is_admin;
+    }
+
+    public function setIsAdmin(bool $is_admin): self
+    {
+        $this->is_admin = $is_admin;
+        return $this;
+    }
 }
