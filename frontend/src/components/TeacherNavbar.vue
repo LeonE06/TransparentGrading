@@ -99,3 +99,101 @@ function checkIfAdmin() {
   }
 }
 </script>
+<style scoped>
+.svg_nav {
+    margin-right: 25px;
+    margin-left: 25px;
+}
+
+.svg_nav path {
+    stroke: var(--icon-color);
+}
+
+.logo {
+    width: 200px;
+    align-self: center;
+    margin-bottom: 25px;
+    margin-top: 20px;
+}
+
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 300px;
+    height: 100vh;
+    background-color: var(--first-background-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-right: var(--second-background-color) 2.5px solid;
+
+
+}
+
+.nav-item {
+    width: 90%;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text);
+    text-align: left;
+    display: flex;
+    margin: 3vh 0;
+    display: flex;
+}
+
+.nav-item:hover {
+    background-color: var(--second-background-color);
+}
+
+.active {
+  background:
+    linear-gradient(var(--first-background-color) 0 0) padding-box,
+    linear-gradient(to right, var(--primary), var(--secondary)) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+}
+
+.navbar-wrapper {
+  position: relative;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .navbar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .navbar.open {
+    transform: translateX(0);
+  }
+
+  .logo {
+    width: 160px;
+  }
+}
+</style>
