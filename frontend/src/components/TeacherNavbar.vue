@@ -18,8 +18,8 @@
             Meine Fächer
         </router-link>
 
-        <!-- Always show Admin Bereich link -->
-        <router-link to="/admin/klassen" class="nav-item" active-class="active">
+        <!-- Conditionally show Admin Bereich link -->
+        <router-link v-if="isAdmin" to="/admin/klassen" class="nav-item" active-class="active">
             Admin Bereich
         </router-link>
 
@@ -74,7 +74,6 @@
   </div>
 </template>
 
-
 <script setup>
 defineProps({
   open: { type: Boolean, default: false }
@@ -84,6 +83,19 @@ defineEmits(['close'])
 import { useTheme } from '@/composables/useTheme.js'
 
 const { isDark } = useTheme()
+
+// Get token from localStorage and decode it to check if the user is an admin
+const token = localStorage.getItem("token");
+let isAdmin = false;
+
+if (token) {
+  try {
+    const decodedToken = JSON.parse(atob(token.split(".")[1]));
+    isAdmin = decodedToken.is_admin || false; // Assuming your token has is_admin property
+  } catch (error) {
+    console.error("Error decoding token", error);
+  }
+}
 </script>
 
 <style scoped>
@@ -115,8 +127,6 @@ const { isDark } = useTheme()
     align-items: center;
     padding: 1rem;
     border-right: var(--second-background-color) 2.5px solid;
-
-
 }
 
 .nav-item {
