@@ -16,6 +16,13 @@ use App\Service\ParentNotificationService;
 #[Route('/api/lehrer', name: 'api_lehrer_assessments_')]
 class TeacherAssessmentsController extends AbstractController
 {
+    private function calculateNotePercentage(float $note): float
+    {
+        $percentage = 100 - (($note - 1) / 4) * 100;
+
+        return max(0, min(100, $percentage));
+    }
+
     private function resolveLehrer(EntityManagerInterface $em): ?Lehrer
     {
         $jwtUser = $this->getUser();
@@ -162,17 +169,32 @@ class TeacherAssessmentsController extends AbstractController
         $benotungsartId = $data['benotungsartId'] ?? null;
         $benotungsartId = ($benotungsartId === '' || $benotungsartId === null) ? null : (int) $benotungsartId;
 
+        $defaultGewichtung = null;
         if ($benotungsartId !== null) {
-            $exists = (int) $conn->fetchOne("SELECT COUNT(*) FROM Benotungsarten WHERE id = :id", ['id' => $benotungsartId]);
-            if ($exists === 0)
+            $typeRow = $conn->fetchAssociative(
+                "SELECT id, gewichtung FROM Benotungsarten WHERE id = :id",
+                ['id' => $benotungsartId]
+            );
+            if ($typeRow === false) {
                 return new JsonResponse(['error' => 'Ungültige benotungsartId'], 400);
+            }
+            $defaultGewichtung = $typeRow['gewichtung'] !== null ? (float) $typeRow['gewichtung'] : null;
         }
 
         $gewichtung = $data['gewichtungProzent'] ?? null;
         $gewichtung = ($gewichtung === '' || $gewichtung === null) ? null : (float) $gewichtung;
+        if ($gewichtung === null) {
+            $gewichtung = $defaultGewichtung;
+        }
+        if ($gewichtung !== null && ($gewichtung < 0 || $gewichtung > 100)) {
+            return new JsonResponse(['error' => 'gewichtungProzent muss zwischen 0 und 100 liegen'], 400);
+        }
 
         $maxPunkte = $data['maxPunkte'] ?? null;
         $maxPunkte = ($maxPunkte === '' || $maxPunkte === null) ? null : (int) $maxPunkte;
+        if ($maxPunkte !== null && $maxPunkte < 0) {
+            return new JsonResponse(['error' => 'maxPunkte darf nicht negativ sein'], 400);
+        }
 
         $conn->insert('Aufgaben', [
             'kurs_id' => $kursId,
@@ -296,6 +318,39 @@ class TeacherAssessmentsController extends AbstractController
             ];
         }, $rows);
 
+        $klassenschnitt = null;
+        $klassenschnittProzent = null;
+        if (\count($rows) > 0) {
+            $noten = array_values(array_filter(array_map(
+                static fn(array $row): ?float => $row['note'] !== null ? (float) $row['note'] : null,
+                $rows
+            ), static fn(?float $value): bool => $value !== null));
+
+            if (\count($noten) > 0) {
+                $klassenschnitt = round(array_sum($noten) / \count($noten), 2);
+                $klassenschnittProzent = round($this->calculateNotePercentage($klassenschnitt), 1);
+            }
+
+            if ($a['maxPunkte'] !== null) {
+                $punkte = array_values(array_filter(array_map(
+                    static fn(array $row): ?float => $row['punkte'] !== null ? (float) $row['punkte'] : null,
+                    $rows
+                ), static fn(?float $value): bool => $value !== null));
+
+                if (\count($punkte) > 0 && (float) $a['maxPunkte'] > 0) {
+                    $klassenschnittProzent = round((array_sum($punkte) / \count($punkte)) / (float) $a['maxPunkte'] * 100, 1);
+                }
+            }
+        }
+
+        $studentsTotal = (int) $conn->fetchOne(
+            "SELECT COUNT(*) FROM Kurs_Schueler WHERE kurs_id = :kid",
+            ['kid' => $kursId]
+        );
+        $teilnahmequote = $studentsTotal > 0
+            ? round((\count($schuelerleistungen) / $studentsTotal) * 100, 1)
+            : null;
+
         return new JsonResponse([
             'id' => (int) $a['id'],
             'kurs' => [
@@ -310,9 +365,9 @@ class TeacherAssessmentsController extends AbstractController
             'datum' => $a['datum'],
             'gewichtungProzent' => $a['gewichtungProzent'] !== null ? (float) $a['gewichtungProzent'] : null,
             'maxPunkte' => $a['maxPunkte'] !== null ? (int) $a['maxPunkte'] : null,
-            'klassenschnitt' => null,
-            'klassenschnittProzent' => null,
-            'teilnahmequote' => null,
+            'klassenschnitt' => $klassenschnitt,
+            'klassenschnittProzent' => $klassenschnittProzent,
+            'teilnahmequote' => $teilnahmequote,
             'schuelerleistungen' => $schuelerleistungen,
         ]);
     }

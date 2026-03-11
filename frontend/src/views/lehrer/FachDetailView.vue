@@ -150,6 +150,9 @@
               {{ t.name }}
             </option>
           </select>
+          <span v-if="selectedBenotungsart?.gewichtung != null" class="field-help">
+            Standardgewichtung: {{ formatWeight(selectedBenotungsart.gewichtung) }}%
+          </span>
         </label>
 
         <div class="row">
@@ -297,6 +300,11 @@ function formatGrade(v) {
   return Number(v).toFixed(1).replace(".", ",");
 }
 
+function formatWeight(v) {
+  if (v == null || v === "") return "0";
+  return Number(v).toFixed(2).replace(/\.00$/, "").replace(".", ",");
+}
+
 // --- Schema helpers ---
 function syncCourseSchemeUi() {
   schemes.value = grading.loadAllSchemes();
@@ -441,6 +449,11 @@ const createForm = ref({
   datum: new Date().toISOString().slice(0, 10),
   gewichtungProzent: null,
 });
+const selectedBenotungsart = computed(() =>
+  benotungsarten.value.find(
+    (item) => String(item.id) === String(createForm.value.benotungsartId),
+  ) || null,
+);
 
 function openCreateAssessment() {
   grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value)
@@ -450,11 +463,33 @@ function openCreateAssessment() {
 function closeCreateAssessment() {
   createOpen.value = false;
   createSaving.value = false;
+  createForm.value = {
+    thema: "",
+    benotungsartId: "",
+    maxPunkte: null,
+    datum: new Date().toISOString().slice(0, 10),
+    gewichtungProzent: null,
+  };
 }
 
 async function submitCreateAssessment() {
   if (!createForm.value.thema || !createForm.value.datum) {
     alert("Bitte Thema und Datum ausfüllen.");
+    return;
+  }
+  if (
+    createForm.value.gewichtungProzent != null &&
+    (Number(createForm.value.gewichtungProzent) < 0 ||
+      Number(createForm.value.gewichtungProzent) > 100)
+  ) {
+    alert("Die Gewichtung muss zwischen 0 und 100 liegen.");
+    return;
+  }
+  if (
+    createForm.value.maxPunkte != null &&
+    Number(createForm.value.maxPunkte) < 0
+  ) {
+    alert("Die möglichen Punkte dürfen nicht negativ sein.");
     return;
   }
   createSaving.value = true;
@@ -472,6 +507,23 @@ async function submitCreateAssessment() {
     createSaving.value = false;
   }
 }
+
+watch(
+  () => createForm.value.benotungsartId,
+  (value) => {
+    const type = benotungsarten.value.find((item) => String(item.id) === String(value));
+    if (!type) {
+      return;
+    }
+
+    const weight = type.gewichtung != null ? Number(type.gewichtung) : null;
+    if (weight == null || Number.isNaN(weight)) {
+      return;
+    }
+
+    createForm.value.gewichtungProzent = weight;
+  },
+);
 </script>
 
 
@@ -620,6 +672,11 @@ async function submitCreateAssessment() {
 }
 
 .field-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.field-help {
   color: var(--muted);
   font-size: 0.85rem;
 }
