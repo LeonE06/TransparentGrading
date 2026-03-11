@@ -123,13 +123,21 @@ function csvCell(value) {
 }
 
 function formatLeistung(note) {
-  if (note?.punkte != null && note?.max_punkte != null) {
-    const prozent = note?.prozent != null ? ` (${String(note.prozent).replace(".", ",")}%)` : "";
-    return `${note.punkte}/${note.max_punkte} Pkt.${prozent}`;
+  const punkte = note?.punkte ?? note?.punkte_erreicht ?? null;
+  const maxPunkte = note?.max_punkte ?? note?.maxPunkte ?? null;
+  const prozent = note?.prozent ?? note?.prozentsatz ?? null;
+
+  if (punkte != null && maxPunkte != null) {
+    const suffix = prozent != null ? ` (${String(prozent).replace(".", ",")}%)` : "";
+    return `${punkte}/${maxPunkte} Pkt.${suffix}`;
   }
 
-  if (note?.prozent != null) {
-    return `${String(note.prozent).replace(".", ",")}%`;
+  if (punkte != null) {
+    return `${punkte} Pkt.`;
+  }
+
+  if (prozent != null) {
+    return `${String(prozent).replace(".", ",")}%`;
   }
 
   return "—";
@@ -265,19 +273,31 @@ function renderChart() {
   const primaryColor = styles.getPropertyValue("--primary").trim() || "#6a16cc";
   const mutedGrid = textColor ? `${textColor}22` : "rgba(0, 0, 0, 0.12)";
 
-  const chartPoints = noten.value.map((n, index) => ({
-    x: index + 1,
+  const sourcePoints = noten.value.map((n, index) => ({
+    x: index,
     y: Number(n.note),
     datum: formatDisplayDate(n.datum),
     typ: n.typ_name || "—",
     kommentar: n.kommentar || "—",
     gewichtung: n.gewichtung ?? "—",
+    hiddenPoint: false,
   })).filter((point) => Number.isFinite(point.y));
 
-  if (chartPoints.length === 0) {
+  if (sourcePoints.length === 0) {
     destroyChart();
     return;
   }
+
+  const chartPoints = sourcePoints.length === 1
+    ? [
+        sourcePoints[0],
+        {
+          ...sourcePoints[0],
+          x: 1,
+          hiddenPoint: true,
+        },
+      ]
+    : sourcePoints;
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 300);
   gradient.addColorStop(0, "rgba(106,22,204,0.0)");
@@ -297,9 +317,9 @@ function renderChart() {
           pointBackgroundColor: secondBg,
           pointBorderColor: primaryColor,
           pointBorderWidth: 2,
-          pointRadius: 6,
-          pointHoverRadius: 9,
-          pointHitRadius: 20,
+          pointRadius: (context) => context.raw?.hiddenPoint ? 0 : 6,
+          pointHoverRadius: (context) => context.raw?.hiddenPoint ? 0 : 9,
+          pointHitRadius: (context) => context.raw?.hiddenPoint ? 0 : 20,
           borderWidth: 3,
         },
       ],
@@ -341,8 +361,8 @@ function renderChart() {
         },
         x: {
           type: "linear",
-          min: 0.5,
-          max: Math.max(chartPoints.length + 0.5, 1.5),
+          min: 0,
+          max: Math.max(chartPoints.length - 1, 1),
           ticks: {
             color: textColor,
             padding: 10,
@@ -354,7 +374,7 @@ function renderChart() {
               size: 12,
             },
             callback: (value) => {
-              const point = chartPoints.find((entry) => entry.x === Number(value));
+              const point = chartPoints.find((entry) => entry.x === Number(value) && !entry.hiddenPoint);
               return point ? point.datum : "";
             },
           },
@@ -383,7 +403,13 @@ function renderChart() {
               `Gewichtung: ${context.raw?.gewichtung ?? "—"}`,
               `Kommentar: ${context.raw?.kommentar ?? "—"}`,
             ],
+            labelColor: (context) => ({
+              borderColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
+              backgroundColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
+            }),
+            beforeBody: (items) => items[0]?.raw?.hiddenPoint ? [""] : [],
           },
+          filter: (tooltipItem) => !tooltipItem.raw?.hiddenPoint,
         },
       },
     },
