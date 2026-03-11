@@ -27,10 +27,6 @@
             <strong>{{ student.email || "—" }}</strong>
           </div>
           <div class="fact">
-            <span class="label">Klasse</span>
-            <strong>{{ klasseName || "—" }}</strong>
-          </div>
-          <div class="fact">
             <span class="label">Geburtsdatum</span>
             <strong>{{ formattedBirthdate }}</strong>
           </div>
@@ -75,14 +71,6 @@ const student = ref({});
 
 const fullName = computed(() =>
   [student.value?.vorname, student.value?.nachname].filter(Boolean).join(" "),
-);
-
-const klasseName = computed(
-  () =>
-    student.value?.klasse?.name ||
-    student.value?.klasse_name ||
-    student.value?.klassenname ||
-    "",
 );
 
 const initials = computed(() => {

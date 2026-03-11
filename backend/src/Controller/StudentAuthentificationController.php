@@ -49,6 +49,10 @@ class StudentAuthentificationController extends AbstractController
             'groups' => ['student_read'],
         ]);
 
-        return new JsonResponse($json, 200, [], true);
+        $data = json_decode($json, true) ?: [];
+        $data['email'] = $ms365User?->getEmail();
+        $data['klasse_name'] = $schueler->getKlasse()?->getName();
+
+        return new JsonResponse($data);
     }
 }
