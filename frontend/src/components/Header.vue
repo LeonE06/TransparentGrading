@@ -178,6 +178,21 @@ async function loadProfile() {
     }
   }
 
+  if (role === 'Lehrer') {
+    try {
+      const res = await apiClient.get('/lehrer/me')
+      const teacher = res.data || {}
+      profile.value = {
+        name: [teacher.vorname, teacher.nachname].filter(Boolean).join(' ') || 'Lehrerprofil',
+        email: teacher.email || '',
+        klasse: '',
+      }
+      return
+    } catch (e) {
+      console.warn('Konnte Lehrerprofil nicht laden', e)
+    }
+  }
+
   profile.value = {
     name: role === 'Lehrer' ? 'Lehrerprofil' : 'Profil',
     email: '',
@@ -209,6 +224,10 @@ function goTo(path) {
 function goToProfile() {
   if (isStudent.value) {
     goTo('/schueler/profil')
+    return
+  }
+  if (currentRole.value === 'Lehrer') {
+    goTo('/lehrer/profil')
     return
   }
   goTo('/lehrer/einstellungen')
