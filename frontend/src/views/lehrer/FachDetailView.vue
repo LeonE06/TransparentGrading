@@ -67,7 +67,10 @@
 
       <div class="chart-card">
         <div class="chart-label">Durchschnittsverlauf</div>
-        <canvas ref="chartEl" height="110"></canvas>
+        <div class="chart-body">
+          <canvas v-if="hasTrendData" ref="chartEl"></canvas>
+          <div v-else class="chart-empty">Noch keine benoteten Leistungen vorhanden.</div>
+        </div>
       </div>
     </div>
 
@@ -270,6 +273,12 @@ const filteredAssessments = computed(() => {
   return assessments.value.filter((a) => String(a.thema || "").toLowerCase().includes(q));
 });
 
+const hasTrendData = computed(() =>
+  (overview.value?.trend || []).some(
+    (entry) => entry?.date && Number.isFinite(Number(entry?.avgNote)),
+  ),
+);
+
 // --- Tables ---
 const assessmentColumns = [
   { key: "thema", label: "Thema", width: "42%" },
@@ -360,12 +369,16 @@ watch(kursId, (v) => {
 const chartEl = ref(null);
 let chart = null;
 
-function renderChart() {
-  if (!chartEl.value) return;
+function destroyChart() {
   if (chart) {
     chart.destroy();
     chart = null;
   }
+}
+
+function renderChart() {
+  if (!chartEl.value) return;
+  destroyChart();
 
   const trend = (overview.value?.trend || []).filter(
     (entry) => entry?.date && Number.isFinite(Number(entry?.avgNote)),
@@ -437,8 +450,22 @@ function renderChart() {
 }
 
 onBeforeUnmount(() => {
-  if (chart) chart.destroy();
+  destroyChart();
 });
+
+watch(
+  [tab, hasTrendData],
+  async ([currentTab, trendAvailable]) => {
+    if (currentTab !== "overview" || !trendAvailable) {
+      destroyChart();
+      return;
+    }
+
+    await nextTick();
+    renderChart();
+  },
+  { flush: "post" },
+);
 
 // --- Navigation/actions ---
 function goToAssessments() {
@@ -682,6 +709,27 @@ watch(
   margin-bottom: 0.75rem;
 }
 
+.chart-body {
+  position: relative;
+  min-height: 320px;
+}
+
+.chart-body canvas {
+  width: 100% !important;
+  height: 320px !important;
+  display: block;
+}
+
+.chart-empty {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
 .icon-action {
   width: 34px;
   height: 34px;
@@ -812,6 +860,15 @@ html:not(.dark) .scheme-select {
 
   .row {
     grid-template-columns: 1fr;
+  }
+
+  .chart-body,
+  .chart-empty {
+    min-height: 260px;
+  }
+
+  .chart-body canvas {
+    height: 260px !important;
   }
 
   .course-title {
