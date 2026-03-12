@@ -48,6 +48,7 @@
 import axios from 'axios'
 
 const props = defineProps(['msg', 'reload'])
+const NOTIFICATIONS_UPDATED_EVENT = 'student-notifications-updated'
 
 function formatDate(d) {
   const date = new Date(d)
@@ -68,8 +69,9 @@ async function toggle(read) {
 
   await axios.put(url, null, {
     headers: { Authorization: `Bearer ${token}` }
-  })  
-  props.reload()
+  })
+  await props.reload()
+  window.dispatchEvent(new CustomEvent(NOTIFICATIONS_UPDATED_EVENT))
 }
 
 async function removeMsg() {
@@ -83,8 +85,9 @@ async function removeMsg() {
     `/api/schueler/nachrichten/${props.msg.id}`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
-  
-  props.reload()
+
+  await props.reload()
+  window.dispatchEvent(new CustomEvent(NOTIFICATIONS_UPDATED_EVENT))
 }
 </script>
 
