@@ -273,11 +273,22 @@ const filteredAssessments = computed(() => {
   return assessments.value.filter((a) => String(a.thema || "").toLowerCase().includes(q));
 });
 
-const hasTrendData = computed(() =>
-  (overview.value?.trend || []).some(
-    (entry) => entry?.date && Number.isFinite(Number(entry?.avgNote)),
-  ),
+const chartSeries = computed(() =>
+  [...assessments.value]
+    .filter(
+      (entry) =>
+        entry?.datum &&
+        Number.isFinite(Number(entry?.klassenschnitt)),
+    )
+    .sort((a, b) => String(a.datum).localeCompare(String(b.datum)))
+    .map((entry) => ({
+      date: entry.datum,
+      avgNote: Number(entry.klassenschnitt),
+      thema: entry.thema || "Leistungsfeststellung",
+    })),
 );
+
+const hasTrendData = computed(() => chartSeries.value.length > 0);
 
 // --- Tables ---
 const assessmentColumns = [
@@ -380,9 +391,7 @@ function renderChart() {
   if (!chartEl.value) return;
   destroyChart();
 
-  const trend = (overview.value?.trend || []).filter(
-    (entry) => entry?.date && Number.isFinite(Number(entry?.avgNote)),
-  );
+  const trend = chartSeries.value;
   if (trend.length === 0) {
     return;
   }
@@ -423,6 +432,10 @@ function renderChart() {
           callbacks: {
             title: (items) => items[0]?.label || "",
             label: (context) => `Durchschnitt: ${formatGrade(context.parsed.y)}`,
+            afterLabel: (context) => {
+              const source = trend[context.dataIndex];
+              return source?.thema ? `Leistung: ${source.thema}` : "";
+            },
           },
         },
       },
