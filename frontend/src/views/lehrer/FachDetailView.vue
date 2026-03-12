@@ -10,9 +10,6 @@
         <button class="btn primary" @click="openCreateAssessment">
           neue Leistungsfeststellung erstellen
         </button>
-        <button class="btn primary ghost" @click="goToAssessments">
-          neue Schülerleistung erstellen
-        </button>
         <button class="btn danger" @click="removeCourse">
           Kurs löschen
         </button>
@@ -65,13 +62,6 @@
         </label>
       </div>
 
-      <div class="chart-card">
-        <div class="chart-label">Durchschnittsverlauf</div>
-        <div class="chart-body">
-          <canvas v-if="hasTrendData" ref="chartEl"></canvas>
-          <div v-else class="chart-empty">Noch keine benoteten Leistungen vorhanden.</div>
-        </div>
-      </div>
     </div>
 
     <!-- ================= Schüler ================= -->
@@ -205,10 +195,9 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
-import Chart from "chart.js/auto";
 import { ExternalLink, Trash2 } from "lucide-vue-next";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
@@ -272,23 +261,6 @@ const filteredAssessments = computed(() => {
   const q = search.value.toLowerCase();
   return assessments.value.filter((a) => String(a.thema || "").toLowerCase().includes(q));
 });
-
-const chartSeries = computed(() =>
-  [...assessments.value]
-    .filter(
-      (entry) =>
-        entry?.datum &&
-        Number.isFinite(Number(entry?.klassenschnitt)),
-    )
-    .sort((a, b) => String(a.datum).localeCompare(String(b.datum)))
-    .map((entry) => ({
-      date: entry.datum,
-      avgNote: Number(entry.klassenschnitt),
-      thema: entry.thema || "Leistungsfeststellung",
-    })),
-);
-
-const hasTrendData = computed(() => chartSeries.value.length > 0);
 
 // --- Tables ---
 const assessmentColumns = [
@@ -355,9 +327,6 @@ async function loadAll() {
     students.value = s;
     assessments.value = a;
     benotungsarten.value = t;
-
-    await nextTick();
-    renderChart();
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
@@ -375,115 +344,6 @@ watch(kursId, (v) => {
   syncCourseSchemeUi();
   loadAll();
 });
-
-// --- Chart ---
-const chartEl = ref(null);
-let chart = null;
-
-function destroyChart() {
-  if (chart) {
-    chart.destroy();
-    chart = null;
-  }
-}
-
-function renderChart() {
-  if (!chartEl.value) return;
-  destroyChart();
-
-  const trend = chartSeries.value;
-  if (trend.length === 0) {
-    return;
-  }
-
-  const styles = getComputedStyle(document.documentElement);
-  const textColor = styles.getPropertyValue("--text").trim() || "#d1d5db";
-  const primaryColor = "rgba(144, 125, 255, 1)";
-  const fillColor = "rgba(144, 125, 255, 0.12)";
-  const gridColor = textColor ? `${textColor}22` : "rgba(255,255,255,0.06)";
-
-  const labels = trend.map((t) => formatDate(t.date));
-  const values = trend.map((t) => Number(t.avgNote));
-
-  chart = new Chart(chartEl.value, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Klassendurchschnitt",
-          data: values,
-          borderColor: primaryColor,
-          backgroundColor: fillColor,
-          tension: 0.35,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 3,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => items[0]?.label || "",
-            label: (context) => `Durchschnitt: ${formatGrade(context.parsed.y)}`,
-            afterLabel: (context) => {
-              const source = trend[context.dataIndex];
-              return source?.thema ? `Leistung: ${source.thema}` : "";
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textColor, maxRotation: 0 },
-          border: { color: gridColor },
-        },
-        y: {
-          min: 1,
-          max: 5,
-          reverse: true,
-          ticks: {
-            color: textColor,
-            stepSize: 1,
-            callback: (value) => formatGrade(value),
-          },
-          grid: { color: gridColor },
-          border: { color: gridColor },
-        },
-      },
-    },
-  });
-}
-
-onBeforeUnmount(() => {
-  destroyChart();
-});
-
-watch(
-  [tab, hasTrendData],
-  async ([currentTab, trendAvailable]) => {
-    if (currentTab !== "overview" || !trendAvailable) {
-      destroyChart();
-      return;
-    }
-
-    await nextTick();
-    renderChart();
-  },
-  { flush: "post" },
-);
-
-// --- Navigation/actions ---
-function goToAssessments() {
-  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`);
-}
 
 function openAssessment(id) {
   router.push(`/lehrer/leistungsfeststellungen/${id}`);
@@ -577,8 +437,6 @@ async function submitCreateAssessment() {
     closeCreateAssessment();
     assessments.value = await getAssessmentsForCourse(kursId.value);
     overview.value = await getCourseOverview(kursId.value);
-    await nextTick();
-    renderChart();
   } catch (e) {
     alert("Konnte nicht erstellen.");
     console.warn(e);
@@ -680,7 +538,7 @@ watch(
 
 .overview {
   display: grid;
-  grid-template-columns: 340px 340px 1fr;
+  grid-template-columns: minmax(280px, 360px) minmax(320px, 1fr);
   gap: 1.2rem;
   margin-top: 1rem;
   align-items: start;
@@ -707,40 +565,6 @@ watch(
   font-size: 2.2rem;
   font-weight: 700;
   margin-top: 0.2rem;
-}
-
-.chart-card {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 1rem;
-}
-
-.chart-label {
-  color: var(--muted);
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
-}
-
-.chart-body {
-  position: relative;
-  min-height: 320px;
-}
-
-.chart-body canvas {
-  width: 100% !important;
-  height: 320px !important;
-  display: block;
-}
-
-.chart-empty {
-  min-height: 320px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  text-align: center;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
 }
 
 .icon-action {
@@ -803,6 +627,9 @@ html:not(.dark) .input {
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
   padding: 1rem;
+  min-height: 100%;
+  display: grid;
+  align-content: start;
 }
 
 .scheme-head {
@@ -873,15 +700,6 @@ html:not(.dark) .scheme-select {
 
   .row {
     grid-template-columns: 1fr;
-  }
-
-  .chart-body,
-  .chart-empty {
-    min-height: 260px;
-  }
-
-  .chart-body canvas {
-    height: 260px !important;
   }
 
   .course-title {
