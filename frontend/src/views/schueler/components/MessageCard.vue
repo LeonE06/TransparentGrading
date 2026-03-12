@@ -93,6 +93,12 @@ async function removeMsg() {
 .svg_nav path {
   stroke: var(--icon-color);
 }
+
+.svg_nav {
+  width: 50px;
+  height: 50px;
+}
+
 .msg-card {
   background: var(--second-background-color);
   padding: 1.5rem;
@@ -106,6 +112,7 @@ async function removeMsg() {
   margin-bottom: .5rem;
 }
 .card-content {
+  align-items: center;
   display: flex;
   gap: 1rem;
 }
