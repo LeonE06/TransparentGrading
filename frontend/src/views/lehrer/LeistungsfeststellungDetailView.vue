@@ -14,30 +14,17 @@
         </div>
       </div>
       <div class="head-actions">
-        <button class="btn ghost" type="button" @click="downloadCsvTemplate">
-          CSV-Vorlage herunterladen
+        <button class="btn ghost" type="button" @click="exportCsv">
+          CSV exportieren
         </button>
-        <button
-          class="btn ghost"
-          type="button"
-          :disabled="importing"
-          @click="openCsvImport"
-        >
-          {{ importing ? "CSV wird importiert…" : "CSV importieren" }}
+        <button class="btn ghost" type="button" @click="exportPdf">
+          PDF exportieren
         </button>
         <button class="btn primary" type="button" @click="openCreate">
           Neue Schülerleistung erstellen
         </button>
       </div>
     </header>
-
-    <input
-      ref="csvFileInput"
-      type="file"
-      accept=".csv,text/csv"
-      class="sr-only"
-      @change="handleCsvImport"
-    />
 
     <div v-if="loading" class="empty">Lade …</div>
     <div v-else-if="error" class="empty">Fehler: {{ error }}</div>
@@ -240,8 +227,6 @@ const loading = ref(false);
 const error = ref("");
 const detail = ref(null);
 const students = ref([]);
-const csvFileInput = ref(null);
-const importing = ref(false);
 
 const search = ref("");
 const columns = [
@@ -315,270 +300,157 @@ function csvNumber(value) {
   return String(value).replace(".", ",");
 }
 
-function openCsvImport() {
-  if (importing.value) return;
-  csvFileInput.value?.click();
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
-function downloadCsvTemplate() {
-  if (!students.value.length) {
-    alert("Keine Schüler*innen im Kurs gefunden.");
+function exportCsv() {
+  if (!detail.value?.schuelerleistungen?.length) {
+    alert("Keine Schülerleistungen zum Exportieren vorhanden.");
     return;
   }
 
-  const existingRows = detail.value?.schuelerleistungen || [];
-  const existingByStudentId = new Map(
-    existingRows.map((row) => [Number(row.schuelerId), row]),
-  );
+  if (!window.confirm("CSV-Export für diese Schülerleistungen starten?")) {
+    return;
+  }
 
-  const header = [
-    "Vorname",
-    "Nachname",
-    "Leistung(Punkten)",
-    "Note",
-    "Datum",
-    "Kommentar",
+  const rows = [
+    ["Vorname", "Nachname", "Leistung", "Note", "Datum", "Kommentar"],
+    ...detail.value.schuelerleistungen.map((row) => [
+      row.vorname || "",
+      row.nachname || "",
+      row.punkte != null && detail.value?.maxPunkte != null
+        ? `${row.punkte} Punkte (${Math.round((row.punkte / (detail.value.maxPunkte || 1)) * 100)}%)`
+        : "—",
+      row.note != null ? csvNumber(row.note) : "",
+      formatCsvDate(row.datum),
+      row.kommentar || "",
+    ]),
   ];
 
-  const rows = students.value.map((student) => {
-    const existing = existingByStudentId.get(Number(student.id));
-    return [
-      student.vorname || "",
-      student.nachname || "",
-      existing?.punkte ?? "",
-      csvNumber(existing?.note),
-      formatCsvDate(existing?.datum || detail.value?.datum),
-      existing?.kommentar || "",
-    ];
-  });
-
   const csvContent =
-    "\uFEFF" +
-    [header, ...rows]
-      .map((row) => row.map((value) => csvCell(value)).join(";"))
-      .join("\n");
+    "\uFEFF" + rows.map((row) => row.map((value) => csvCell(value)).join(";")).join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const href = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = href;
-  link.download = `leistungsfeststellung_${id.value}_vorlage.csv`;
+  link.download = `leistungsfeststellung_${String(detail.value?.thema || id.value).replace(/\s+/g, "_")}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(href);
 }
 
-function normalizeText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-}
-
-function parseCsv(text) {
-  const src = String(text || "")
-    .replace(/^\uFEFF/, "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n");
-
-  const firstLine = src.split("\n")[0] || "";
-  const delimiter = firstLine.includes(";") ? ";" : ",";
-
-  const rows = [];
-  let row = [];
-  let cell = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < src.length; i += 1) {
-    const ch = src[i];
-
-    if (ch === '"') {
-      if (inQuotes && src[i + 1] === '"') {
-        cell += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (ch === delimiter && !inQuotes) {
-      row.push(cell);
-      cell = "";
-      continue;
-    }
-
-    if (ch === "\n" && !inQuotes) {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-      continue;
-    }
-
-    cell += ch;
+function exportPdf() {
+  if (!detail.value?.schuelerleistungen?.length) {
+    alert("Keine Schülerleistungen zum Exportieren vorhanden.");
+    return;
   }
 
-  row.push(cell);
-  rows.push(row);
-
-  return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
-}
-
-function resolveCsvColumns(headerRow) {
-  const headers = headerRow.map((value) =>
-    normalizeText(value).replace(/[()]/g, ""),
-  );
-  const findIndex = (candidates) =>
-    headers.findIndex((header) =>
-      candidates.some((candidate) => header.includes(candidate)),
-    );
-
-  return {
-    vorname: findIndex(["vorname", "first name"]),
-    nachname: findIndex(["nachname", "last name"]),
-    punkte: findIndex(["leistung", "punkte", "punkten", "points"]),
-    note: findIndex(["note", "grade"]),
-    datum: findIndex(["datum", "date"]),
-    kommentar: findIndex(["kommentar", "comment"]),
-  };
-}
-
-function parseOptionalNumber(raw, lineNumber, label) {
-  const text = String(raw || "").trim();
-  if (!text) return null;
-  const parsed = Number(text.replace(",", "."));
-  if (Number.isNaN(parsed)) {
-    throw new Error(`Zeile ${lineNumber}: Ungültiger Wert in "${label}"`);
-  }
-  return parsed;
-}
-
-function parseOptionalDate(raw, lineNumber) {
-  const text = String(raw || "").trim();
-  if (!text) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    return text;
+  if (!window.confirm("PDF-Export für diese Schülerleistungen starten?")) {
+    return;
   }
 
-  const m = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (!m) {
-    throw new Error(
-      `Zeile ${lineNumber}: Datum muss YYYY-MM-DD oder DD.MM.YYYY sein`,
-    );
+  const printWindow = window.open("", "_blank", "width=960,height=720");
+  if (!printWindow) {
+    console.warn("PDF-Export konnte nicht gestartet werden.");
+    return;
   }
 
-  const day = String(Number(m[1])).padStart(2, "0");
-  const month = String(Number(m[2])).padStart(2, "0");
-  const year = m[3];
-  return `${year}-${month}-${day}`;
-}
+  const rows = detail.value.schuelerleistungen
+    .map(
+      (row) => `
+      <tr>
+        <td>${escapeHtml(row.vorname || "—")}</td>
+        <td>${escapeHtml(row.nachname || "—")}</td>
+        <td>${escapeHtml(
+          row.punkte != null && detail.value?.maxPunkte != null
+            ? `${row.punkte} Punkte (${Math.round((row.punkte / (detail.value.maxPunkte || 1)) * 100)}%)`
+            : "—",
+        )}</td>
+        <td>${escapeHtml(row.note != null ? formatGrade(row.note) : "—")}</td>
+        <td>${escapeHtml(formatDate(row.datum))}</td>
+        <td>${escapeHtml(row.kommentar || "—")}</td>
+      </tr>
+    `,
+    )
+    .join("");
 
-async function handleCsvImport(event) {
-  const file = event?.target?.files?.[0];
-  if (!file) return;
-
-  importing.value = true;
-  try {
-    const text = await file.text();
-    const rows = parseCsv(text);
-    if (rows.length < 2) {
-      throw new Error("CSV enthält keine Datenzeilen.");
-    }
-
-    const columns = resolveCsvColumns(rows[0]);
-    if (columns.vorname < 0 || columns.nachname < 0) {
-      throw new Error("CSV benötigt mindestens die Spalten Vorname und Nachname.");
-    }
-
-    const studentsByName = new Map();
-    for (const student of students.value) {
-      const key = `${normalizeText(student.vorname)}|${normalizeText(student.nachname)}`;
-      const list = studentsByName.get(key) || [];
-      list.push(student);
-      studentsByName.set(key, list);
-    }
-
-    let imported = 0;
-    const issues = [];
-
-    for (let i = 1; i < rows.length; i += 1) {
-      const row = rows[i];
-      const lineNumber = i + 1;
-
-      const vorname = String(row[columns.vorname] || "").trim();
-      const nachname = String(row[columns.nachname] || "").trim();
-      const rowHasContent = row.some((value) => String(value || "").trim() !== "");
-      if (!rowHasContent) continue;
-
-      if (!vorname || !nachname) {
-        issues.push(`Zeile ${lineNumber}: Vorname/Nachname fehlt.`);
-        continue;
-      }
-
-      const key = `${normalizeText(vorname)}|${normalizeText(nachname)}`;
-      const matches = studentsByName.get(key) || [];
-      if (matches.length === 0) {
-        issues.push(`Zeile ${lineNumber}: ${vorname} ${nachname} nicht im Kurs.`);
-        continue;
-      }
-      if (matches.length > 1) {
-        issues.push(`Zeile ${lineNumber}: ${vorname} ${nachname} ist nicht eindeutig.`);
-        continue;
-      }
-
-      try {
-        const punkteRaw = columns.punkte >= 0 ? row[columns.punkte] : "";
-        const noteRaw = columns.note >= 0 ? row[columns.note] : "";
-        const datumRaw = columns.datum >= 0 ? row[columns.datum] : "";
-        const kommentarRaw = columns.kommentar >= 0 ? row[columns.kommentar] : "";
-
-        const punkte = parseOptionalNumber(punkteRaw, lineNumber, "Leistung(Punkten)");
-        const note = parseOptionalNumber(noteRaw, lineNumber, "Note");
-        const derivedNote = note ?? calculateNoteFromPoints(punkte);
-        if (derivedNote == null) {
-          throw new Error(
-            `Zeile ${lineNumber}: Note fehlt und konnte nicht aus den Punkten berechnet werden`,
-          );
-        }
-        const datum = parseOptionalDate(datumRaw, lineNumber);
-        const kommentar = String(kommentarRaw || "").trim() || null;
-
-        await createStudentResult(id.value, {
-          schuelerId: matches[0].id,
-          punkte: punkte != null ? Math.round(punkte) : null,
-          note: derivedNote,
-          datum,
-          kommentar,
-        });
-        imported += 1;
-      } catch (importError) {
-        const apiError = importError?.response?.data?.error;
-        issues.push(
-          `Zeile ${lineNumber}: ${apiError || importError?.message || "Import fehlgeschlagen"}`,
-        );
-      }
-    }
-
-    await load();
-
-    let message = `${imported} Schülerleistungen importiert.`;
-    if (issues.length > 0) {
-      const preview = issues.slice(0, 8).join("\n");
-      const more = issues.length > 8 ? `\n... +${issues.length - 8} weitere` : "";
-      message += `\n\nProbleme:\n${preview}${more}`;
-    }
-    alert(message);
-  } catch (e) {
-    alert(e?.message || "CSV konnte nicht importiert werden.");
-  } finally {
-    importing.value = false;
-    if (event?.target) {
-      event.target.value = "";
-    }
-  }
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="de">
+      <head>
+        <meta charset="utf-8" />
+        <title>Export ${escapeHtml(detail.value?.thema || "Leistungsfeststellung")}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 32px; color: #1f2937; }
+          h1 { margin: 0 0 8px; font-size: 28px; }
+          .meta { margin-bottom: 24px; color: #4b5563; }
+          .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+          .stat { padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 12px; min-width: 160px; }
+          .stat-label { font-size: 12px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+          .stat-value { font-size: 24px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+          th { font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+        <h1>Export ${escapeHtml(detail.value?.thema || "Leistungsfeststellung")}</h1>
+        <div class="meta">
+          <div><strong>Kurs:</strong> ${escapeHtml(detail.value?.kurs?.name || "—")}</div>
+          <div><strong>Datum:</strong> ${escapeHtml(formatDate(detail.value?.datum))}</div>
+          <div>Erstellt am ${escapeHtml(new Date().toLocaleDateString("de-DE"))}</div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Klassenschnitt</div>
+            <div class="stat-value">${escapeHtml(
+              detail.value?.klassenschnittProzent != null && detail.value?.klassenschnitt != null
+                ? `${detail.value.klassenschnittProzent}% (${formatGrade(detail.value.klassenschnitt)})`
+                : "—",
+            )}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Gewichtung</div>
+            <div class="stat-value">${escapeHtml(
+              detail.value?.gewichtungProzent != null ? `${detail.value.gewichtungProzent}%` : "—",
+            )}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Teilnahmequote</div>
+            <div class="stat-value">${escapeHtml(
+              detail.value?.teilnahmequote != null ? `${detail.value.teilnahmequote}%` : "—",
+            )}</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Vorname</th>
+              <th>Nachname</th>
+              <th>Leistung</th>
+              <th>Note</th>
+              <th>Datum</th>
+              <th>Kommentar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="6">Keine Einträge vorhanden</td></tr>'}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 
 async function load() {

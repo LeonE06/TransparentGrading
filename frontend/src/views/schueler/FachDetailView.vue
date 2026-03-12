@@ -175,6 +175,10 @@ function goBack() {
 }
 
 function downloadCsv() {
+  if (!window.confirm("CSV-Export für dieses Fach starten?")) {
+    return;
+  }
+
   const rows = [
     ["Datum", "Art", "Note", "Leistung", "Gewichtung", "Kommentar"],
     ...noten.value.map((note) => [
@@ -202,6 +206,10 @@ function downloadCsv() {
 }
 
 function exportPdf() {
+  if (!window.confirm("PDF-Export für dieses Fach starten?")) {
+    return;
+  }
+
   const printWindow = window.open("", "_blank", "width=960,height=720");
   if (!printWindow) {
     console.warn("PDF-Export konnte nicht gestartet werden.");
