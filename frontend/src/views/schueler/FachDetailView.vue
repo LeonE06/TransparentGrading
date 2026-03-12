@@ -3,7 +3,13 @@
     <button class="back-btn" @click="goBack">← Zurück</button>
 
     <div class="title-row">
-      <h1 class="fach-title">Fachdaten – {{ fachName }}</h1>
+      <div class="title-block">
+        <h1 class="fach-title">Fachdaten – {{ fachName }}</h1>
+        <div v-if="dataLoaded" class="title-badges">
+          <span class="title-badge primary">Gesamtnote {{ gesamtnote }}</span>
+          <span class="title-badge">{{ gesamtnoteMeta }}</span>
+        </div>
+      </div>
       <div class="export-actions">
         <button class="export-btn" type="button" @click="downloadCsv">
           CSV exportieren
@@ -441,7 +447,9 @@ async function loadFachName() {
   try {
     // ✅ apiClient statt axios
     const res = await apiClient.get("/schueler/faecher");
-    const fach = (res.data || []).find((f) => String(f.id) === String(kursId));
+    const fach = (res.data || []).find(
+      (f) => String(f.kurs_id ?? f.id) === String(kursId)
+    );
     fachName.value =
       fach?.fach?.name ||
       fach?.fach_name ||
@@ -518,6 +526,11 @@ body {
   margin-bottom: 2rem;
 }
 
+.title-block {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .back-btn {
   background: none;
   border: none;
@@ -531,6 +544,30 @@ body {
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 0;
+}
+
+.title-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.title-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.title-badge.primary {
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  border-color: transparent;
+  color: #fff;
 }
 
 .export-actions {

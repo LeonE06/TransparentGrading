@@ -72,8 +72,20 @@
         row-key="id"
         empty-text="Keine Daten vorhanden."
       >
-        <template #cell-gesamtnote="{ row }">
-          {{ row.gesamtnote != null ? formatGrade(row.gesamtnote) : "—" }}
+        <template #cell-name="{ row }">
+          <div class="student-cell">
+            <span class="student-name">{{ formatStudentName(row) }}</span>
+            <span class="student-grade" :class="{ empty: row.gesamtnote == null }">
+              {{
+                row.gesamtnote != null
+                  ? `Gesamtnote ${formatGrade(row.gesamtnote)}`
+                  : "Noch keine Gesamtnote"
+              }}
+            </span>
+          </div>
+        </template>
+        <template #cell-anzahl_noten="{ row }">
+          {{ row.anzahl_noten ?? 0 }}
         </template>
       </DataTable>
     </div>
@@ -277,10 +289,9 @@ const assessmentColumns = [
 ];
 
 const studentColumns = [
-  { key: "vorname", label: "Vorname" },
-  { key: "nachname", label: "Nachname" },
-  { key: "gesamtnote", label: "Gesamtnote" },
+  { key: "name", label: "Schüler*in", width: "50%" },
   { key: "klasse", label: "Klasse" },
+  { key: "anzahl_noten", label: "Benotete Leistungen" },
 ];
 
 function formatDate(d) {
@@ -295,6 +306,10 @@ function formatDate(d) {
 function formatGrade(v) {
   if (v == null) return "—";
   return Number(v).toFixed(1).replace(".", ",");
+}
+
+function formatStudentName(student) {
+  return [student?.vorname, student?.nachname].filter(Boolean).join(" ").trim() || "—";
 }
 
 function formatWeight(v) {
@@ -528,6 +543,36 @@ watch(
 
 .panel {
   margin-top: 1rem;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.student-name {
+  font-weight: 600;
+}
+
+.student-grade {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  background: rgba(44, 169, 91, 0.14);
+  border: 1px solid rgba(44, 169, 91, 0.28);
+  color: var(--text);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.student-grade.empty {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
 }
 
 .search {
