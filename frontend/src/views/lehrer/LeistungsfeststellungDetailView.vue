@@ -265,12 +265,7 @@ const filteredRows = computed(() => {
 // ✅ Kurs-ID kommt aus Assessment-Detail
 const kursId = computed(() => detail.value?.kurs?.id ?? null);
 
-const backToCourse = computed(() => {
-  const kid = detail.value?.kurs?.id;
-  return kid
-    ? `/lehrer/faecher/${kid}/leistungsfeststellungen`
-    : "/lehrer/faecher";
-});
+const backToCourse = computed(() => "/lehrer/faecher");
 
 const backLabel = computed(() =>
   detail.value?.kurs?.name ? "Meine Fächer" : "Meine Fächer",

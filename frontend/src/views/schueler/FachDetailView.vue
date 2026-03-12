@@ -19,8 +19,9 @@
       <!-- LEFT SIDE -->
       <div class="left-boxes">
         <div class="stat-card big">
-          <h3>Notenstand</h3>
-          <p class="stat-value">{{ dataLoaded ? schuelerNotenstand : '-' }}</p>
+          <h3>Gesamtnote</h3>
+          <p class="stat-value">{{ dataLoaded ? gesamtnote : "-" }}</p>
+          <p class="stat-meta">{{ gesamtnoteMeta }}</p>
         </div>
 
         <div class="stat-card big">
@@ -83,8 +84,9 @@ const router = useRouter();
 const kursId = route.params.id;
 
 const noten = ref([]);
-const schuelerNotenstand = ref("-");
+const gesamtnote = ref("-");
 const klassenschnitt = ref("-");
+const anzahlBenoteteLeistungen = ref(0);
 const fachName = ref("Fachdetails");
 const schuelerName = ref("Schüler:in");
 const dataLoaded = ref(false);
@@ -95,6 +97,14 @@ let chart = null;
 const hasChartData = computed(() =>
   noten.value.some((note) => Number.isFinite(Number(note?.note)))
 );
+const gesamtnoteMeta = computed(() => {
+  if (!dataLoaded.value) return "";
+  if (anzahlBenoteteLeistungen.value > 0) {
+    return `${anzahlBenoteteLeistungen.value} benotete Leistungen`;
+  }
+
+  return "Noch keine benoteten Leistungen";
+});
 
 function formatDisplayDate(value) {
   if (!value) return "—";
@@ -141,6 +151,17 @@ function formatLeistung(note) {
   }
 
   return "—";
+}
+
+function formatGradeValue(value) {
+  if (value == null || value === "") return "—";
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return String(value);
+  }
+
+  return parsed.toFixed(2).replace(".", ",");
 }
 
 function goBack() {
@@ -219,8 +240,8 @@ function exportPdf() {
         </div>
         <div class="stats">
           <div class="stat">
-            <div class="stat-label">Notenstand</div>
-            <div class="stat-value">${escapeHtml(schuelerNotenstand.value ?? "—")}</div>
+            <div class="stat-label">Gesamtnote</div>
+            <div class="stat-value">${escapeHtml(gesamtnote.value ?? "—")}</div>
           </div>
           <div class="stat">
             <div class="stat-label">Klassenschnitt</div>
@@ -449,8 +470,9 @@ async function loadData() {
     const data = response.data;
 
     noten.value = data?.noten ?? [];
-    schuelerNotenstand.value = data?.schueler_notenstand ?? "-";
-    klassenschnitt.value = data?.klassenschnitt ?? "-";
+    gesamtnote.value = formatGradeValue(data?.gesamtnote ?? data?.schueler_notenstand);
+    klassenschnitt.value = formatGradeValue(data?.klassenschnitt);
+    anzahlBenoteteLeistungen.value = Number(data?.anzahl_noten ?? 0);
 
     dataLoaded.value = true;
 
@@ -460,8 +482,9 @@ async function loadData() {
     console.error("Fehler beim Laden der Fachdaten", err);
     dataLoaded.value = false;
     noten.value = [];
-    schuelerNotenstand.value = "-";
+    gesamtnote.value = "-";
     klassenschnitt.value = "-";
+    anzahlBenoteteLeistungen.value = 0;
     destroyChart();
   }
 }
@@ -556,6 +579,12 @@ body {
   font-size: 3rem;
   font-weight: 700;
   margin-top: 0.5rem;
+}
+
+.stat-meta {
+  margin-top: 0.25rem;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.95rem;
 }
 
 .chart-section {
