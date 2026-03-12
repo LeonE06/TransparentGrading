@@ -529,7 +529,7 @@ class TeacherCoursesController extends AbstractController
 
         $trendRows = $conn->fetchAllAssociative(
             "SELECT
-                DATE_FORMAT(COALESCE(ab.datum, a.faelligkeit), '%Y-%m') AS ym,
+                DATE_FORMAT(COALESCE(ab.datum, a.faelligkeit), '%Y-%m-%d') AS datum,
                 ab.note,
                 COALESCE(a.gewichtung_prozent, ba.gewichtung, 0) AS gewichtung
              FROM Aufgaben a
@@ -541,7 +541,7 @@ class TeacherCoursesController extends AbstractController
              UNION ALL
 
              SELECT
-                DATE_FORMAT(b.datum, '%Y-%m') AS ym,
+                DATE_FORMAT(b.datum, '%Y-%m-%d') AS datum,
                 b.note,
                 COALESCE(ba.gewichtung, 0) AS gewichtung
              FROM Benotung b
@@ -550,25 +550,43 @@ class TeacherCoursesController extends AbstractController
              WHERE ku.id = :kid
                AND b.lehrer_id = :lid
                AND b.datum IS NOT NULL
-             ORDER BY ym ASC",
+             ORDER BY datum ASC",
             ['kid' => $kursId, 'lid' => $lehrer->getId()]
         );
 
         $trendBuckets = [];
         foreach ($trendRows as $row) {
-            if (empty($row['ym'])) {
+            if (empty($row['datum'])) {
                 continue;
             }
-            $trendBuckets[$row['ym']][] = $row;
+            $trendBuckets[$row['datum']][] = $row;
         }
 
         ksort($trendBuckets);
 
         $trend = [];
-        foreach ($trendBuckets as $ym => $rows) {
+        $runningWeightedSum = 0.0;
+        $runningTotalWeight = 0.0;
+        foreach ($trendBuckets as $datum => $rows) {
+            foreach ($rows as $row) {
+                $note = isset($row['note']) ? (float) $row['note'] : null;
+                $weight = isset($row['gewichtung']) ? (float) $row['gewichtung'] : 0.0;
+
+                if ($note === null || $weight <= 0.0) {
+                    continue;
+                }
+
+                $runningWeightedSum += $note * $weight;
+                $runningTotalWeight += $weight;
+            }
+
+            if ($runningTotalWeight <= 0.0) {
+                continue;
+            }
+
             $trend[] = [
-                'ym' => $ym,
-                'avgNote' => ($avg = $this->calculateWeightedAverage($rows)) !== null ? round($avg, 2) : null,
+                'date' => $datum,
+                'avgNote' => round($runningWeightedSum / $runningTotalWeight, 2),
             ];
         }
 

@@ -107,6 +107,11 @@ const totalPages = ref(1)
 const searchTerm = ref('')
 const loading = ref(false)
 
+
+const isSorted = ref(false)
+
+
+
 // Modal
 const showEditModal = ref(false)
 const selectedStudent = ref(null)
@@ -150,13 +155,20 @@ function changePage(n) {
 
 const filteredStudents = computed(() => {
   if (!searchTerm.value.trim()) return students.value
+
   const term = searchTerm.value.toLowerCase()
-  return students.value.filter(
-    s =>
-      s.vorname.toLowerCase().includes(term) ||
-      s.nachname.toLowerCase().includes(term) ||
-      s.email.toLowerCase().includes(term)
-  )
+
+  return students.value.filter((s) => {
+    const vorname = String(s.vorname ?? '').toLowerCase()
+    const nachname = String(s.nachname ?? '').toLowerCase()
+    const email = String(s.email ?? '').toLowerCase()
+
+    return (
+      vorname.includes(term) ||
+      nachname.includes(term) ||
+      email.includes(term)
+    )
+  })
 })
 
 async function deleteStudent(id) {

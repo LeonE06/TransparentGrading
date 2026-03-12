@@ -80,7 +80,7 @@ async function removeMsg() {
 
 <style scoped>
 .msg-card {
-  background: #fff;
+  background: var(--second-background-color);
   padding: 1.5rem;
   border-radius: 14px;
   margin: 1rem 0;
@@ -88,7 +88,7 @@ async function removeMsg() {
 }
 .date-line {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text);
   margin-bottom: .5rem;
 }
 .card-content {
@@ -103,7 +103,7 @@ async function removeMsg() {
 }
 .meta {
   margin-top: .3rem;
-  color: #666;
+  color: var(--muted);
   font-size: .85rem;
 }
 .actions {
@@ -117,12 +117,9 @@ async function removeMsg() {
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  background: #1864ab;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
   color: white;
   font-size: .8rem;
-}
-.actions button:hover {
-  background: #0c3c6a;
 }
 .actions .danger {
   background: #c92a2a;

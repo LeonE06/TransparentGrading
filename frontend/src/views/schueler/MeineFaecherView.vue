@@ -28,6 +28,10 @@
           </div>
         </div>
 
+        <div v-if="fach.gesamtnote != null" class="grade-badge">
+          Gesamtnote {{ formatGrade(fach.gesamtnote) }}
+        </div>
+
         <div class="actions">
           <button type="button" class="icon-btn bell" @click.stop="toggleNotif(fach.kurs_id)">
             <span v-if="fach.notif_enabled == 1">🔔</span>
@@ -206,6 +210,17 @@ async function toggleNotif(id) {
   }
 }
 
+function formatGrade(value) {
+  if (value == null || value === "") return "—";
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return String(value);
+  }
+
+  return parsed.toFixed(2).replace(".", ",");
+}
+
 const visibleSubjects = computed(() => {
   let list = subjects.value;
 
@@ -295,13 +310,32 @@ onMounted(() => {
   align-items: center;
   padding: .9rem 0;
   border-bottom: 1px solid #eee;
+  gap: 1rem;
 }
 
 .subject-info {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 1rem;
   cursor: pointer;
+  min-width: 0;
+}
+
+.grade-badge {
+  margin-left: auto;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: var(--second-background-color);
+  border: 1px solid var(--aczent-color);
+  font-size: 0.9rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.fach-text {
+  min-width: 0;
 }
 
 .fach-image {
