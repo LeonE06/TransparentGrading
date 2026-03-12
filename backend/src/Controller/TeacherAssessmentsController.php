@@ -16,6 +16,31 @@ use App\Service\ParentNotificationService;
 #[Route('/api/lehrer', name: 'api_lehrer_assessments_')]
 class TeacherAssessmentsController extends AbstractController
 {
+    private function createNotification(Connection $conn, ?int $kursId, string $titel, string $inhalt, array $schuelerIds, ?int $zielSchuelerId = null): void
+    {
+        if ($schuelerIds === []) {
+            return;
+        }
+
+        $conn->insert('Nachrichten', [
+            'kurs_id' => $kursId,
+            'ziel_schueler_id' => $zielSchuelerId,
+            'titel' => $titel,
+            'inhalt' => $inhalt,
+            'erstellt_am' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ]);
+
+        $nachrichtId = (int) $conn->lastInsertId();
+
+        foreach ($schuelerIds as $sid) {
+            $conn->insert('Nachrichten_Status', [
+                'nachricht_id' => $nachrichtId,
+                'schueler_id' => (int) $sid,
+                'gelesen' => 0,
+            ]);
+        }
+    }
+
     private function calculateNotePercentage(float $note): float
     {
         $percentage = 100 - (($note - 1) / 4) * 100;
@@ -219,29 +244,13 @@ class TeacherAssessmentsController extends AbstractController
         $titel = 'Neue Leistungsfeststellung';
         $inhalt = 'Im Kurs "' . $kursName . '" wurde eine neue Leistungsfeststellung angelegt (Datum: ' . $datum . ').';
 
-        // 1) Nachricht anlegen
-        $conn->insert('Nachrichten', [
-            'kurs_id' => $kursId,
-            'titel' => $titel,
-            'inhalt' => $inhalt,
-            'erstellt_am' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
-        ]);
-
-        $nachrichtId = (int) $conn->lastInsertId();
-
-        // 2) Status für ALLE Schüler im Kurs (ungelesen)
         $schuelerIds = $conn->fetchFirstColumn(
             'SELECT schueler_id FROM Kurs_Schueler WHERE kurs_id = :kid',
             ['kid' => $kursId]
         );
 
-        foreach ($schuelerIds as $sid) {
-            $conn->insert('Nachrichten_Status', [
-                'nachricht_id' => $nachrichtId,
-                'schueler_id' => (int) $sid,
-                'gelesen' => 0,
-            ]);
-        }
+        $this->createNotification($conn, $kursId, $titel, $inhalt, $schuelerIds);
+
         return new JsonResponse(['id' => $newId], 201);
     }
 
@@ -456,7 +465,9 @@ class TeacherAssessmentsController extends AbstractController
             ['aid' => $id, 'sid' => $schuelerId]
         );
 
-        if ($existingRow !== false) {
+        $isNewStudentResult = $existingRow === false;
+
+        if (!$isNewStudentResult) {
             $conn->update('Aufgaben_Bewertung', [
                 'lehrer_id' => $lehrer->getId(),
                 'punkte' => $punkte,
@@ -476,6 +487,31 @@ class TeacherAssessmentsController extends AbstractController
                 'datum' => $datum,
                 'kommentar' => $kommentar,
             ]);
+        }
+
+        if ($isNewStudentResult) {
+            $assessment = $conn->fetchAssociative(
+                "SELECT COALESCE(a.kommentar, a.titel) AS thema, a.faelligkeit, k.name AS kurs_name
+                 FROM Aufgaben a
+                 INNER JOIN Kurse k ON k.id = a.kurs_id
+                 WHERE a.id = :aid",
+                ['aid' => $id]
+            );
+
+            $titel = 'Neue Schülerleistung';
+            $inhalt = 'Für die Leistungsfeststellung "' . ((string) ($assessment['thema'] ?? '')) . '" im Kurs "' . ((string) ($assessment['kurs_name'] ?? '')) . '" wurde eine neue Bewertung eingetragen.';
+
+            if (!empty($assessment['faelligkeit'])) {
+                $inhalt .= ' Termin: ' . (string) $assessment['faelligkeit'] . '.';
+            }
+
+            if ($note !== null) {
+                $inhalt .= ' Note: ' . rtrim(rtrim(number_format($note, 2, '.', ''), '0'), '.') . '.';
+            } elseif ($punkte !== null) {
+                $inhalt .= ' Punkte: ' . $punkte . '.';
+            }
+
+            $this->createNotification($conn, $kursId, $titel, $inhalt, [$schuelerId], $schuelerId);
         }
 
         $parentNotificationService
