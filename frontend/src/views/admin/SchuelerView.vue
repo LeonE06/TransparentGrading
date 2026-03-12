@@ -1,29 +1,23 @@
 <template>
   <div class="schueler-view">
+    <!-- Überschrift -->
     <h1 class="title">Alle Schüler*innen</h1>
 
+    <!-- Toolbar -->
     <div class="toolbar">
       <div class="left-controls">
-        <button class="btn" @click="showAll">Alle</button>
+        <button class="btn" @click="loadStudents">Alle</button>
         <button class="btn" @click="sortByName">Sortiert A-Z</button>
       </div>
     </div>
 
-    <input
-      v-if="!isDark"
-      v-model="searchTerm"
-      type="text"
-      class="search-input"
-      placeholder="Nach Schüler*in suchen..."
-    />
-    <input
-      v-else
-      v-model="searchTerm"
-      type="text"
-      class="search-input-dark"
-      placeholder="Nach Schüler*in suchen..."
-    />
+    <!-- Suchfeld -->
+    <input v-if="!isDark" v-model="searchTerm" type="text" class="search-input"
+      placeholder="Nach Schüler*in suchen..." />
+    <input v-else v-model="searchTerm" type="text" class="search-input-dark" placeholder="Nach Schüler*in suchen..." />
 
+
+    <!-- Schülerliste -->
     <div class="student-list">
       <div v-if="loading" class="loading">⏳ Lade Schüler...</div>
 
@@ -60,7 +54,6 @@
                     stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-
               <button class="delete-btn" @click="deleteStudent(s.schueler_id)">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -83,23 +76,16 @@
       </table>
     </div>
 
+    <!-- Pagination -->
     <div class="pagination" v-if="totalPages > 1">
-      <button
-        v-for="n in totalPages"
-        :key="n"
-        @click="changePage(n)"
-        :class="['page-btn', { active: page === n }]"
-      >
+      <button v-for="n in totalPages" :key="n" @click="changePage(n)" :class="['page-btn', { active: page === n }]">
         {{ n }}
       </button>
     </div>
 
-    <EditStudentModal
-      v-if="showEditModal"
-      :student="selectedStudent"
-      @close="closeEditModal"
-      @updated="onStudentUpdated"
-    />
+    <!-- Edit Modal -->
+    <EditStudentModal v-if="showEditModal" :student="selectedStudent" @close="closeEditModal"
+      @updated="onStudentUpdated" />
   </div>
 </template>
 
@@ -108,8 +94,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import EditStudentModal from '../../components/EditStudentModal.vue'
 import { useTheme } from '@/composables/useTheme.js'
-
-const { isDark } = useTheme()
+const { isDark, toggleTheme } = useTheme()
 
 const isDev = import.meta.env.DEV
 const apiBase = import.meta.env.VITE_API_URL || ''
@@ -121,8 +106,13 @@ const limit = ref(10)
 const totalPages = ref(1)
 const searchTerm = ref('')
 const loading = ref(false)
+
+
 const isSorted = ref(false)
 
+
+
+// Modal
 const showEditModal = ref(false)
 const selectedStudent = ref(null)
 
@@ -144,13 +134,7 @@ function onStudentUpdated() {
 async function loadStudents() {
   loading.value = true
   try {
-    let url = `${apiPrefix}/students/view?page=${page.value}&limit=${limit.value}`
-
-    if (isSorted.value) {
-      url += `&sort=nachname&direction=asc`
-    }
-
-    const response = await axios.get(url)
+    const response = await axios.get(`${apiPrefix}/students/view?page=${page.value}&limit=${limit.value}`)
     students.value = response.data.data
     totalPages.value = response.data.pages
   } catch (error) {
@@ -160,16 +144,8 @@ async function loadStudents() {
   }
 }
 
-function showAll() {
-  isSorted.value = false
-  page.value = 1
-  loadStudents()
-}
-
 function sortByName() {
-  isSorted.value = true
-  page.value = 1
-  loadStudents()
+  students.value.sort((a, b) => a.nachname.localeCompare(b.nachname))
 }
 
 function changePage(n) {
@@ -186,13 +162,11 @@ const filteredStudents = computed(() => {
     const vorname = String(s.vorname ?? '').toLowerCase()
     const nachname = String(s.nachname ?? '').toLowerCase()
     const email = String(s.email ?? '').toLowerCase()
-    const klassenname = String(s.klassenname ?? '').toLowerCase()
 
     return (
       vorname.includes(term) ||
       nachname.includes(term) ||
-      email.includes(term) ||
-      klassenname.includes(term)
+      email.includes(term)
     )
   })
 })
@@ -209,10 +183,7 @@ async function deleteStudent(id) {
   }
 }
 
-onMounted(() => {
-  isSorted.value = false
-  loadStudents()
-})
+onMounted(loadStudents)
 </script>
 
 <style scoped>
