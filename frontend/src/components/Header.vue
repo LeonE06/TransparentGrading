@@ -4,7 +4,7 @@
       v-if="showHamburger"
       class="hamburger icon-btn"
       @click="$emit('toggle-sidebar')"
-      aria-label="Menü öffnen"
+      aria-label="Menue oeffnen"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M3 12H21" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" />
@@ -30,7 +30,7 @@
     </button>
 
     <div class="lang">
-      <span class="flag" aria-hidden="true">🇩🇪</span>
+      <span class="flag" aria-hidden="true">DE</span>
       <select class="lang-select" v-model="language" @change="persistLanguage">
         <option value="Deutsch">Deutsch</option>
       </select>
@@ -40,7 +40,7 @@
       <button
         class="profile-btn"
         type="button"
-        aria-label="Profilmenü öffnen"
+        aria-label="Profilmenue oeffnen"
         aria-haspopup="menu"
         :aria-expanded="profileOpen"
         @click="toggleProfileMenu"
@@ -106,7 +106,6 @@
       </div>
     </div>
   </div>
-
 </template>
 
 <script setup>
@@ -114,6 +113,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
 import { apiClient } from '@/services/apiClient'
+import { getPrimaryRole, getRolesFromToken } from '@/services/auth'
 import { getTeacherSettings, updateTeacherSettings } from '@/services/teacherData'
 
 defineProps({
@@ -133,27 +133,21 @@ const profile = ref({
   klasse: ''
 })
 
-function getRoleFromToken() {
-  const token = localStorage.getItem('token')
-  if (!token) return null
-  try {
-    return JSON.parse(atob(token.split('.')[1])).role || null
-  } catch {
-    return null
-  }
-}
-
-const currentRole = computed(() => getRoleFromToken())
+const currentRole = computed(() => getPrimaryRole())
+const roles = computed(() => getRolesFromToken())
 const isStudent = computed(() => currentRole.value === 'Schueler')
+const isTeacher = computed(() => roles.value.includes('Lehrer'))
+const isAdmin = computed(() => roles.value.includes('Admin'))
 const roleLabel = computed(() => {
-  if (currentRole.value === 'Schueler') return 'Schülerkonto'
+  if (isAdmin.value && isTeacher.value) return 'Lehrer- und Administratorkonto'
+  if (currentRole.value === 'Schueler') return 'Schuelerkonto'
   if (currentRole.value === 'Lehrer') return 'Lehrerkonto'
   if (currentRole.value === 'Admin') return 'Administratorkonto'
   return 'Konto'
 })
 
 async function persistLanguage() {
-  if (getRoleFromToken() !== 'Lehrer') return
+  if (!isTeacher.value) return
   try {
     await updateTeacherSettings({ sprache: language.value })
   } catch (e) {
@@ -162,24 +156,23 @@ async function persistLanguage() {
 }
 
 async function loadProfile() {
-  const role = getRoleFromToken()
-  if (role === 'Schueler') {
+  if (currentRole.value === 'Schueler') {
     try {
       const res = await apiClient.get('/schueler/me')
       const student = res.data || {}
       profile.value = {
-        name: [student.vorname, student.nachname].filter(Boolean).join(' ') || 'Schülerprofil',
+        name: [student.vorname, student.nachname].filter(Boolean).join(' ') || 'Schuelerprofil',
         email: student.email || '',
         klasse: student.klasse?.name || student.klasse_name || student.klassenname || '',
       }
       return
     } catch (e) {
-      console.warn('Konnte Schülerprofil nicht laden', e)
+      console.warn('Konnte Schuelerprofil nicht laden', e)
     }
   }
 
   profile.value = {
-    name: role === 'Lehrer' ? 'Lehrerprofil' : 'Profil',
+    name: isTeacher.value ? 'Lehrerprofil' : isAdmin.value ? 'Adminprofil' : 'Profil',
     email: '',
     klasse: '',
   }
@@ -222,7 +215,7 @@ function toggleThemeFromMenu() {
 onMounted(async () => {
   await loadFromServer()
   await loadProfile()
-  if (getRoleFromToken() !== 'Lehrer') return
+  if (!isTeacher.value) return
   try {
     const s = await getTeacherSettings()
     if (s?.sprache) language.value = s.sprache

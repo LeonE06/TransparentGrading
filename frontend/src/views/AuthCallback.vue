@@ -5,35 +5,31 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router";
+import { useRouter } from 'vue-router'
+import { getRolesFromToken } from '@/services/auth'
 
-const router = useRouter();
+const router = useRouter()
 
-const urlParams = new URLSearchParams(window.location.search);
-const token = urlParams.get("token");
+const urlParams = new URLSearchParams(window.location.search)
+const token = urlParams.get('token')
 
 if (!token) {
-  router.push("/login");
-} else {
-  // JWT speichern
-  localStorage.setItem("token", token);
-
-  // Cookie für Symfony setzen → wichtig für Backend!
-  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`;
-
-  // Rolle auslesen
-  const payload = JSON.parse(atob(token.split(".")[1]))
-const role = payload.role
-
-if (role === 'Lehrer') {
-  router.push('/lehrer/faecher')
-} else if (role === 'Schueler') {
-  router.push('/schueler/faecher')
-} else if (role === 'Admin') {
-  router.push('/admin/klassen')
-} else {
   router.push('/login')
-}
+} else {
+  localStorage.setItem('token', token)
+  document.cookie = `auth_token=${token}; Path=/; Secure; SameSite=None`
+
+  const roles = getRolesFromToken()
+
+  if (roles.includes('Admin')) {
+    router.push('/admin/klassen')
+  } else if (roles.includes('Lehrer')) {
+    router.push('/lehrer/faecher')
+  } else if (roles.includes('Schueler')) {
+    router.push('/schueler/faecher')
+  } else {
+    router.push('/login')
+  }
 }
 </script>
 

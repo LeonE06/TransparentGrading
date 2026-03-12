@@ -61,41 +61,35 @@ class MicrosoftLoginController extends AbstractController
                 'disableState' => true,
             ]);
 
-            // User von Microsoft holen
             $graphUser = $this->provider->get('https://graph.microsoft.com/v1.0/me', $tokenMicrosoft);
 
-            // Echte Login-Adresse beeinflusst Rolle
-$email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';
+            $email = $graphUser['userPrincipalName'] ?? $graphUser['mail'] ?? '';
+            $local = explode('@', strtolower($email))[0];
 
-$local = explode('@', strtolower($email))[0];
+            if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {
+                foreach ($graphUser['proxyAddresses'] as $address) {
+                    $address = strtolower(str_replace('smtp:', '', $address));
+                    $localAlias = explode('@', $address)[0];
 
-// Falls Hauptadresse kein Schüler → Proxy-Aliase prüfen
-if (!preg_match('/^[0-9]{4}$/', $local) && isset($graphUser['proxyAddresses'])) {
-    foreach ($graphUser['proxyAddresses'] as $address) {
-        $address = strtolower(str_replace('smtp:', '', $address));
-        $localAlias = explode('@', $address)[0];
+                    if (preg_match('/^[0-9]{4}$/', $localAlias)) {
+                        $email = $address;
+                        break;
+                    }
+                }
+            }
 
-        if (preg_match('/^[0-9]{4}$/', $localAlias)) {
-            $email = $address;
-            break;
-        }
-    }
-}
-            $vorname  = $graphUser['givenName'] ?? '';
-$nachname = $graphUser['surname'] ?? '';
+            $vorname = $graphUser['givenName'] ?? '';
+            $nachname = $graphUser['surname'] ?? '';
+            $roles = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
 
-    $role = $this->userService->handleMicrosoftUser($vorname, $nachname, $email);
-
-            // JWT bauen
             $payload = [
                 'email' => $email,
-                'role'  => $role,
-                'exp'   => time() + 3600, // 1 Stunde gültig
+                'role'  => $roles[0] ?? 'Unbekannt',
+                'roles' => $roles,
+                'exp'   => time() + 3600,
             ];
 
             $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
-
-            // Redirect ins Frontend
             $frontendUrl = $_ENV['FRONTEND_URL'];
 
             return $this->redirect($frontendUrl . '/auth/callback?token=' . $jwt);

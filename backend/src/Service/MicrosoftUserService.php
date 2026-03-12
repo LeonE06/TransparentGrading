@@ -2,10 +2,10 @@
 
 namespace App\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Lehrer;
 use App\Entity\Microsoft365User;
 use App\Entity\Schueler;
-use App\Entity\Lehrer;
+use Doctrine\ORM\EntityManagerInterface;
 
 class MicrosoftUserService
 {
@@ -17,24 +17,21 @@ class MicrosoftUserService
     }
 
     /**
-     * Speichert den Microsoft-Benutzer (falls nötig) und gibt die Rolle zurück.
+     * Speichert den Microsoft-Benutzer (falls noetig) und gibt alle ermittelten Rollen zurueck.
      *
-     * @return string "Schueler" | "Lehrer" | "Unbekannt"
+     * @return string[]
      */
-    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): string
+    public function handleMicrosoftUser(string $vorname, string $nachname, string $email): array
     {
-        // --- M365-User in Haupttabelle suchen ---
         $existingUser = $this->em->getRepository(Microsoft365User::class)
             ->findOneBy(['email' => $email]);
 
-        // Falls noch nicht vorhanden → anlegen
         if (!$existingUser) {
             $existingUser = new Microsoft365User();
             $existingUser->setVorname($vorname);
             $existingUser->setNachname($nachname);
             $existingUser->setEmail($email);
 
-            // Falls es die Felder in der Entity gibt:
             if (method_exists($existingUser, 'setLizenzen')) {
                 $existingUser->setLizenzen('');
             }
@@ -46,29 +43,31 @@ class MicrosoftUserService
             $this->em->flush();
         }
 
-        // --- Rolle aus der Mail bestimmen ---
-        // 1034@htl.rennweg.at  → Schüler
-        // ABC@htl.rennweg.at   → Lehrer
+        $roles = [];
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
-        // Schüler-Mail (4 Ziffern) → Lehrer
-if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
-}
+        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+            $lehrer = $this->ensureLehrer($existingUser, $vorname, $nachname);
+            $roles[] = 'Lehrer';
 
-if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
-}
+            if ($lehrer->getIsAdmin()) {
+                $roles[] = 'Admin';
+            }
+        }
 
-        return 'Unbekannt';
+        if (preg_match('/^[0-9]{4}$/', $localPart)) {
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            $roles[] = 'Schueler';
+        }
+
+        if ($roles === []) {
+            $roles[] = 'Unbekannt';
+        }
+
+        return array_values(array_unique($roles));
     }
 
-    /**
-     * Stellt sicher, dass es zu diesem Microsoft365User einen Schüler-Datensatz gibt.
-     */
     private function ensureSchueler(Microsoft365User $m365User, string $vorname, string $nachname): void
     {
         $schueler = $this->em->getRepository(Schueler::class)
@@ -87,17 +86,14 @@ if (preg_match('/^[a-z]{3}$/', $localPart)) {
         $this->em->flush();
     }
 
-
-    /**
-     * Stellt sicher, dass es zu diesem Microsoft365User einen Lehrer-Datensatz gibt.
-     */
-    private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): void
+    private function ensureLehrer(Microsoft365User $m365User, string $vorname, string $nachname): Lehrer
     {
         $lehrer = $this->em->getRepository(Lehrer::class)
             ->findOneBy(['ms365User' => $m365User]);
 
-        if ($lehrer)
-            return;
+        if ($lehrer) {
+            return $lehrer;
+        }
 
         $lehrer = new Lehrer();
         $lehrer->setVorname($vorname);
@@ -106,5 +102,7 @@ if (preg_match('/^[a-z]{3}$/', $localPart)) {
 
         $this->em->persist($lehrer);
         $this->em->flush();
+
+        return $lehrer;
     }
 }

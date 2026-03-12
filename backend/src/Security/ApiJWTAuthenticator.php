@@ -34,31 +34,30 @@ class ApiJWTAuthenticator extends AbstractAuthenticator
                 new Key($_ENV['JWT_SECRET'], 'HS256')
             );
         } catch (\Throwable $e) {
-            throw new AuthenticationException('Ungültiges Token');
+            throw new AuthenticationException('Ungueltiges Token');
         }
 
-        if (!isset($decoded->email, $decoded->role)) {
-            throw new AuthenticationException('Token unvollständig');
+        if (!isset($decoded->email) || (!isset($decoded->role) && !isset($decoded->roles))) {
+            throw new AuthenticationException('Token unvollstaendig');
         }
+
+        $roles = $this->extractRoles($decoded);
 
         return new SelfValidatingPassport(
-            new UserBadge($decoded->email, function () use ($decoded) {
-                return new JWTUser($decoded->email, $decoded->role);
+            new UserBadge($decoded->email, function () use ($decoded, $roles) {
+                return new JWTUser($decoded->email, $roles);
             })
         );
     }
 
-    /** ✅ PFLICHT in Symfony 7 */
     public function onAuthenticationSuccess(
         Request $request,
         $token,
         string $firewallName
     ): ?Response {
-        // nichts tun → Request darf weiter
         return null;
     }
 
-    /** ✅ PFLICHT in Symfony 7 */
     public function onAuthenticationFailure(
         Request $request,
         AuthenticationException $exception
@@ -71,5 +70,18 @@ class ApiJWTAuthenticator extends AbstractAuthenticator
             Response::HTTP_UNAUTHORIZED,
             ['Content-Type' => 'application/json']
         );
+    }
+
+    private function extractRoles(object $decoded): array
+    {
+        if (isset($decoded->roles) && is_array($decoded->roles)) {
+            return $decoded->roles;
+        }
+
+        if (isset($decoded->role)) {
+            return [$decoded->role];
+        }
+
+        return ['Unbekannt'];
     }
 }

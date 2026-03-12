@@ -5,7 +5,7 @@
     <div class="info-box">
       <h3>Anmeldeinformationen</h3>
       <p>Anmeldung nur mit Microsoft Schulkonto</p>
-      <p><strong>SchülerInnen:</strong> 1234@htl.rennweg.at</p>
+      <p><strong>SchuelerInnen:</strong> 1234@htl.rennweg.at</p>
       <p><strong>LehrerInnen:</strong> ABC@htl.rennweg.at</p>
     </div>
 
@@ -29,35 +29,34 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getRolesFromToken } from '@/services/auth'
 
-const router = useRouter();
+const router = useRouter()
 
 onMounted(() => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token')
 
   if (!token) {
-    return; // bleibe auf Login
+    return
   }
 
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const role = payload.role;
+  const roles = getRolesFromToken()
 
-    if (role === "Schueler") {
-      router.push("/schueler/faecher");
-    } else if (role === "Lehrer") {
-      router.push("/admin/klassen");
-    }
-  } catch (e) {
-    // Ungültiger Token -> sauber ausloggen
-    localStorage.removeItem("token");
+  if (roles.includes('Admin')) {
+    router.push('/admin/klassen')
+  } else if (roles.includes('Lehrer')) {
+    router.push('/lehrer/faecher')
+  } else if (roles.includes('Schueler')) {
+    router.push('/schueler/faecher')
+  } else {
+    localStorage.removeItem('token')
   }
-});
+})
 
 function loginMicrosoft() {
-  window.location.href = "https://transparentgrading.onrender.com/microsoft";
+  window.location.href = 'https://transparentgrading.onrender.com/microsoft'
 }
 
 function downloadPDF() {
@@ -89,7 +88,7 @@ function downloadPDF() {
 }
 
 svg {
-      margin-right: 6px;
+  margin-right: 6px;
 }
 
 span {
@@ -108,7 +107,7 @@ span {
   border: 1.5px solid transparent;
   border-radius: 10px;
   box-shadow: 0 0 12px rgba(0, 120, 212, 0.1);
-  font-family: "Segoe UI", sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   display: flex;
   flex-direction: column;
   justify-content: space-around;

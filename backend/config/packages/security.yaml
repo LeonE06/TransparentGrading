@@ -10,7 +10,6 @@ security:
             pattern: ^/(_profiler|_wdt|css|images|js)
             security: false
 
-        # 🔐 Alle API-Endpunkte → JWT
         api:
             pattern: ^/api
             stateless: true
@@ -19,6 +18,9 @@ security:
                 - App\Security\ApiJWTAuthenticator
 
     access_control:
+        - { path: ^/api/classes, roles: ROLE_ADMIN }
+        - { path: ^/api/students, roles: ROLE_ADMIN }
+        - { path: ^/api/teachers, roles: ROLE_ADMIN }
         - { path: ^/api/mood, roles: ROLE_SCHUELER }
         - { path: ^/api/lehrer, roles: ROLE_LEHRER }
         - { path: ^/api/schueler, roles: ROLE_SCHUELER }
