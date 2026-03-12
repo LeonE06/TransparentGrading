@@ -13,7 +13,6 @@
 
         <div class="meta">
           <span>{{ msg.fach_name }}</span>
-          <span>{{ msg.kurs_name }}</span>
         </div>
 
         <div class="actions" v-if="msg.system !== 1">
