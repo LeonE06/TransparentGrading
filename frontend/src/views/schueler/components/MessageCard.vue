@@ -80,7 +80,7 @@ async function removeMsg() {
 
 <style scoped>
 .msg-card {
-  background: var(--card);
+  background: var(--second-background-color);
   padding: 1.5rem;
   border-radius: 14px;
   margin: 1rem 0;
