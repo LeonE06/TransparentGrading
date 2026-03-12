@@ -24,7 +24,12 @@
           <div class="fach-image">{{ fach.fach_name.charAt(0) }}</div>
 
           <div class="fach-text">
-            <strong>{{ fach.fach_name }}</strong>
+            <div class="subject-head">
+              <strong>{{ fach.fach_name }}</strong>
+              <span class="grade-pill">
+                Gesamtnote: {{ formatGrade(fach.gesamtnote) }}
+              </span>
+            </div>
             <span class="class-name">{{ fach.klasse_name }}</span>
           </div>
         </div>
@@ -212,6 +217,14 @@ function toggleSorting() {
   sortByName.value = !sortByName.value;
 }
 
+function formatGrade(value) {
+  if (value == null || Number.isNaN(Number(value))) {
+    return "—";
+  }
+
+  return Number(value).toFixed(2).replace(/\.00$/, "").replace(".", ",");
+}
+
 const visibleSubjects = computed(() => {
   let list = subjects.value;
 
@@ -311,6 +324,19 @@ onMounted(() => {
   align-items: center;
   gap: 1rem;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.fach-text {
+  min-width: 0;
+}
+
+.subject-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .fach-image {
@@ -376,7 +402,20 @@ onMounted(() => {
 }
 
 .class-name {
+  display: inline-block;
   margin-left: 10px;
+}
+
+.grade-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  color: var(--text);
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 
@@ -398,6 +437,10 @@ onMounted(() => {
   .subject-info {
     flex: 1;
     min-width: 0;
+  }
+
+  .subject-head {
+    gap: 0.5rem;
   }
 
   .fach-image {

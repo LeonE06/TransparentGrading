@@ -19,7 +19,7 @@
       <!-- LEFT SIDE -->
       <div class="left-boxes">
         <div class="stat-card big">
-          <h3>Notenstand</h3>
+          <h3>Gesamtnote</h3>
           <p class="stat-value">{{ dataLoaded ? schuelerNotenstand : '-' }}</p>
         </div>
 

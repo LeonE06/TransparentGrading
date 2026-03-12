@@ -78,7 +78,11 @@
         :rows="students"
         row-key="id"
         empty-text="Keine Daten vorhanden."
-      />
+      >
+        <template #cell-gesamtnote="{ row }">
+          {{ formatGrade(row.gesamtnote) }}
+        </template>
+      </DataTable>
     </div>
 
     <!-- ================= Leistungsfeststellungen ================= -->
@@ -283,6 +287,7 @@ const assessmentColumns = [
 const studentColumns = [
   { key: "vorname", label: "Vorname" },
   { key: "nachname", label: "Nachname" },
+  { key: "gesamtnote", label: "Gesamtnote" },
   { key: "klasse", label: "Klasse" },
 ];
 
