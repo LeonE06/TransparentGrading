@@ -3,6 +3,8 @@
 namespace App\Service;
 
 use Doctrine\DBAL\Connection;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 
@@ -10,7 +12,12 @@ class ParentNotificationService
 {
     public function __construct(
         private Connection $conn,
-        private MailerInterface $mailer
+        private MailerInterface $mailer,
+        private LoggerInterface $logger,
+        #[Autowire('%mail_from_address%')]
+        private string $fromAddress,
+        #[Autowire('%mail_from_name%')]
+        private string $fromName,
     ) {
     }
 
@@ -44,64 +51,99 @@ class ParentNotificationService
             return;
         }
 
-        // 3) Elterninfo laden
+        // 3) Schüler- und Kursinfo laden
         $info = $this->conn->fetchAssociative("
-    SELECT
-        s.vorname,
-        s.nachname,
-        e.elternemail,
-        k.name AS kurs,
-        f.name AS fach,
-        l.vorname AS l_vorname,
-        l.nachname AS l_nachname,
-        mu.email AS lehrer_email
-    FROM Schueler s
-    INNER JOIN Einstellungen e ON e.id = s.ms365usr_id
-    INNER JOIN Kurse k ON k.id = :kid
-    INNER JOIN Faecher f ON f.id = k.fach_id
-    INNER JOIN Lehrer l ON l.id = k.lehrer_id
-    INNER JOIN tbl_Microsoft365_User mu ON mu.ID = l.MS365Usr_ID
-    WHERE s.id = :sid
-      AND e.ElternAktivierung = 1
-", [
+            SELECT
+                s.vorname,
+                s.nachname,
+                e.elternemail,
+                e.ElternAktivierung AS elternaktivierung,
+                m365.email AS schueler_email,
+                k.name AS kurs,
+                f.name AS fach,
+                l.vorname AS l_vorname,
+                l.nachname AS l_nachname,
+                mu.email AS lehrer_email
+            FROM Schueler s
+            LEFT JOIN Einstellungen e ON e.schueler_id = s.id
+            LEFT JOIN tbl_Microsoft365_User m365 ON m365.ID = s.ms365usr_id
+            INNER JOIN Kurse k ON k.id = :kid
+            INNER JOIN Faecher f ON f.id = k.fach_id
+            INNER JOIN Lehrer l ON l.id = k.lehrer_id
+            LEFT JOIN tbl_Microsoft365_User mu ON mu.ID = l.MS365Usr_ID
+            WHERE s.id = :sid
+        ", [
             'sid' => $schuelerId,
             'kid' => $kursId
         ]);
 
-        if (!$info || !$info['elternemail']) {
-            return; // Keine Elternmail vorhanden
+        if (!$info) {
+            return;
         }
 
-           // 4) Mail senden (mit Try-Catch, damit Request nicht blockiert)
-           try {
-            $mail = (new Email())
-                ->from('1033@htl.rennweg.at')
-                ->replyTo($info['lehrer_email'])
-                ->to($info['elternemail'])
-                ->subject('Leistungsinformation – ' . $info['fach'])
-                ->text(sprintf(
-                    "Sehr geehrte Erziehungsberechtigte,\n\n" .
-                    "Ihr Kind %s %s steht aktuell im Fach %s auf der Note %.2f.\n\n" .
-                    "Mit freundlichen Grüßen\n%s %s",
+        $fach = $info['fach'];
+        $schuelerName = $info['vorname'] . ' ' . $info['nachname'];
+        $lehrerName = $info['l_vorname'] . ' ' . $info['l_nachname'];
+
+        // 4) E-Mail an Schüler senden
+        if (!empty($info['schueler_email'])) {
+            $this->sendMail(
+                $info['schueler_email'],
+                'Notenwarnung – ' . $fach,
+                sprintf(
+                    "Hallo %s,\n\n" .
+                    "dein aktueller Notendurchschnitt im Fach %s (Kurs: %s) beträgt %.2f " .
+                    "und entspricht damit der Note Nicht Genügend (5).\n\n" .
+                    "Bitte melde dich in Transparent Grading an und prüfe deine Noten.\n\n" .
+                    "Mit freundlichen Grüßen\n%s",
                     $info['vorname'],
-                    $info['nachname'],
-                    $info['fach'],
+                    $fach,
+                    $info['kurs'],
                     $schnitt,
-                    $info['l_vorname'],
-                    $info['l_nachname']
-                ));
+                    $lehrerName
+                ),
+                $info['lehrer_email']
+            );
+        }
+
+        // 5) E-Mail an Eltern senden (falls aktiviert)
+        if (!empty($info['elternaktivierung']) && !empty($info['elternemail'])) {
+            $this->sendMail(
+                $info['elternemail'],
+                'Leistungsinformation – ' . $fach,
+                sprintf(
+                    "Sehr geehrte Erziehungsberechtigte,\n\n" .
+                    "Ihr Kind %s steht aktuell im Fach %s (Kurs: %s) auf der Note %.2f " .
+                    "und entspricht damit der Note Nicht Genügend (5).\n\n" .
+                    "Mit freundlichen Grüßen\n%s",
+                    $schuelerName,
+                    $fach,
+                    $info['kurs'],
+                    $schnitt,
+                    $lehrerName
+                ),
+                $info['lehrer_email']
+            );
+        }
+    }
+
+    private function sendMail(string $to, string $subject, string $text, ?string $replyTo = null): void
+    {
+        try {
+            $mail = (new Email())
+                ->from("{$this->fromName} <{$this->fromAddress}>")
+                ->to($to)
+                ->subject($subject)
+                ->text($text);
+
+            if ($replyTo) {
+                $mail->replyTo($replyTo);
+            }
 
             $this->mailer->send($mail);
+            $this->logger->info("Notenwarnung gesendet an {$to}: {$subject}");
         } catch (\Exception $e) {
-            // Log den Fehler, aber wirf keine Exception
-            // Der Request kann trotzdem erfolgreich zurückgegeben werden
-            error_log(sprintf(
-                "Mail-Versendung fehlgeschlagen für Schüler ID %d, Kurs ID %d: %s",
-                $schuelerId,
-                $kursId,
-                $e->getMessage()
-            ));
-            // Optional: Du könntest auch Symfony's Logger verwenden, falls du einen hast
+            $this->logger->error("Mail-Versand fehlgeschlagen an {$to}: " . $e->getMessage());
         }
     }
 
