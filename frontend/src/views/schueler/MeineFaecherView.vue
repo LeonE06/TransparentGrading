@@ -13,7 +13,6 @@
       <button class="btn" :class="{ active: tab === 'alle' }" @click="tab = 'alle'">Alle</button>
       <button class="btn" :class="{ active: tab === 'visible' }" @click="tab = 'visible'">Eingeblendete</button>
       <button class="btn" :class="{ active: tab === 'hidden' }" @click="tab = 'hidden'">Ausgeblendete</button>
-      <button class="btn" @click="toggleSorting">Sortiert A–Z</button>
     </div>
 
     <input v-model="searchTerm" type="text" class="search-input" placeholder="Nach Fächern suchen..." />
@@ -65,7 +64,6 @@ const router = useRouter();
 const searchTerm = ref("");
 const subjects = ref([]);
 const tab = ref("alle");
-const sortByName = ref(false);
 
 const geburtsdatum = ref(null); // Neuer State für das Geburtsdatum
 const elternEmail = ref(null); // Neuer State für die Eltern-Email
@@ -212,10 +210,6 @@ async function toggleNotif(id) {
   }
 }
 
-function toggleSorting() {
-  sortByName.value = !sortByName.value;
-}
-
 function formatGrade(value) {
   if (value == null || value === "") return "—";
 
@@ -237,9 +231,6 @@ const visibleSubjects = computed(() => {
     list = list.filter(s =>
       s.fach_name.toLowerCase().includes(searchTerm.value.toLowerCase())
     );
-
-  if (sortByName.value)
-    list = stableSortSubjects(list);
 
   return list;
 });
