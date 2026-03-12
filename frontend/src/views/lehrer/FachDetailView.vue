@@ -66,7 +66,7 @@
       </div>
 
       <div class="chart-card">
-        <div class="chart-label">Notenverlauf</div>
+        <div class="chart-label">Durchschnittsverlauf</div>
         <canvas ref="chartEl" height="110"></canvas>
       </div>
     </div>
@@ -367,9 +367,21 @@ function renderChart() {
     chart = null;
   }
 
-  const trend = overview.value?.trend || [];
-  const labels = trend.map((t) => (t.ym || "").replace("-", " "));
-  const values = trend.map((t) => t.avgNote);
+  const trend = (overview.value?.trend || []).filter(
+    (entry) => entry?.date && Number.isFinite(Number(entry?.avgNote)),
+  );
+  if (trend.length === 0) {
+    return;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const textColor = styles.getPropertyValue("--text").trim() || "#d1d5db";
+  const primaryColor = "rgba(144, 125, 255, 1)";
+  const fillColor = "rgba(144, 125, 255, 0.12)";
+  const gridColor = textColor ? `${textColor}22` : "rgba(255,255,255,0.06)";
+
+  const labels = trend.map((t) => formatDate(t.date));
+  const values = trend.map((t) => Number(t.avgNote));
 
   chart = new Chart(chartEl.value, {
     type: "line",
@@ -377,21 +389,48 @@ function renderChart() {
       labels,
       datasets: [
         {
+          label: "Klassendurchschnitt",
           data: values,
-          borderColor: "rgba(144, 125, 255, 1)",
-          backgroundColor: "rgba(144, 125, 255, 0.12)",
+          borderColor: primaryColor,
+          backgroundColor: fillColor,
           tension: 0.35,
           fill: true,
-          pointRadius: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 3,
         },
       ],
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label || "",
+            label: (context) => `Durchschnitt: ${formatGrade(context.parsed.y)}`,
+          },
+        },
+      },
       scales: {
-        x: { grid: { display: false }, ticks: { color: "#9aa0a6", maxRotation: 0 } },
-        y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#9aa0a6" } },
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 0 },
+          border: { color: gridColor },
+        },
+        y: {
+          min: 1,
+          max: 5,
+          reverse: true,
+          ticks: {
+            color: textColor,
+            stepSize: 1,
+            callback: (value) => formatGrade(value),
+          },
+          grid: { color: gridColor },
+          border: { color: gridColor },
+        },
       },
     },
   });
