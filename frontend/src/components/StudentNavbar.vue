@@ -103,6 +103,7 @@ import { useTheme } from '@/composables/useTheme.js'
 const { isDark } = useTheme()
 const route = useRoute()
 const unreadCount = ref(0)
+const NOTIFICATIONS_UPDATED_EVENT = 'student-notifications-updated'
 let refreshTimer = null
 
 async function loadUnreadCount() {
@@ -122,6 +123,7 @@ onMounted(async () => {
 
 onMounted(() => {
   window.addEventListener('focus', loadUnreadCount)
+  window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, loadUnreadCount)
 })
 
 onBeforeUnmount(() => {
@@ -129,6 +131,7 @@ onBeforeUnmount(() => {
     window.clearInterval(refreshTimer)
   }
   window.removeEventListener('focus', loadUnreadCount)
+  window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, loadUnreadCount)
 })
 
 watch(() => route.fullPath, () => {
