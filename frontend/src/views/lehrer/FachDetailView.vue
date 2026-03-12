@@ -10,9 +10,6 @@
         <button class="btn primary" @click="openCreateAssessment">
           neue Leistungsfeststellung erstellen
         </button>
-        <button class="btn primary ghost" @click="goToAssessments">
-          neue Schülerleistung erstellen
-        </button>
         <button class="btn danger" @click="removeCourse">
           Kurs löschen
         </button>
@@ -65,10 +62,6 @@
         </label>
       </div>
 
-      <div class="chart-card">
-        <div class="chart-label">Notenverlauf</div>
-        <canvas ref="chartEl" height="110"></canvas>
-      </div>
     </div>
 
     <!-- ================= Schüler ================= -->
@@ -202,10 +195,9 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
-import Chart from "chart.js/auto";
 import { ExternalLink, Trash2 } from "lucide-vue-next";
 import DataTable from "@/components/DataTable.vue";
 import ModalForm from "@/components/ModalForm.vue";
@@ -335,9 +327,6 @@ async function loadAll() {
     students.value = s;
     assessments.value = a;
     benotungsarten.value = t;
-
-    await nextTick();
-    renderChart();
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
@@ -355,56 +344,6 @@ watch(kursId, (v) => {
   syncCourseSchemeUi();
   loadAll();
 });
-
-// --- Chart ---
-const chartEl = ref(null);
-let chart = null;
-
-function renderChart() {
-  if (!chartEl.value) return;
-  if (chart) {
-    chart.destroy();
-    chart = null;
-  }
-
-  const trend = overview.value?.trend || [];
-  const labels = trend.map((t) => (t.ym || "").replace("-", " "));
-  const values = trend.map((t) => t.avgNote);
-
-  chart = new Chart(chartEl.value, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          data: values,
-          borderColor: "rgba(144, 125, 255, 1)",
-          backgroundColor: "rgba(144, 125, 255, 0.12)",
-          tension: 0.35,
-          fill: true,
-          pointRadius: 0,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#9aa0a6", maxRotation: 0 } },
-        y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#9aa0a6" } },
-      },
-    },
-  });
-}
-
-onBeforeUnmount(() => {
-  if (chart) chart.destroy();
-});
-
-// --- Navigation/actions ---
-function goToAssessments() {
-  router.push(`/lehrer/faecher/${kursId.value}/leistungsfeststellungen`);
-}
 
 function openAssessment(id) {
   router.push(`/lehrer/leistungsfeststellungen/${id}`);
@@ -498,8 +437,6 @@ async function submitCreateAssessment() {
     closeCreateAssessment();
     assessments.value = await getAssessmentsForCourse(kursId.value);
     overview.value = await getCourseOverview(kursId.value);
-    await nextTick();
-    renderChart();
   } catch (e) {
     alert("Konnte nicht erstellen.");
     console.warn(e);
@@ -601,7 +538,7 @@ watch(
 
 .overview {
   display: grid;
-  grid-template-columns: 340px 340px 1fr;
+  grid-template-columns: minmax(280px, 360px) minmax(320px, 1fr);
   gap: 1.2rem;
   margin-top: 1rem;
   align-items: start;
@@ -628,19 +565,6 @@ watch(
   font-size: 2.2rem;
   font-weight: 700;
   margin-top: 0.2rem;
-}
-
-.chart-card {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 1rem;
-}
-
-.chart-label {
-  color: var(--muted);
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
 }
 
 .icon-action {
@@ -703,6 +627,9 @@ html:not(.dark) .input {
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
   padding: 1rem;
+  min-height: 100%;
+  display: grid;
+  align-content: start;
 }
 
 .scheme-head {
