@@ -93,6 +93,7 @@ class StudentGradesController extends AbstractController
             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
             WHERE b.schueler_id = :sid
               AND b.fach_id = (SELECT fach_id FROM Kurse WHERE id = :kid)
+              AND b.lehrer_id = (SELECT lehrer_id FROM Kurse WHERE id = :kid)
 
             UNION ALL
 
@@ -126,6 +127,10 @@ class StudentGradesController extends AbstractController
         // 2) Berechne Schüler-Durchschnitt
         // ------------------------------------------------
         $schuelerDurchschnitt = $this->calculateWeightedAverage($noten);
+        $anzahlNoten = count(array_filter(
+            $noten,
+            static fn (array $row): bool => isset($row['note']) && $row['note'] !== null
+        ));
 
         // ------------------------------------------------
         // 3) Berechne Klassenschnitt
@@ -137,6 +142,7 @@ class StudentGradesController extends AbstractController
             FROM Benotung b
             LEFT JOIN Benotungsarten ba ON ba.id = b.typ
             WHERE b.fach_id = (SELECT fach_id FROM Kurse WHERE id = :kid)
+              AND b.lehrer_id = (SELECT lehrer_id FROM Kurse WHERE id = :kid)
 
             UNION ALL
 
@@ -157,7 +163,9 @@ class StudentGradesController extends AbstractController
         // ------------------------------------------------
         return new JsonResponse([
             'noten' => $noten,
+            'gesamtnote' => $schuelerDurchschnitt !== null ? round($schuelerDurchschnitt, 2) : null,
             'schueler_notenstand' => $schuelerDurchschnitt !== null ? round($schuelerDurchschnitt, 2) : null,
+            'anzahl_noten' => $anzahlNoten,
             'klassenschnitt' => $klassenDurchschnitt !== null ? round($klassenDurchschnitt, 2) : null,
         ]);
     }
