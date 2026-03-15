@@ -251,9 +251,18 @@ const filteredRows = computed(() => {
 });
 
 const dirtyRows = computed(() =>
-  editableRows.value.filter(
-    (row) => snapshotRow(row) !== row.originalSnapshot && (row.resultId != null || rowHasScore(row)),
-  ),
+  editableRows.value.filter((row) => {
+    const valuesChanged = snapshotRow(row) !== row.originalSnapshot;
+    const schemeChanged =
+      usesPointBasedGrading.value &&
+      parseOptionalInt(row.punkteInput) != null &&
+      row.originalSchemeId !== String(courseSchemeId.value || "");
+
+    return (
+      (valuesChanged || schemeChanged) &&
+      (row.resultId != null || rowHasScore(row))
+    );
+  }),
 );
 
 const saveButtonLabel = computed(() => {
@@ -265,9 +274,16 @@ const saveButtonLabel = computed(() => {
 
 const schemes = ref([]);
 const courseSchemeId = ref("default");
-const activeCourseScheme = computed(
-  () => grading.getActiveSchemeForCourse?.(kursId.value)?.scheme || grading.loadScheme(),
-);
+const activeCourseScheme = computed(() => {
+  const selectedId = String(courseSchemeId.value || "");
+  const selectedScheme =
+    schemes.value.find((scheme) => String(scheme.id) === selectedId) ||
+    grading.getSchemeById?.(selectedId) ||
+    grading.getActiveSchemeForCourse?.(kursId.value) ||
+    grading.getActiveScheme?.();
+
+  return selectedScheme?.scheme || grading.loadScheme();
+});
 
 function clearSaveFeedback() {
   saveFeedback.value = "";
@@ -472,6 +488,9 @@ function buildEditableRow(student, result) {
     datumInput: defaultDateValue(result?.datum),
     kommentarInput: result?.kommentar ?? "",
     originalPunkte: result?.punkte != null ? Number(result.punkte) : null,
+    originalSchemeId: usesPointBasedGrading.value
+      ? String(courseSchemeId.value || "")
+      : "",
     originalSnapshot: "",
   };
 
@@ -535,10 +554,6 @@ function resolveRowGrade(row) {
   const points = parseOptionalInt(row.punkteInput);
   if (points == null) {
     return parseOptionalFloat(row.noteInput);
-  }
-
-  if (row.resultId != null && points === row.originalPunkte) {
-    return parseOptionalFloat(row.noteInput) ?? calculateNoteFromPoints(points);
   }
 
   return calculateNoteFromPoints(points);
@@ -629,8 +644,8 @@ async function load() {
     const currentCourseId = detail.value?.kurs?.id;
     students.value = currentCourseId ? await getCourseStudents(currentCourseId) : [];
 
-    rebuildEditableRows();
     syncCourseSchemeUi();
+    rebuildEditableRows();
   } catch (e) {
     error.value = e?.message || "Unbekannter Fehler";
   } finally {
