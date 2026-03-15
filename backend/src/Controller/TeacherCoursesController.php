@@ -633,6 +633,59 @@ class TeacherCoursesController extends AbstractController
     /**
      * Schüler eines Kurses (Legacy: /faecher/{kursId}/schueler)
      */
+    #[Route('/kurse/{kursId<\\d+>}/schueler', name: 'course_students_add', methods: ['POST'])]
+    #[Route('/faecher/{kursId<\\d+>}/schueler', name: 'course_students_add_legacy', methods: ['POST'])]
+    public function addCourseStudents(int $kursId, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $lehrer = $this->resolveLehrer($em);
+        if (!$lehrer) {
+            return new JsonResponse(['error' => 'Unauthenticated'], 401);
+        }
+
+        $conn = $em->getConnection();
+
+        $courseOk = $conn->fetchOne(
+            "SELECT COUNT(*) FROM Kurse WHERE id = :kid AND lehrer_id = :lid",
+            ['kid' => $kursId, 'lid' => $lehrer->getId()]
+        );
+        if ((int) $courseOk === 0) {
+            return new JsonResponse(['error' => 'Kurs nicht gefunden'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true) ?: [];
+        $studentIds = $data['studentIds'] ?? ($data['schuelerIds'] ?? null);
+        if (!is_array($studentIds)) {
+            $singleId = $data['studentId'] ?? ($data['schuelerId'] ?? null);
+            $studentIds = $singleId !== null ? [$singleId] : [];
+        }
+
+        $studentIds = array_values(array_unique(array_filter(array_map(
+            static fn ($id): int => (int) $id,
+            $studentIds
+        ), static fn (int $id): bool => $id > 0)));
+
+        if ($studentIds === []) {
+            return new JsonResponse(['error' => 'Mindestens eine gültige schuelerId ist erforderlich'], 400);
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($studentIds), '?'));
+        $added = $conn->executeStatement(
+            "INSERT INTO Kurs_Schueler (kurs_id, schueler_id)
+             SELECT ?, s.id
+             FROM Schueler s
+             LEFT JOIN Kurs_Schueler ks
+               ON ks.kurs_id = ? AND ks.schueler_id = s.id
+             WHERE s.id IN ($placeholders)
+               AND ks.schueler_id IS NULL",
+            array_merge([$kursId, $kursId], $studentIds)
+        );
+
+        return new JsonResponse([
+            'status' => 'ok',
+            'studentsAdded' => $added,
+        ], 201);
+    }
+
     #[Route('/kurse/{kursId<\\d+>}/schueler', name: 'course_students', methods: ['GET'])]
     #[Route('/faecher/{kursId<\\d+>}/schueler', name: 'course_students_legacy', methods: ['GET'])]
     public function courseStudents(int $kursId, EntityManagerInterface $em): JsonResponse

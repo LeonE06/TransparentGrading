@@ -25,6 +25,20 @@ export async function getCourseStudents(kursId) {
   return res.data || []
 }
 
+export async function searchCourseStudents(query, limit = 20) {
+  const res = await apiClient.get('/lehrer/schueler/suche', {
+    params: { q: query, limit },
+  })
+  return res.data || []
+}
+
+export async function addCourseStudents(kursId, studentIds) {
+  const res = await apiClient.post(`/lehrer/faecher/${kursId}/schueler`, {
+    studentIds,
+  })
+  return res.data
+}
+
 export async function removeCourseStudent(kursId, schuelerId) {
   const res = await apiClient.delete(`/lehrer/faecher/${kursId}/schueler/${schuelerId}`)
   return res.data
