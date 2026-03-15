@@ -75,6 +75,16 @@
         <template #cell-gesamtnote="{ row }">
           {{ row.gesamtnote != null ? formatGrade(row.gesamtnote) : "—" }}
         </template>
+        <template #actions="{ row }">
+          <button
+            class="icon-action danger"
+            type="button"
+            title="Schüler*in entfernen"
+            @click="removeStudent(row)"
+          >
+            <Trash2 :size="18" />
+          </button>
+        </template>
       </DataTable>
     </div>
 
@@ -215,6 +225,7 @@ import {
   getCourseOverview,
   getCourseStudents,
   getGradingTypes,
+  removeCourseStudent,
 } from "@/services/teacherData";
 
 const route = useRoute();
@@ -378,6 +389,22 @@ async function removeCourse() {
   } catch (e) {
     const apiError = e?.response?.data?.error;
     alert(apiError ? `Kurs konnte nicht gelöscht werden: ${apiError}` : "Kurs konnte nicht gelöscht werden.");
+    console.warn(e);
+  }
+}
+
+async function removeStudent(student) {
+  const studentName = `${student?.vorname || ""} ${student?.nachname || ""}`.trim() || "diese Person";
+  if (!confirm(`Schüler*in \"${studentName}\" aus diesem Kurs entfernen? Bereits erfasste Bewertungen in diesem Kurs werden ebenfalls entfernt.`)) {
+    return;
+  }
+
+  try {
+    await removeCourseStudent(kursId.value, student.id);
+    await loadAll();
+  } catch (e) {
+    const apiError = e?.response?.data?.error;
+    alert(apiError || "Schüler*in konnte nicht entfernt werden.");
     console.warn(e);
   }
 }
@@ -581,6 +608,11 @@ watch(
   color: var(--text);
   cursor: pointer;
   margin-left: 0.5rem;
+}
+
+.icon-action.danger {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.35);
 }
 
 .form {
