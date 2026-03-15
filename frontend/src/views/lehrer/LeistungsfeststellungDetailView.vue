@@ -77,7 +77,8 @@
         <div class="grading-info">
           <div class="table-title">Schülerleistungen</div>
           <div class="table-subtitle">
-            Punkte direkt in der Tabelle eintragen und gesammelt speichern.
+            Punkte direkt in der Tabelle eintragen. Mit Pfeil hoch/runter springst du
+            zum nächsten Schüler.
           </div>
         </div>
 
@@ -120,12 +121,14 @@
           <div class="cell-stack">
             <input
               v-model="row.punkteInput"
+              :ref="(el) => setPointInputRef(row.rowKey, el)"
               class="input cell-input number-input"
               type="number"
               min="0"
               :max="detail?.maxPunkte ?? undefined"
               placeholder="Punkte"
               @input="clearSaveFeedback"
+              @keydown="handlePointFieldKeydown($event, row.rowKey)"
             />
             <span class="cell-meta">{{ formatPointsMeta(row) }}</span>
           </div>
@@ -193,7 +196,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import DataTable from "@/components/DataTable.vue";
 import grading from "@/services/grading";
@@ -215,6 +218,7 @@ const saving = ref(false);
 const saveFeedback = ref("");
 const saveFeedbackTone = ref("success");
 const search = ref("");
+const pointInputRefs = new Map();
 
 const columns = [
   { key: "vorname", label: "Vorname", width: "14%" },
@@ -267,6 +271,55 @@ const activeCourseScheme = computed(
 
 function clearSaveFeedback() {
   saveFeedback.value = "";
+}
+
+function setPointInputRef(rowKey, element) {
+  if (!rowKey) return;
+
+  if (element) {
+    pointInputRefs.set(rowKey, element);
+    return;
+  }
+
+  pointInputRefs.delete(rowKey);
+}
+
+function compareStudentRows(a, b) {
+  const lastName = String(a.nachname ?? "").localeCompare(String(b.nachname ?? ""), "de", {
+    sensitivity: "base",
+  });
+  if (lastName !== 0) return lastName;
+
+  return String(a.vorname ?? "").localeCompare(String(b.vorname ?? ""), "de", {
+    sensitivity: "base",
+  });
+}
+
+function focusPointFieldByRowKey(rowKey) {
+  const input = pointInputRefs.get(rowKey);
+  if (!input || typeof input.focus !== "function") return;
+
+  input.focus();
+  if (typeof input.select === "function") {
+    input.select();
+  }
+}
+
+function handlePointFieldKeydown(event, rowKey) {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+  const visibleRows = filteredRows.value;
+  const currentIndex = visibleRows.findIndex((row) => row.rowKey === rowKey);
+  if (currentIndex === -1) return;
+
+  const nextIndex = event.key === "ArrowDown" ? currentIndex + 1 : currentIndex - 1;
+  const targetRow = visibleRows[nextIndex];
+  if (!targetRow) return;
+
+  event.preventDefault();
+  nextTick(() => {
+    focusPointFieldByRowKey(targetRow.rowKey);
+  });
 }
 
 function normalizeDateInput(value) {
@@ -454,11 +507,7 @@ function rebuildEditableRows() {
     );
   }
 
-  editableRows.value = nextRows.sort((a, b) => {
-    const lastName = a.nachname.localeCompare(b.nachname, "de");
-    if (lastName !== 0) return lastName;
-    return a.vorname.localeCompare(b.vorname, "de");
-  });
+  editableRows.value = nextRows.sort(compareStudentRows);
 }
 
 function snapshotRow(row) {
