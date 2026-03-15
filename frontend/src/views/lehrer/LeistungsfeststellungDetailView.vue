@@ -1,9 +1,9 @@
 <template>
   <section class="page">
     <div class="breadcrumb">
-      <router-link class="back" :to="backToCourse"
-        >‹ {{ backLabel }}</router-link
-      >
+      <router-link class="back" :to="backToCourse">
+        ‹ {{ backLabel }}
+      </router-link>
     </div>
 
     <header class="head">
@@ -20,8 +20,13 @@
         <button class="btn ghost" type="button" @click="exportPdf">
           PDF exportieren
         </button>
-        <button class="btn primary" type="button" @click="openCreate">
-          Neue Schülerleistung erstellen
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="saving || dirtyRows.length === 0"
+          @click="saveResults"
+        >
+          {{ saveButtonLabel }}
         </button>
       </div>
     </header>
@@ -68,142 +73,122 @@
         </div>
       </div>
 
-      <div class="table-head">
-        <div class="table-title">Schülerleistungen</div>
-        <input
-          v-model="search"
-          class="search"
-          placeholder="Nach Schüler*in suchen"
-        />
+      <div class="grading-panel">
+        <div class="grading-info">
+          <div class="table-title">Schülerleistungen</div>
+          <div class="table-subtitle">
+            Punkte direkt in der Tabelle eintragen und gesammelt speichern.
+          </div>
+        </div>
+
+        <div class="grading-controls">
+          <label class="field scheme-field">
+            <span class="field-label">Bewertungsschema</span>
+            <select
+              v-model="courseSchemeId"
+              class="input"
+              @change="handleSchemeChange"
+            >
+              <option v-for="scheme in schemes" :key="scheme.id" :value="scheme.id">
+                {{ scheme.name }}
+              </option>
+            </select>
+          </label>
+
+          <div class="search-wrap">
+            <input
+              v-model="search"
+              class="search"
+              placeholder="Nach Schüler*in suchen"
+              @input="clearSaveFeedback"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="saveFeedback" :class="['save-feedback', saveFeedbackTone]">
+        {{ saveFeedback }}
       </div>
 
       <DataTable
         :columns="columns"
         :rows="filteredRows"
-        row-key="id"
-        empty-text="Keine Daten vorhanden."
+        row-key="rowKey"
+        empty-text="Keine Schüler vorhanden."
       >
-        <template #cell-leistung="{ row }">
-          <span v-if="row.punkte != null && detail?.maxPunkte != null">
-            {{ row.punkte }} Punkte ({{
-              Math.round((row.punkte / (detail.maxPunkte || 1)) * 100)
-            }}%)
-          </span>
-          <span v-else>—</span>
-        </template>
-        <template #cell-note="{ row }">{{
-          row.note != null ? formatGrade(row.note) : "—"
-        }}</template>
-        <template #cell-datum="{ row }">{{ formatDate(row.datum) }}</template>
-        <template #cell-kommentar="{ row }">{{
-          row.kommentar || "—"
-        }}</template>
-      </DataTable>
-    </div>
-
-    <ModalForm
-      :open="createOpen"
-      title="Neue Schülerleistung erstellen"
-      @close="closeCreate"
-    >
-      <div class="form">
-        <!-- ✅ Aktives Schema im Modal -->
-        <div class="scheme-inline">
-          <div class="scheme-inline-title">Aktives Bewertungsschema</div>
-          <div class="scheme-inline-sub">
-            Dieses Schema wird für die Berechnung in diesem Fach verwendet.
-          </div>
-
-          <label class="field">
-            <span class="field-label">Schema auswählen</span>
-            <select
-              class="input"
-              v-model="courseSchemeId"
-              @change="saveCourseScheme"
-            >
-              <option v-for="s in schemes" :key="s.id" :value="s.id">
-                {{ s.name }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <!-- dein bestehendes Formular -->
-        <label class="field">
-          <span class="field-label">Schüler*in</span>
-          <select v-model="createForm.schuelerId" class="input">
-            <option value="">Schüler*in auswählen</option>
-            <option v-for="s in students" :key="s.id" :value="s.id">
-              {{ s.vorname }} {{ s.nachname }}
-            </option>
-          </select>
-        </label>
-
-        <div class="row">
-          <label class="field">
-            <span class="field-label">Punkte</span>
+        <template #cell-punkte="{ row }">
+          <div class="cell-stack">
             <input
-              v-model.number="createForm.punkte"
-              class="input"
+              v-model="row.punkteInput"
+              class="input cell-input number-input"
               type="number"
               min="0"
-              :max="detail?.maxPunkte || 9999"
+              :max="detail?.maxPunkte ?? undefined"
+              placeholder="Punkte"
+              @input="clearSaveFeedback"
             />
-          </label>
+            <span class="cell-meta">{{ formatPointsMeta(row) }}</span>
+          </div>
+        </template>
 
-          <label class="field">
-            <span class="field-label">Note</span>
-            <input
-              v-if="detail?.maxPunkte != null"
-              :value="autoCalculatedNoteDisplay"
-              class="input"
-              type="text"
-              readonly
-            />
-            <input
-              v-else
-              v-model.number="createForm.note"
-              class="input"
-              type="number"
-              min="1"
-              max="5"
-              step="0.1"
-            />
-            <span v-if="detail?.maxPunkte != null" class="field-help">
-              Wird automatisch aus Punkten und Bewertungsschema berechnet.
-            </span>
-          </label>
+        <template #cell-note="{ row }">
+          <div class="cell-stack">
+            <template v-if="usesPointBasedGrading">
+              <div class="calculated-grade">
+                {{ formatCalculatedGrade(row) }}
+              </div>
+              <span class="cell-meta">wird aus Punkten berechnet</span>
+            </template>
+            <template v-else>
+              <input
+                v-model="row.noteInput"
+                class="input cell-input number-input"
+                type="number"
+                min="1"
+                max="5"
+                step="0.1"
+                placeholder="Note"
+                @input="clearSaveFeedback"
+              />
+            </template>
+          </div>
+        </template>
 
-          <label class="field">
-            <span class="field-label">Datum</span>
-            <input v-model="createForm.datum" class="input" type="date" />
-          </label>
-        </div>
-
-        <label class="field">
-          <span class="field-label">Kommentar</span>
-          <textarea
-            v-model="createForm.kommentar"
-            class="input textarea"
-            rows="3"
+        <template #cell-datum="{ row }">
+          <input
+            v-model="row.datumInput"
+            class="input cell-input"
+            type="date"
+            @input="clearSaveFeedback"
           />
-        </label>
-      </div>
+        </template>
 
-      <template #actions>
-        <button class="btn ghost" type="button" @click="closeCreate">
-          Abbrechen
-        </button>
+        <template #cell-kommentar="{ row }">
+          <textarea
+            v-model="row.kommentarInput"
+            class="input cell-input cell-textarea"
+            rows="2"
+            placeholder="Optionaler Kommentar"
+            @input="clearSaveFeedback"
+          />
+        </template>
+      </DataTable>
+
+      <div class="footer-actions">
+        <div class="footer-hint">
+          {{ dirtyRows.length }} Änderung{{ dirtyRows.length === 1 ? "" : "en" }}
+          zum Speichern vorgemerkt.
+        </div>
         <button
           class="btn primary"
           type="button"
-          :disabled="saving"
-          @click="submitCreate"
+          :disabled="saving || dirtyRows.length === 0"
+          @click="saveResults"
         >
-          Schülerleistung erstellen
+          {{ saveButtonLabel }}
         </button>
-      </template>
-    </ModalForm>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -211,7 +196,6 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import DataTable from "@/components/DataTable.vue";
-import ModalForm from "@/components/ModalForm.vue";
 import grading from "@/services/grading";
 import {
   createStudentResult,
@@ -222,54 +206,130 @@ import {
 const route = useRoute();
 
 const id = computed(() => route.params.id);
-
 const loading = ref(false);
 const error = ref("");
 const detail = ref(null);
 const students = ref([]);
-
+const editableRows = ref([]);
+const saving = ref(false);
+const saveFeedback = ref("");
+const saveFeedbackTone = ref("success");
 const search = ref("");
+
 const columns = [
-  { key: "vorname", label: "Vorname" },
-  { key: "nachname", label: "Nachname" },
-  { key: "leistung", label: "Leistung" },
-  { key: "note", label: "Note" },
-  { key: "datum", label: "Datum" },
-  { key: "kommentar", label: "Kommentar", width: "42%" },
+  { key: "vorname", label: "Vorname", width: "14%" },
+  { key: "nachname", label: "Nachname", width: "16%" },
+  { key: "punkte", label: "Punkte", width: "18%" },
+  { key: "note", label: "Note", width: "14%" },
+  { key: "datum", label: "Datum", width: "16%" },
+  { key: "kommentar", label: "Kommentar", width: "22%" },
 ];
 
-const filteredRows = computed(() => {
-  const list = detail.value?.schuelerleistungen || [];
-  if (!search.value) return list;
-  const q = search.value.toLowerCase();
-  return list.filter((r) =>
-    `${r.vorname} ${r.nachname}`.toLowerCase().includes(q),
-  );
-});
-
-// ✅ Kurs-ID kommt aus Assessment-Detail
 const kursId = computed(() => detail.value?.kurs?.id ?? null);
+const usesPointBasedGrading = computed(() => detail.value?.maxPunkte != null);
 
 const backToCourse = computed(() =>
-  kursId.value ? `/lehrer/faecher/${kursId.value}` : "/lehrer/faecher"
+  kursId.value ? `/lehrer/faecher/${kursId.value}` : "/lehrer/faecher",
 );
 
 const backLabel = computed(() =>
-  detail.value?.kurs?.name ? detail.value.kurs.name : "Meine Fächer"
+  detail.value?.kurs?.name ? detail.value.kurs.name : "Meine Fächer",
 );
 
-function formatDate(d) {
-  if (!d) return "—";
+const filteredRows = computed(() => {
+  const list = editableRows.value;
+  if (!search.value) return list;
+
+  const query = search.value.toLowerCase();
+  return list.filter((row) =>
+    `${row.vorname} ${row.nachname}`.toLowerCase().includes(query),
+  );
+});
+
+const dirtyRows = computed(() =>
+  editableRows.value.filter(
+    (row) => snapshotRow(row) !== row.originalSnapshot && (row.resultId != null || rowHasScore(row)),
+  ),
+);
+
+const saveButtonLabel = computed(() => {
+  if (saving.value) return "Speichert …";
+  if (dirtyRows.value.length === 0) return "Keine Änderungen";
+  if (dirtyRows.value.length === 1) return "1 Änderung speichern";
+  return `${dirtyRows.value.length} Änderungen speichern`;
+});
+
+const schemes = ref([]);
+const courseSchemeId = ref("default");
+const activeCourseScheme = computed(
+  () => grading.getActiveSchemeForCourse?.(kursId.value)?.scheme || grading.loadScheme(),
+);
+
+function clearSaveFeedback() {
+  saveFeedback.value = "";
+}
+
+function normalizeDateInput(value) {
+  if (!value) return "";
+
+  const text = String(value);
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function defaultDateValue(existingDate = "") {
+  return (
+    normalizeDateInput(existingDate) ||
+    normalizeDateInput(detail.value?.datum) ||
+    todayInputValue()
+  );
+}
+
+function parseOptionalInt(value) {
+  if (value === "" || value == null) return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.round(numeric);
+}
+
+function parseOptionalFloat(value) {
+  if (value === "" || value == null) return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Number(numeric);
+}
+
+function normalizeComment(value) {
+  const text = String(value ?? "").trim();
+  return text || "";
+}
+
+function formatDate(value) {
+  if (!value) return "—";
   try {
-    return new Date(d).toLocaleDateString("de-DE");
+    return new Date(value).toLocaleDateString("de-DE");
   } catch {
-    return d;
+    return value;
   }
 }
 
-function formatGrade(v) {
-  if (v == null) return "—";
-  return Number(v).toFixed(1).replace(".", ",");
+function formatGrade(value) {
+  if (value == null) return "—";
+  return Number(value).toFixed(1).replace(".", ",");
 }
 
 function formatCsvDate(value) {
@@ -307,6 +367,259 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function syncCourseSchemeUi() {
+  schemes.value = grading.loadAllSchemes();
+
+  const currentCourseId = kursId.value;
+  courseSchemeId.value =
+    (currentCourseId != null
+      ? grading.getActiveSchemeIdForCourse?.(currentCourseId)
+      : null) ||
+    grading.getActiveSchemeId?.() ||
+    "default";
+}
+
+function handleSchemeChange() {
+  const currentCourseId = kursId.value;
+  if (currentCourseId == null) return;
+
+  grading.setActiveSchemeIdForCourse(currentCourseId, courseSchemeId.value);
+  clearSaveFeedback();
+}
+
+function calculateNoteFromPoints(points) {
+  const maxPoints = Number(detail.value?.maxPunkte);
+  if (!Number.isFinite(maxPoints) || maxPoints <= 0) return null;
+  if (points == null || points === "") return null;
+
+  const numericPoints = Number(points);
+  if (!Number.isFinite(numericPoints)) return null;
+
+  const scheme = activeCourseScheme.value || {};
+  const bands =
+    Array.isArray(scheme.gradeBands) && scheme.gradeBands.length > 0
+      ? scheme.gradeBands
+      : undefined;
+  const percentage = Math.max(0, Math.min(100, (numericPoints / maxPoints) * 100));
+
+  return grading.percentageToGrade(percentage, bands);
+}
+
+function buildEditableRow(student, result) {
+  const row = {
+    rowKey: result?.id ? `result-${result.id}` : `student-${student.id}`,
+    resultId: result?.id ?? null,
+    schuelerId: Number(result?.schuelerId ?? student.id),
+    vorname: result?.vorname ?? student.vorname ?? "",
+    nachname: result?.nachname ?? student.nachname ?? "",
+    punkteInput: result?.punkte != null ? String(result.punkte) : "",
+    noteInput: result?.note != null ? String(result.note) : "",
+    datumInput: defaultDateValue(result?.datum),
+    kommentarInput: result?.kommentar ?? "",
+    originalPunkte: result?.punkte != null ? Number(result.punkte) : null,
+    originalSnapshot: "",
+  };
+
+  row.originalSnapshot = snapshotRow(row);
+  return row;
+}
+
+function rebuildEditableRows() {
+  const rowsByStudent = new Map(
+    (detail.value?.schuelerleistungen || []).map((row) => [Number(row.schuelerId), row]),
+  );
+  const studentIds = new Set();
+
+  const nextRows = students.value.map((student) => {
+    const studentId = Number(student.id);
+    studentIds.add(studentId);
+    return buildEditableRow(student, rowsByStudent.get(studentId));
+  });
+
+  for (const row of detail.value?.schuelerleistungen || []) {
+    const studentId = Number(row.schuelerId);
+    if (studentIds.has(studentId)) continue;
+
+    nextRows.push(
+      buildEditableRow(
+        {
+          id: studentId,
+          vorname: row.vorname,
+          nachname: row.nachname,
+        },
+        row,
+      ),
+    );
+  }
+
+  editableRows.value = nextRows.sort((a, b) => {
+    const lastName = a.nachname.localeCompare(b.nachname, "de");
+    if (lastName !== 0) return lastName;
+    return a.vorname.localeCompare(b.vorname, "de");
+  });
+}
+
+function snapshotRow(row) {
+  return JSON.stringify({
+    punkte: parseOptionalInt(row.punkteInput),
+    note: parseOptionalFloat(row.noteInput),
+    datum: row.datumInput || "",
+    kommentar: normalizeComment(row.kommentarInput),
+  });
+}
+
+function rowHasScore(row) {
+  if (usesPointBasedGrading.value) {
+    return parseOptionalInt(row.punkteInput) != null;
+  }
+
+  return parseOptionalFloat(row.noteInput) != null;
+}
+
+function resolveRowGrade(row) {
+  if (!usesPointBasedGrading.value) {
+    return parseOptionalFloat(row.noteInput);
+  }
+
+  const points = parseOptionalInt(row.punkteInput);
+  if (points == null) {
+    return parseOptionalFloat(row.noteInput);
+  }
+
+  if (row.resultId != null && points === row.originalPunkte) {
+    return parseOptionalFloat(row.noteInput) ?? calculateNoteFromPoints(points);
+  }
+
+  return calculateNoteFromPoints(points);
+}
+
+function formatCalculatedGrade(row) {
+  return formatGrade(resolveRowGrade(row));
+}
+
+function formatPointsMeta(row) {
+  const points = parseOptionalInt(row.punkteInput);
+  const maxPoints = Number(detail.value?.maxPunkte);
+
+  if (points == null) {
+    return detail.value?.maxPunkte != null ? `max. ${detail.value.maxPunkte} Punkte` : "—";
+  }
+
+  if (!Number.isFinite(maxPoints) || maxPoints <= 0) {
+    return `${points} Punkte`;
+  }
+
+  const percentage = Math.round((points / maxPoints) * 100);
+  return `${points}/${maxPoints} Punkte (${percentage}%)`;
+}
+
+function buildSubmissionPayload(row) {
+  const punkte = parseOptionalInt(row.punkteInput);
+
+  return {
+    schuelerId: row.schuelerId,
+    punkte,
+    note: resolveRowGrade(row),
+    datum: row.datumInput || defaultDateValue(),
+    kommentar: normalizeComment(row.kommentarInput) || null,
+  };
+}
+
+function validateRows(rows) {
+  const invalid = [];
+  const maxPoints = Number(detail.value?.maxPunkte);
+
+  for (const row of rows) {
+    const payload = buildSubmissionPayload(row);
+    const label = `${row.vorname} ${row.nachname}`.trim();
+
+    if (usesPointBasedGrading.value) {
+      if (payload.punkte == null) {
+        invalid.push(`${label}: Punkte fehlen`);
+        continue;
+      }
+
+      if (payload.punkte < 0) {
+        invalid.push(`${label}: Punkte dürfen nicht negativ sein`);
+        continue;
+      }
+
+      if (Number.isFinite(maxPoints) && payload.punkte > maxPoints) {
+        invalid.push(`${label}: Punkte dürfen maximal ${maxPoints} sein`);
+        continue;
+      }
+    } else {
+      if (payload.note == null) {
+        invalid.push(`${label}: Note fehlt`);
+        continue;
+      }
+
+      if (payload.note < 1 || payload.note > 5) {
+        invalid.push(`${label}: Note muss zwischen 1 und 5 liegen`);
+        continue;
+      }
+    }
+
+    if (!payload.datum) {
+      invalid.push(`${label}: Datum fehlt`);
+    }
+  }
+
+  return invalid;
+}
+
+async function load() {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    detail.value = await getAssessmentDetail(id.value);
+
+    const currentCourseId = detail.value?.kurs?.id;
+    students.value = currentCourseId ? await getCourseStudents(currentCourseId) : [];
+
+    rebuildEditableRows();
+    syncCourseSchemeUi();
+  } catch (e) {
+    error.value = e?.message || "Unbekannter Fehler";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function saveResults() {
+  const rowsToSave = dirtyRows.value;
+  if (rowsToSave.length === 0) return;
+
+  const invalidRows = validateRows(rowsToSave);
+  if (invalidRows.length > 0) {
+    saveFeedbackTone.value = "error";
+    saveFeedback.value = invalidRows.slice(0, 3).join(" | ");
+    return;
+  }
+
+  saving.value = true;
+  saveFeedback.value = "";
+
+  try {
+    await Promise.all(
+      rowsToSave.map((row) => createStudentResult(id.value, buildSubmissionPayload(row))),
+    );
+
+    await load();
+    saveFeedbackTone.value = "success";
+    saveFeedback.value =
+      rowsToSave.length === 1
+        ? "1 Schülerleistung gespeichert."
+        : `${rowsToSave.length} Schülerleistungen gespeichert.`;
+  } catch (e) {
+    saveFeedbackTone.value = "error";
+    saveFeedback.value = e?.message || "Speichern fehlgeschlagen.";
+  } finally {
+    saving.value = false;
+  }
 }
 
 function exportCsv() {
@@ -453,135 +766,8 @@ function exportPdf() {
   printWindow.print();
 }
 
-async function load() {
-  loading.value = true;
-  error.value = "";
-  try {
-    detail.value = await getAssessmentDetail(id.value);
-
-    const kid = detail.value?.kurs?.id;
-    if (kid) {
-      students.value = await getCourseStudents(kid);
-    } else {
-      students.value = [];
-    }
-  } catch (e) {
-    error.value = e?.message || "Unbekannter Fehler";
-  } finally {
-    loading.value = false;
-  }
-}
-
 onMounted(load);
 watch(id, load);
-
-// --------------------
-// ✅ Schema im Modal
-// --------------------
-const schemes = ref([]);
-const courseSchemeId = ref("default");
-const activeCourseScheme = computed(
-  () => grading.getActiveSchemeForCourse?.(kursId.value)?.scheme || grading.loadScheme(),
-);
-
-function syncCourseSchemeUi() {
-  schemes.value = grading.loadAllSchemes();
-
-  const kid = kursId.value;
-  courseSchemeId.value =
-    (kid != null ? grading.getActiveSchemeIdForCourse?.(kid) : null) ||
-    grading.getActiveSchemeId?.() ||
-    "default";
-}
-
-function saveCourseScheme() {
-  const kid = kursId.value;
-  if (kid == null) return;
-  grading.setActiveSchemeIdForCourse(kid, courseSchemeId.value);
-}
-
-function calculateNoteFromPoints(points) {
-  const maxPoints = Number(detail.value?.maxPunkte);
-  if (!Number.isFinite(maxPoints) || maxPoints <= 0) return null;
-  if (points == null || points === "") return null;
-
-  const numericPoints = Number(points);
-  if (!Number.isFinite(numericPoints)) return null;
-
-  const scheme = activeCourseScheme.value || {};
-  const bands =
-    Array.isArray(scheme.gradeBands) && scheme.gradeBands.length > 0
-      ? scheme.gradeBands
-      : undefined;
-  const percentage = Math.max(0, Math.min(100, (numericPoints / maxPoints) * 100));
-
-  return grading.percentageToGrade(percentage, bands);
-}
-
-// --------------------
-// ✅ Modal Schülerleistung
-// --------------------
-const createOpen = ref(false);
-const saving = ref(false);
-
-const createForm = ref({
-  schuelerId: "",
-  punkte: null,
-  note: null,
-  datum: new Date().toISOString().slice(0, 10),
-  kommentar: "",
-});
-const autoCalculatedNote = computed(() => calculateNoteFromPoints(createForm.value.punkte));
-const autoCalculatedNoteDisplay = computed(() =>
-  autoCalculatedNote.value != null ? formatGrade(autoCalculatedNote.value) : "—",
-);
-
-function openCreate() {
-  syncCourseSchemeUi(); // ✅ damit es immer aktuell ist
-  createOpen.value = true;
-}
-
-function closeCreate() {
-  createOpen.value = false;
-  saving.value = false;
-  createForm.value = {
-    schuelerId: "",
-    punkte: null,
-    note: null,
-    datum: new Date().toISOString().slice(0, 10),
-    kommentar: "",
-  };
-}
-
-async function submitCreate() {
-  const noteForSubmission =
-    detail.value?.maxPunkte != null
-      ? autoCalculatedNote.value
-      : createForm.value.note;
-
-  if (!createForm.value.schuelerId || noteForSubmission == null) {
-    alert("Bitte Schüler*in und eine gültige Leistung erfassen.");
-    return;
-  }
-
-  saving.value = true;
-  try {
-    await createStudentResult(id.value, {
-      schuelerId: createForm.value.schuelerId,
-      punkte: createForm.value.punkte,
-      note: noteForSubmission,
-      datum: createForm.value.datum,
-      kommentar: createForm.value.kommentar,
-    });
-    closeCreate();
-    await load();
-  } catch (e) {
-    alert("Konnte nicht erstellen.");
-    console.warn(e);
-  } finally {
-    saving.value = false;
-  }
-}
 </script>
 
 <style scoped>
@@ -641,21 +827,14 @@ async function submitCreate() {
   cursor: pointer;
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .btn.ghost {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .kpis {
@@ -683,39 +862,43 @@ async function submitCreate() {
   margin-top: 0.25rem;
 }
 
-.table-head {
+.grading-panel {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.grading-info {
+  display: grid;
+  gap: 0.2rem;
 }
 
 .table-title {
-  font-weight: 650;
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
-.search {
-  width: 360px;
-  max-width: 100%;
-  border-radius: 999px;
-  padding: 0.55rem 1rem;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  outline: none;
+.table-subtitle {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
-.form {
-  display: grid;
-  gap: 1rem;
-  padding-top: 0.5rem;
+.grading-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.9rem;
+.scheme-field {
+  min-width: 220px;
+}
+
+.search-wrap {
+  min-width: 280px;
 }
 
 .field {
@@ -728,11 +911,6 @@ async function submitCreate() {
   font-size: 0.85rem;
 }
 
-.field-help {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
 .input {
   border-radius: 10px;
   padding: 0.65rem 0.85rem;
@@ -740,80 +918,112 @@ async function submitCreate() {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   outline: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 html:not(.dark) .input {
   background: rgba(0, 0, 0, 0.04);
 }
 
-.textarea {
+.search {
+  width: 100%;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  outline: none;
+}
+
+.save-feedback {
+  margin-bottom: 0.85rem;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  font-size: 0.92rem;
+}
+
+.save-feedback.success {
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  color: #bbf7d0;
+}
+
+.save-feedback.error {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.cell-stack {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.cell-input {
+  min-width: 0;
+}
+
+.number-input {
+  min-width: 96px;
+}
+
+.cell-textarea {
   resize: vertical;
+  min-height: 72px;
+}
+
+.cell-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.calculated-grade {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.footer-actions {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-hint {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .empty {
   padding: 2rem 0;
   color: var(--muted);
 }
-.scheme-inline {
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.9rem;
-}
 
-.scheme-inline-title {
-  font-weight: 700;
-  margin-bottom: 0.2rem;
-}
-
-.scheme-inline-sub {
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.25rem;
-}
-
-@media (max-width: 768px) {
-  .page {
-    max-width: 100%;
-  }
-
-  .head {
-    flex-direction: column;
+@media (max-width: 960px) {
+  .head,
+  .grading-panel,
+  .footer-actions {
     align-items: stretch;
+    flex-direction: column;
   }
 
-  .head-actions {
+  .head-actions,
+  .grading-controls {
     justify-content: stretch;
-  }
-
-  .head-actions .btn {
-    width: 100%;
-  }
-
-  .table-head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search {
-    width: 100%;
   }
 
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .row {
-    grid-template-columns: 1fr;
-  }
-
-  .title {
-    font-size: 1.35rem;
-  }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .kpis {
     grid-template-columns: 1fr;
   }
