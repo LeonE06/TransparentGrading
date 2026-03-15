@@ -25,6 +25,11 @@ export async function getCourseStudents(kursId) {
   return res.data || []
 }
 
+export async function removeCourseStudent(kursId, schuelerId) {
+  const res = await apiClient.delete(`/lehrer/faecher/${kursId}/schueler/${schuelerId}`)
+  return res.data
+}
+
 export async function getGradingTypes(kursId) {
   const res = await apiClient.get(`/lehrer/faecher/${kursId}/benotungsarten`)
   return res.data || []
