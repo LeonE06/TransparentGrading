@@ -304,58 +304,36 @@ function renderChart() {
   // 🔥 CSS Variablen richtig auslesen
   const styles = getComputedStyle(document.documentElement);
   const textColor = styles.getPropertyValue("--text").trim();
-  const secondBg = styles.getPropertyValue("--second-background-color").trim();
   const primaryColor = styles.getPropertyValue("--primary").trim() || "#6a16cc";
   const mutedGrid = textColor ? `${textColor}22` : "rgba(0, 0, 0, 0.12)";
 
-  const sourcePoints = noten.value.map((n, index) => ({
-    x: index,
-    y: Number(n.note),
+  const chartEntries = noten.value.map((n) => ({
+    label: formatDisplayDate(n.datum),
+    value: Number(n.note),
     datum: formatDisplayDate(n.datum),
     typ: n.typ_name || "—",
     kommentar: n.kommentar || "—",
     gewichtung: n.gewichtung ?? "—",
-    hiddenPoint: false,
-  })).filter((point) => Number.isFinite(point.y));
+  })).filter((entry) => Number.isFinite(entry.value));
 
-  if (sourcePoints.length === 0) {
+  if (chartEntries.length === 0) {
     destroyChart();
     return;
   }
 
-  const chartPoints = sourcePoints.length === 1
-    ? [
-        sourcePoints[0],
-        {
-          ...sourcePoints[0],
-          x: 1,
-          hiddenPoint: true,
-        },
-      ]
-    : sourcePoints;
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "rgba(106,22,204,0.0)");
-  gradient.addColorStop(1, "rgba(106,22,204,0.25)");
-
   chart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
+      labels: chartEntries.map((entry) => entry.label),
       datasets: [
         {
           label: "Note",
-          data: chartPoints,
+          data: chartEntries.map((entry) => entry.value),
+          backgroundColor: `${primaryColor}B3`,
           borderColor: primaryColor,
-          backgroundColor: gradient,
-          tension: 0.25,
-          fill: { target: "start" },
-          pointBackgroundColor: secondBg,
-          pointBorderColor: primaryColor,
-          pointBorderWidth: 2,
-          pointRadius: (context) => context.raw?.hiddenPoint ? 0 : 6,
-          pointHoverRadius: (context) => context.raw?.hiddenPoint ? 0 : 9,
-          pointHitRadius: (context) => context.raw?.hiddenPoint ? 0 : 20,
-          borderWidth: 3,
+          borderWidth: 1,
+          borderRadius: 8,
+          maxBarThickness: 48,
         },
       ],
     },
@@ -372,7 +350,7 @@ function renderChart() {
       },
       interaction: {
         mode: "nearest",
-        intersect: false,
+        intersect: true,
       },
       scales: {
         y: {
@@ -395,22 +373,14 @@ function renderChart() {
           },
         },
         x: {
-          type: "linear",
-          min: 0,
-          max: Math.max(chartPoints.length - 1, 1),
           ticks: {
             color: textColor,
             padding: 10,
-            stepSize: 1,
             autoSkip: false,
             maxRotation: 0,
             minRotation: 0,
             font: {
               size: 12,
-            },
-            callback: (value) => {
-              const point = chartPoints.find((entry) => entry.x === Number(value) && !entry.hiddenPoint);
-              return point ? point.datum : "";
             },
           },
           grid: {
@@ -431,20 +401,18 @@ function renderChart() {
           displayColors: false,
           padding: 12,
           callbacks: {
-            title: (items) => items[0]?.raw?.datum || "Note",
-            label: (context) => `Note: ${context.raw?.y ?? "—"}`,
+            title: (items) => chartEntries[items[0]?.dataIndex]?.datum || "Note",
+            label: (context) => `Note: ${context.raw ?? "—"}`,
             afterLabel: (context) => [
-              `Art: ${context.raw?.typ ?? "—"}`,
-              `Gewichtung: ${context.raw?.gewichtung ?? "—"}`,
-              `Kommentar: ${context.raw?.kommentar ?? "—"}`,
+              `Art: ${chartEntries[context.dataIndex]?.typ ?? "—"}`,
+              `Gewichtung: ${chartEntries[context.dataIndex]?.gewichtung ?? "—"}`,
+              `Kommentar: ${chartEntries[context.dataIndex]?.kommentar ?? "—"}`,
             ],
-            labelColor: (context) => ({
-              borderColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
-              backgroundColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
+            labelColor: () => ({
+              borderColor: primaryColor,
+              backgroundColor: primaryColor,
             }),
-            beforeBody: (items) => items[0]?.raw?.hiddenPoint ? [""] : [],
           },
-          filter: (tooltipItem) => !tooltipItem.raw?.hiddenPoint,
         },
       },
     },
