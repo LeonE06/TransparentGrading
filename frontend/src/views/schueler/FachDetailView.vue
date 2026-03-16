@@ -38,7 +38,7 @@
 
       <!-- RIGHT SIDE – CHART -->
       <div class="chart-section">
-        <h3>Notenverlauf</h3>
+        <h3>Leistungsentwicklung</h3>
         <canvas v-if="hasChartData" ref="notenChartEl"></canvas>
         <div v-else class="chart-empty">
           Noch nicht genug Noten für einen Verlauf vorhanden.
@@ -356,7 +356,7 @@ function renderChart() {
         y: {
           min: 1,
           max: 5,
-          reverse: true,
+          reverse: false,
           ticks: {
             color: textColor,
             stepSize: 1,
