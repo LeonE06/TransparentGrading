@@ -309,12 +309,12 @@ function renderChart() {
 
   const chartEntries = noten.value.map((n) => ({
     label: formatDisplayDate(n.datum),
-    value: Number(n.note),
+    grade: Number(n.note),
     datum: formatDisplayDate(n.datum),
     typ: n.typ_name || "—",
     kommentar: n.kommentar || "—",
     gewichtung: n.gewichtung ?? "—",
-  })).filter((entry) => Number.isFinite(entry.value));
+  })).filter((entry) => Number.isFinite(entry.grade));
 
   if (chartEntries.length === 0) {
     destroyChart();
@@ -328,7 +328,15 @@ function renderChart() {
       datasets: [
         {
           label: "Note",
-          data: chartEntries.map((entry) => entry.value),
+          data: chartEntries.map((entry) => ({
+            x: entry.label,
+            y: 6 - entry.grade,
+            grade: entry.grade,
+            datum: entry.datum,
+            typ: entry.typ,
+            gewichtung: entry.gewichtung,
+            kommentar: entry.kommentar,
+          })),
           backgroundColor: `${primaryColor}B3`,
           borderColor: primaryColor,
           borderWidth: 1,
@@ -354,15 +362,18 @@ function renderChart() {
       },
       scales: {
         y: {
-          min: 1,
+          min: 0,
           max: 5,
-          reverse: false,
           ticks: {
             color: textColor,
             stepSize: 1,
             padding: 10,
             font: {
               size: 13,
+            },
+            callback: (value) => {
+              if (Number(value) === 0) return "";
+              return 6 - Number(value);
             },
           },
           grid: {
@@ -401,12 +412,12 @@ function renderChart() {
           displayColors: false,
           padding: 12,
           callbacks: {
-            title: (items) => chartEntries[items[0]?.dataIndex]?.datum || "Note",
-            label: (context) => `Note: ${context.raw ?? "—"}`,
+            title: (items) => items[0]?.raw?.datum || "Note",
+            label: (context) => `Note: ${context.raw?.grade ?? "—"}`,
             afterLabel: (context) => [
-              `Art: ${chartEntries[context.dataIndex]?.typ ?? "—"}`,
-              `Gewichtung: ${chartEntries[context.dataIndex]?.gewichtung ?? "—"}`,
-              `Kommentar: ${chartEntries[context.dataIndex]?.kommentar ?? "—"}`,
+              `Art: ${context.raw?.typ ?? "—"}`,
+              `Gewichtung: ${context.raw?.gewichtung ?? "—"}`,
+              `Kommentar: ${context.raw?.kommentar ?? "—"}`,
             ],
             labelColor: () => ({
               borderColor: primaryColor,
