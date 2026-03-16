@@ -330,7 +330,7 @@ function renderChart() {
           label: "Note",
           data: chartEntries.map((entry) => ({
             x: entry.label,
-            y: 6 - entry.grade,
+            y: entry.grade,
             grade: entry.grade,
             datum: entry.datum,
             typ: entry.typ,
@@ -341,6 +341,8 @@ function renderChart() {
           borderColor: primaryColor,
           borderWidth: 1,
           borderRadius: 8,
+          base: 5,
+          minBarLength: 3,
           maxBarThickness: 48,
         },
       ],
@@ -362,18 +364,15 @@ function renderChart() {
       },
       scales: {
         y: {
-          min: 0,
+          min: 1,
           max: 5,
+          reverse: true,
           ticks: {
             color: textColor,
             stepSize: 1,
             padding: 10,
             font: {
               size: 13,
-            },
-            callback: (value) => {
-              if (Number(value) === 0) return "";
-              return 6 - Number(value);
             },
           },
           grid: {
