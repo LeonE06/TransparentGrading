@@ -53,15 +53,16 @@ class MicrosoftUserService
         [$localPart] = explode('@', $emailLower);
 
         // Schüler-Mail (4 Ziffern) → Lehrer
-if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
-}
 
-if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
-}
+        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            return 'Schueler';
+        }
+
+        if (preg_match('/^[0-9]{4}$/', $localPart)) {
+            $this->ensureLehrer($existingUser, $vorname, $nachname);
+            return 'Lehrer';
+        }
 
         return 'Unbekannt';
     }
