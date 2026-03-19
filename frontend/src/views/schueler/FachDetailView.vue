@@ -38,7 +38,7 @@
 
       <!-- RIGHT SIDE – CHART -->
       <div class="chart-section">
-        <h3>Notenverlauf</h3>
+        <h3>Leistungsentwicklung</h3>
         <canvas v-if="hasChartData" ref="notenChartEl"></canvas>
         <div v-else class="chart-empty">
           Noch nicht genug Noten für einen Verlauf vorhanden.
@@ -175,6 +175,10 @@ function goBack() {
 }
 
 function downloadCsv() {
+  if (!window.confirm("CSV-Export für dieses Fach starten?")) {
+    return;
+  }
+
   const rows = [
     ["Datum", "Art", "Note", "Leistung", "Gewichtung", "Kommentar"],
     ...noten.value.map((note) => [
@@ -202,6 +206,10 @@ function downloadCsv() {
 }
 
 function exportPdf() {
+  if (!window.confirm("PDF-Export für dieses Fach starten?")) {
+    return;
+  }
+
   const printWindow = window.open("", "_blank", "width=960,height=720");
   if (!printWindow) {
     console.warn("PDF-Export konnte nicht gestartet werden.");
@@ -296,58 +304,46 @@ function renderChart() {
   // 🔥 CSS Variablen richtig auslesen
   const styles = getComputedStyle(document.documentElement);
   const textColor = styles.getPropertyValue("--text").trim();
-  const secondBg = styles.getPropertyValue("--second-background-color").trim();
   const primaryColor = styles.getPropertyValue("--primary").trim() || "#6a16cc";
   const mutedGrid = textColor ? `${textColor}22` : "rgba(0, 0, 0, 0.12)";
 
-  const sourcePoints = noten.value.map((n, index) => ({
-    x: index,
-    y: Number(n.note),
+  const chartEntries = noten.value.map((n) => ({
+    label: formatDisplayDate(n.datum),
+    grade: Number(n.note),
     datum: formatDisplayDate(n.datum),
     typ: n.typ_name || "—",
     kommentar: n.kommentar || "—",
     gewichtung: n.gewichtung ?? "—",
-    hiddenPoint: false,
-  })).filter((point) => Number.isFinite(point.y));
+  })).filter((entry) => Number.isFinite(entry.grade));
 
-  if (sourcePoints.length === 0) {
+  if (chartEntries.length === 0) {
     destroyChart();
     return;
   }
 
-  const chartPoints = sourcePoints.length === 1
-    ? [
-        sourcePoints[0],
-        {
-          ...sourcePoints[0],
-          x: 1,
-          hiddenPoint: true,
-        },
-      ]
-    : sourcePoints;
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "rgba(106,22,204,0.0)");
-  gradient.addColorStop(1, "rgba(106,22,204,0.25)");
-
   chart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
+      labels: chartEntries.map((entry) => entry.label),
       datasets: [
         {
           label: "Note",
-          data: chartPoints,
+          data: chartEntries.map((entry) => ({
+            x: entry.label,
+            y: entry.grade,
+            grade: entry.grade,
+            datum: entry.datum,
+            typ: entry.typ,
+            gewichtung: entry.gewichtung,
+            kommentar: entry.kommentar,
+          })),
+          backgroundColor: `${primaryColor}B3`,
           borderColor: primaryColor,
-          backgroundColor: gradient,
-          tension: 0.25,
-          fill: { target: "start" },
-          pointBackgroundColor: secondBg,
-          pointBorderColor: primaryColor,
-          pointBorderWidth: 2,
-          pointRadius: (context) => context.raw?.hiddenPoint ? 0 : 6,
-          pointHoverRadius: (context) => context.raw?.hiddenPoint ? 0 : 9,
-          pointHitRadius: (context) => context.raw?.hiddenPoint ? 0 : 20,
-          borderWidth: 3,
+          borderWidth: 1,
+          borderRadius: 8,
+          base: 5,
+          minBarLength: 3,
+          maxBarThickness: 48,
         },
       ],
     },
@@ -364,7 +360,7 @@ function renderChart() {
       },
       interaction: {
         mode: "nearest",
-        intersect: false,
+        intersect: true,
       },
       scales: {
         y: {
@@ -387,22 +383,14 @@ function renderChart() {
           },
         },
         x: {
-          type: "linear",
-          min: 0,
-          max: Math.max(chartPoints.length - 1, 1),
           ticks: {
             color: textColor,
             padding: 10,
-            stepSize: 1,
             autoSkip: false,
             maxRotation: 0,
             minRotation: 0,
             font: {
               size: 12,
-            },
-            callback: (value) => {
-              const point = chartPoints.find((entry) => entry.x === Number(value) && !entry.hiddenPoint);
-              return point ? point.datum : "";
             },
           },
           grid: {
@@ -424,19 +412,17 @@ function renderChart() {
           padding: 12,
           callbacks: {
             title: (items) => items[0]?.raw?.datum || "Note",
-            label: (context) => `Note: ${context.raw?.y ?? "—"}`,
+            label: (context) => `Note: ${context.raw?.grade ?? "—"}`,
             afterLabel: (context) => [
               `Art: ${context.raw?.typ ?? "—"}`,
               `Gewichtung: ${context.raw?.gewichtung ?? "—"}`,
               `Kommentar: ${context.raw?.kommentar ?? "—"}`,
             ],
-            labelColor: (context) => ({
-              borderColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
-              backgroundColor: context.raw?.hiddenPoint ? "transparent" : primaryColor,
+            labelColor: () => ({
+              borderColor: primaryColor,
+              backgroundColor: primaryColor,
             }),
-            beforeBody: (items) => items[0]?.raw?.hiddenPoint ? [""] : [],
           },
-          filter: (tooltipItem) => !tooltipItem.raw?.hiddenPoint,
         },
       },
     },
