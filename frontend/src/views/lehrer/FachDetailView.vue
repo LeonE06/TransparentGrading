@@ -66,6 +66,68 @@
 
     <!-- ================= Schüler ================= -->
     <div v-else-if="tab === 'students'" class="panel">
+      <div class="student-manage">
+        <div class="student-manage-head">
+          <div>
+            <div class="student-manage-title">Schüler*innen hinzufügen</div>
+            <div class="student-manage-sub">
+              Nach Namen suchen, auswählen und anschließend zum Kurs hinzufügen.
+            </div>
+          </div>
+          <button
+            class="btn primary"
+            type="button"
+            :disabled="addingStudents || selectedStudentsToAdd.length === 0"
+            @click="addStudentsToCurrentCourse"
+          >
+            {{ addingStudents ? "Fügt hinzu …" : "Ausgewählte hinzufügen" }}
+          </button>
+        </div>
+
+        <input
+          v-model="studentSearchQuery"
+          class="input"
+          type="text"
+          placeholder="Schüler*in suchen"
+        />
+
+        <div v-if="selectedStudentsToAdd.length" class="student-chip-list">
+          <button
+            v-for="student in selectedStudentsToAdd"
+            :key="student.id"
+            class="student-chip"
+            type="button"
+            @click="removePendingStudent(student.id)"
+          >
+            {{ formatStudentLabel(student) }} ×
+          </button>
+        </div>
+
+        <div
+          v-if="studentSearchQuery.trim().length < MIN_STUDENT_QUERY_LENGTH"
+          class="student-search-hint"
+        >
+          Mindestens {{ MIN_STUDENT_QUERY_LENGTH }} Zeichen eingeben.
+        </div>
+        <div v-else-if="studentSearchLoading" class="student-search-hint">
+          Suche läuft …
+        </div>
+        <div v-else-if="studentSearchError" class="student-search-error">
+          {{ studentSearchError }}
+        </div>
+        <div v-else-if="studentSearchResults.length" class="student-search-results">
+          <button
+            v-for="student in studentSearchResults"
+            :key="student.id"
+            class="student-search-result"
+            type="button"
+            @click="addPendingStudent(student)"
+          >
+            {{ formatStudentLabel(student) }}
+          </button>
+        </div>
+      </div>
+
       <DataTable
         :columns="studentColumns"
         :rows="students"
@@ -74,6 +136,16 @@
       >
         <template #cell-gesamtnote="{ row }">
           {{ row.gesamtnote != null ? formatGrade(row.gesamtnote) : "—" }}
+        </template>
+        <template #actions="{ row }">
+          <button
+            class="icon-action danger"
+            type="button"
+            title="Schüler*in entfernen"
+            @click="removeStudent(row)"
+          >
+            <Trash2 :size="18" />
+          </button>
         </template>
       </DataTable>
     </div>
@@ -199,7 +271,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import grading from "@/services/grading";
 import { ExternalLink, Trash2 } from "lucide-vue-next";
@@ -208,6 +280,7 @@ import ModalForm from "@/components/ModalForm.vue";
 import TgTabs from "@/components/TgTabs.vue";
 import {
   createAssessment,
+  addCourseStudents,
   deleteCourse,
   deleteAssessment,
   getAssessmentsForCourse,
@@ -215,6 +288,8 @@ import {
   getCourseOverview,
   getCourseStudents,
   getGradingTypes,
+  removeCourseStudent,
+  searchCourseStudents,
 } from "@/services/teacherData";
 
 const route = useRoute();
@@ -230,6 +305,15 @@ const overview = ref(null);
 const students = ref([]);
 const assessments = ref([]);
 const benotungsarten = ref([]);
+const studentSearchQuery = ref("");
+const studentSearchResults = ref([]);
+const selectedStudentsToAdd = ref([]);
+const studentSearchLoading = ref(false);
+const studentSearchError = ref("");
+const addingStudents = ref(false);
+const MIN_STUDENT_QUERY_LENGTH = 2;
+let studentSearchTimer = null;
+let studentSearchRequestId = 0;
 
 // --- Schema state (Auswahl in Overview) ---
 const schemes = ref([]);
@@ -302,6 +386,11 @@ function formatWeight(v) {
   return Number(v).toFixed(2).replace(/\.00$/, "").replace(".", ",");
 }
 
+function formatStudentLabel(student) {
+  const klasse = student?.klasse ? ` (${student.klasse})` : "";
+  return `${student?.vorname || ""} ${student?.nachname || ""}${klasse}`.trim();
+}
+
 // --- Schema helpers ---
 function syncCourseSchemeUi() {
   schemes.value = grading.loadAllSchemes();
@@ -313,6 +402,68 @@ function syncCourseSchemeUi() {
 
 function saveCourseScheme() {
   grading.setActiveSchemeIdForCourse(kursId.value, courseSchemeId.value);
+}
+
+function resetStudentSearch() {
+  if (studentSearchTimer) {
+    clearTimeout(studentSearchTimer);
+    studentSearchTimer = null;
+  }
+  studentSearchRequestId += 1;
+  studentSearchQuery.value = "";
+  studentSearchResults.value = [];
+  selectedStudentsToAdd.value = [];
+  studentSearchLoading.value = false;
+  studentSearchError.value = "";
+}
+
+function addPendingStudent(student) {
+  const id = Number(student.id);
+  if (selectedStudentsToAdd.value.some((item) => Number(item.id) === id)) return;
+
+  selectedStudentsToAdd.value.push({
+    id,
+    vorname: student.vorname || "",
+    nachname: student.nachname || "",
+    klasse: student.klasse || "",
+  });
+  studentSearchQuery.value = "";
+  studentSearchResults.value = [];
+  studentSearchError.value = "";
+}
+
+function removePendingStudent(studentId) {
+  const id = Number(studentId);
+  selectedStudentsToAdd.value = selectedStudentsToAdd.value.filter(
+    (student) => Number(student.id) !== id,
+  );
+}
+
+async function searchStudentsForCourse(query) {
+  const requestId = ++studentSearchRequestId;
+  studentSearchLoading.value = true;
+  studentSearchError.value = "";
+
+  try {
+    const data = await searchCourseStudents(query, 20);
+    if (requestId !== studentSearchRequestId) return;
+
+    const existingIds = new Set(students.value.map((student) => Number(student.id)));
+    const selectedIds = new Set(selectedStudentsToAdd.value.map((student) => Number(student.id)));
+    studentSearchResults.value = data.filter((student) => {
+      const id = Number(student.id);
+      return !existingIds.has(id) && !selectedIds.has(id);
+    });
+  } catch (e) {
+    if (requestId !== studentSearchRequestId) return;
+    const apiError = e?.response?.data?.error;
+    studentSearchError.value = apiError || e?.message || "Schüler konnten nicht geladen werden.";
+    studentSearchResults.value = [];
+  } finally {
+    if (requestId === studentSearchRequestId) {
+      studentSearchLoading.value = false;
+    }
+  }
 }
 
 // --- Load data ---
@@ -347,7 +498,38 @@ onMounted(() => {
 watch(kursId, (v) => {
   if (!v) return;
   syncCourseSchemeUi();
+  resetStudentSearch();
   loadAll();
+});
+
+watch(
+  () => studentSearchQuery.value,
+  (value) => {
+    if (studentSearchTimer) {
+      clearTimeout(studentSearchTimer);
+      studentSearchTimer = null;
+    }
+
+    const query = value.trim();
+    if (query.length < MIN_STUDENT_QUERY_LENGTH) {
+      studentSearchRequestId += 1;
+      studentSearchLoading.value = false;
+      studentSearchError.value = "";
+      studentSearchResults.value = [];
+      return;
+    }
+
+    studentSearchTimer = setTimeout(() => {
+      searchStudentsForCourse(query);
+    }, 300);
+  },
+);
+
+onBeforeUnmount(() => {
+  if (studentSearchTimer) {
+    clearTimeout(studentSearchTimer);
+    studentSearchTimer = null;
+  }
 });
 
 function openAssessment(id) {
@@ -379,6 +561,42 @@ async function removeCourse() {
     const apiError = e?.response?.data?.error;
     alert(apiError ? `Kurs konnte nicht gelöscht werden: ${apiError}` : "Kurs konnte nicht gelöscht werden.");
     console.warn(e);
+  }
+}
+
+async function removeStudent(student) {
+  const studentName = `${student?.vorname || ""} ${student?.nachname || ""}`.trim() || "diese Person";
+  if (!confirm(`Schüler*in \"${studentName}\" aus diesem Kurs entfernen? Bereits erfasste Bewertungen in diesem Kurs werden ebenfalls entfernt.`)) {
+    return;
+  }
+
+  try {
+    await removeCourseStudent(kursId.value, student.id);
+    await loadAll();
+  } catch (e) {
+    const apiError = e?.response?.data?.error;
+    alert(apiError || "Schüler*in konnte nicht entfernt werden.");
+    console.warn(e);
+  }
+}
+
+async function addStudentsToCurrentCourse() {
+  if (selectedStudentsToAdd.value.length === 0) return;
+
+  addingStudents.value = true;
+  try {
+    await addCourseStudents(
+      kursId.value,
+      selectedStudentsToAdd.value.map((student) => Number(student.id)),
+    );
+    await loadAll();
+    resetStudentSearch();
+  } catch (e) {
+    const apiError = e?.response?.data?.error;
+    alert(apiError || "Schüler*innen konnten nicht hinzugefügt werden.");
+    console.warn(e);
+  } finally {
+    addingStudents.value = false;
   }
 }
 
@@ -530,6 +748,73 @@ watch(
   margin-top: 1rem;
 }
 
+.student-manage {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.student-manage-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.student-manage-title {
+  font-weight: 700;
+}
+
+.student-manage-sub {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.student-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.student-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.student-search-results {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.student-search-result {
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 0.75rem 0.9rem;
+  cursor: pointer;
+}
+
+.student-search-hint,
+.student-search-error {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.student-search-error {
+  color: #fca5a5;
+}
+
 .search {
   width: 420px;
   max-width: 100%;
@@ -581,6 +866,11 @@ watch(
   color: var(--text);
   cursor: pointer;
   margin-left: 0.5rem;
+}
+
+.icon-action.danger {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.35);
 }
 
 .form {
@@ -701,6 +991,11 @@ html:not(.dark) .scheme-select {
 
   .overview {
     grid-template-columns: 1fr;
+  }
+
+  .student-manage-head {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .row {

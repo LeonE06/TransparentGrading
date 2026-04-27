@@ -47,22 +47,23 @@ class MicrosoftUserService
         }
 
         // --- Rolle aus der Mail bestimmen ---
-        // 1034@htl.rennweg.at  → Schüler
-        // ABC@htl.rennweg.at   → Lehrer
+        // 1234@htl.rennweg.at  -> Schüler
+        // ABC@htl.rennweg.at   -> Lehrer
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
-        // Schüler-Mail (4 Ziffern) → Lehrer
-if (preg_match('/^[0-9]{4}$/', $localPart)) {
-    $this->ensureSchueler($existingUser, $vorname, $nachname);
-    return 'Schueler';
-}
+        // Schüler-Mail (4 Ziffern) -> Schüler
+        if (preg_match('/^[0-9]{4}$/', $localPart)) {
+            $this->ensureSchueler($existingUser, $vorname, $nachname);
+            return 'Schueler';
+        }
+        // Lehrer-Mail (3 Buchstaben) -> Lehrer
+        if (preg_match('/^[a-z]{3}$/', $localPart)) {
+            $this->ensureLehrer($existingUser, $vorname, $nachname);
+            return 'Lehrer';
+        }
 
-if (preg_match('/^[a-z]{3}$/', $localPart)) {
-    $this->ensureLehrer($existingUser, $vorname, $nachname);
-    return 'Lehrer';
-} 
-
+        
         return 'Unbekannt';
     }
 
