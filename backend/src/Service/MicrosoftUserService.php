@@ -49,6 +49,7 @@ class MicrosoftUserService
         // --- Rolle aus der Mail bestimmen ---
         // 1234@htl.rennweg.at  -> Schüler
         // ABC@htl.rennweg.at   -> Lehrer
+        //testcommit
         $emailLower = strtolower($email);
         [$localPart] = explode('@', $emailLower);
 
