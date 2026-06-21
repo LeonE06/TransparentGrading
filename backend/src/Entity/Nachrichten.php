@@ -30,7 +30,8 @@ class Nachrichten
     #[ORM\Column(type: 'text')]
     private string $inhalt;
 
-    #[ORM\Column(type: 'datetime', columnDefinition: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP')]
+    // bleibt wie bei dir
+    #[ORM\Column(type: 'datetime')]
     private \DateTimeInterface $erstelltAm;
 
 

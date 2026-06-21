@@ -1,45 +1,76 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
-use App\Repository\EinstellungenRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups; // ← FEHLT!
 
-#[ORM\Entity(repositoryClass: EinstellungenRepository::class)]
-#[ORM\Table(name: "Einstellungen")]
+#[ORM\Entity]
+#[ORM\Table(name: 'Einstellungen')]
 class Einstellungen
 {
-    #[ORM\Id]
-    #[ORM\OneToOne(inversedBy: 'einstellungen', cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(name: 'id', referencedColumnName: 'id')]
-    private ?Schueler $schueler = NULL;
+    /**
+     * Primärschlüssel = schueler_id (OneToOne zu Schueler)
+     */
+#[ORM\Id]
+#[ORM\OneToOne(targetEntity: Schueler::class, inversedBy: 'einstellungen')]
+#[ORM\JoinColumn(
+    name: 'schueler_id',
+    referencedColumnName: 'id',
+    nullable: false,
+    onDelete: 'CASCADE'
+)]
+private Schueler $schueler;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $sprache = NULL;
 
-    #[ORM\Column(length: 200, nullable: true)]
-    #[Groups(['student_read'])]
-    private ?string $elternemail = NULL;
+    #[ORM\Column(type: 'string', length: 100, nullable: true)]
+    private ?string $sprache = null;
 
-    #[ORM\Column(type: 'boolean', nullable: true)]
-    private ?bool $elternaktivierung = NULL;
+    #[ORM\Column(type: 'string', length: 200, nullable: true)]
+    private ?string $elternemail = null;
 
-    #[ORM\Column(type: 'boolean', nullable: true)]
-    private ?bool $benachrichtigungen = NULL;
+    #[ORM\Column(type: 'boolean', options: ['default' => 0])]
+    private bool $elternaktivierung = false;
 
-    #[ORM\Column(type: 'boolean', nullable: true)]
-    private ?bool $light_darkmode = NULL;
+    #[ORM\Column(type: 'boolean', options: ['default' => 0])]
+    private bool $benachrichtigungen = false;
 
-    public function getSchueler(): ?Schueler
+    #[ORM\Column(
+        name: 'mood_benachrichtigung',
+        type: 'boolean',
+        options: ['default' => 1]
+    )]
+    private bool $moodBenachrichtigung = true;
+
+    #[ORM\Column(
+        name: 'light_darkmode',
+        type: 'boolean',
+        options: ['default' => 0]
+    )]
+    private bool $lightDarkmode = false;
+
+    /* ==========================
+       Getter / Setter
+       ========================== */
+
+    public function getSchueler(): Schueler
     {
         return $this->schueler;
     }
 
-    public function setSchueler(?Schueler $schueler): self
+    public function setSchueler(Schueler $schueler): self
     {
         $this->schueler = $schueler;
         return $this;
+    }
+
+    /**
+     * Optional: Convenience-Getter für die ID des Schülers
+     */
+    public function getSchuelerId(): int
+    {
+        return $this->schueler->getId();
     }
 
     public function getSprache(): ?string
@@ -64,36 +95,47 @@ class Einstellungen
         return $this;
     }
 
-    public function getElternaktivierung(): ?bool
+    public function isElternaktivierung(): bool
     {
         return $this->elternaktivierung;
     }
 
-    public function setElternaktivierung(?bool $elternaktivierung): self
+    public function setElternaktivierung(bool $elternaktivierung): self
     {
         $this->elternaktivierung = $elternaktivierung;
         return $this;
     }
 
-    public function getBenachrichtigungen(): ?bool
+    public function isBenachrichtigungen(): bool
     {
         return $this->benachrichtigungen;
     }
 
-    public function setBenachrichtigungen(?bool $benachrichtigungen): self
+    public function setBenachrichtigungen(bool $benachrichtigungen): self
     {
         $this->benachrichtigungen = $benachrichtigungen;
         return $this;
     }
 
-    public function getLightDarkmode(): ?bool
+    public function isMoodBenachrichtigung(): bool
     {
-        return $this->light_darkmode;
+        return $this->moodBenachrichtigung;
     }
 
-    public function setLightDarkmode(?bool $light_darkmode): self
+    public function setMoodBenachrichtigung(bool $enabled): self
     {
-        $this->light_darkmode = $light_darkmode;
+        $this->moodBenachrichtigung = $enabled;
+        return $this;
+    }
+
+    public function isLightDarkmode(): bool
+    {
+        return $this->lightDarkmode;
+    }
+
+    public function setLightDarkmode(bool $lightDarkmode): self
+    {
+        $this->lightDarkmode = $lightDarkmode;
         return $this;
     }
 }
